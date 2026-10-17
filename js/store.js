@@ -666,6 +666,23 @@ const Store = {
     }
   },
 
+  deleteCustomExpenseRubrique(name) {
+    if (!name || !this.data || !Array.isArray(this.data.custom_expense_rubriques)) return false;
+    const clean = name.trim();
+    const idx = this.data.custom_expense_rubriques.indexOf(clean);
+    if (idx !== -1) {
+      this.data.custom_expense_rubriques.splice(idx, 1);
+      this.persist();
+      return true;
+    }
+    return false;
+  },
+
+  isCustomExpenseRubrique(name) {
+    if (!name || !this.data || !Array.isArray(this.data.custom_expense_rubriques)) return false;
+    return this.data.custom_expense_rubriques.includes(name.trim());
+  },
+
   logAudit(action, details = {}) {
     if (!this.data) return;
     if (!Array.isArray(this.data.audit_log)) {
@@ -691,13 +708,14 @@ const Store = {
     const category = (expenseData.category || 'Fournitures scolaires & papeterie').trim();
     const schoolId = (this.data.school && this.data.school.id) ? this.data.school.id : '11111111-1111-1111-1111-111111111111';
     const newExpense = {
-      id: 'expense_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      id: expenseData.id || ('expense_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
       school_id: schoolId,
       motif: (expenseData.motif || '').trim(),
       amount: parseInt(expenseData.amount, 10) || 0,
       date: expenseData.date || new Date().toISOString().split('T')[0],
       category: category,
-      created_at: new Date().toISOString()
+      status: expenseData.status || 'active',
+      created_at: expenseData.created_at || new Date().toISOString()
     };
     this.data.expenses.push(newExpense);
     this.addCustomExpenseRubrique(category);
@@ -752,6 +770,44 @@ const Store = {
     return null;
   },
 
+  /**
+   * Annuler une dépense avec motif obligatoire (traçabilité comptable et réintégration du montant)
+   */
+  cancelExpense(id, cancelReason) {
+    if (!this.data || !Array.isArray(this.data.expenses)) return null;
+    if (!cancelReason || !cancelReason.trim()) {
+      throw new Error("Un motif d'annulation explicite est obligatoire.");
+    }
+    const expense = this.data.expenses.find(e => e.id === id);
+    if (!expense) throw new Error("Dépense introuvable");
+    if (expense.status === 'cancelled') {
+      throw new Error("Cette dépense a déjà été annulée.");
+    }
+
+    const nowIso = new Date().toISOString();
+    expense.status = 'cancelled';
+    expense.cancel_reason = cancelReason.trim();
+    expense.cancelled_at = nowIso;
+    expense.cancelled_by = this.currentUser ? this.currentUser.id : 'director-user-id';
+
+    this.persist();
+
+    try {
+      this.logAudit('EXPENSE_CANCELLED', {
+        expense_id: id,
+        motif: expense.motif,
+        amount: expense.amount,
+        category: expense.category,
+        cancel_reason: expense.cancel_reason,
+        date: expense.date
+      });
+    } catch (e) {
+      console.warn("Audit log notice:", e);
+    }
+
+    return expense;
+  },
+
   deleteExpense(id) {
     if (!this.data || !Array.isArray(this.data.expenses)) return false;
     const index = this.data.expenses.findIndex(e => e.id === id);
@@ -767,22 +823,27 @@ const Store = {
       } catch (e) {
         console.warn("Audit log notice:", e);
       }
-      return true;
+      return removed;
     }
     return false;
   },
 
   getTotalExpenses() {
-    if (!this.data.expenses) return 0;
-    return this.data.expenses.reduce((sum, e) => sum + (parseInt(e.amount, 10) || 0), 0);
+    if (!this.data || !Array.isArray(this.data.expenses)) return 0;
+    return this.data.expenses
+      .filter(e => e.status !== 'cancelled')
+      .reduce((sum, e) => sum + (parseInt(e.amount, 10) || 0), 0);
   },
 
   getExpensesSummary() {
     const list = this.getExpenses();
+    const active = list.filter(e => e.status !== 'cancelled');
     const total = this.getTotalExpenses();
     return {
       total_amount: total,
-      count: list.length,
+      count: active.length,
+      total_count: list.length,
+      cancelled_count: list.length - active.length,
       expenses: list
     };
   },

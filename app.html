@@ -414,20 +414,27 @@
             <div class="form-helper">Cette rubrique sera mémorisée et disponible pour vos prochaines dépenses.</div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="App.closeAllModals()">Annuler</button>
-          <button type="submit" class="btn btn-primary" id="expenseSubmitBtn">Enregistrer la dépense</button>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="expenseModalDeleteBtn" style="display:none;" onclick="App.deleteExpenseFromModal()" title="Supprimer définitivement cette dépense">
+              🗑️ Supprimer cette dépense
+            </button>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeAllModals()">Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="expenseSubmitBtn">Enregistrer la dépense</button>
+          </div>
         </div>
       </form>
     </div>
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=9"></script>
-  <script src="js/utils.js?v=9"></script>
-  <script src="js/stamp.js?v=9"></script>
-  <script src="js/demo-data.js?v=9"></script>
-  <script src="js/store.js?v=9"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/config.js?v=10"></script>
+  <script src="js/utils.js?v=10"></script>
+  <script src="js/stamp.js?v=10"></script>
+  <script src="js/demo-data.js?v=10"></script>
+  <script src="js/store.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

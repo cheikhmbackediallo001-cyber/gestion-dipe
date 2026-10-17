@@ -301,6 +301,35 @@ img, svg {
   background-color: var(--primary-subtle);
 }
 
+.btn-outline-danger {
+  background-color: transparent !important;
+  color: #DC2626 !important;
+  border: 1px solid rgba(220, 38, 38, 0.45) !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all var(--transition-fast);
+}
+
+.btn-outline-danger:hover {
+  background-color: rgba(220, 38, 38, 0.12) !important;
+  border-color: #DC2626 !important;
+  color: #EF4444 !important;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+  color: #F87171 !important;
+  border-color: rgba(248, 113, 113, 0.4) !important;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: rgba(220, 38, 38, 0.22) !important;
+  border-color: #F87171 !important;
+  color: #FCA5A5 !important;
+}
+
 .btn-danger {
   background-color: #DC2626 !important;
   color: #FFFFFF !important;

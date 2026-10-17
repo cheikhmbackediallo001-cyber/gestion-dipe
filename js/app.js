@@ -289,8 +289,12 @@ const App = {
             <p class="view-subtitle">${filtered.length} élève(s) affiché(s) · Ordre alphabétique par nom de famille (A-Z)</p>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="App.openImportCsvModal()">
+            <button class="btn btn-secondary btn-sm" onclick="App.exportStudentsCsv()" title="Télécharger la liste complète des élèves en format CSV Excel">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              <span>Exporter CSV</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="App.openImportCsvModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
               <span>Importer CSV</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="App.openAddStudentModal()">
@@ -894,10 +898,15 @@ const App = {
               <strong style="color:var(--danger);">${Utils.formatFCFA(expensesSummary.total_amount)}</strong>
             </button>
             ${Object.keys(rubriqueTotals).map(r => `
-              <button type="button" class="rubrique-chip ${activeFilter === r ? 'active' : ''}" onclick="App.onExpenseRubriqueFilterChange('${Utils.escapeHtml(r)}')">
-                <span>${Utils.escapeHtml(r)}</span>
-                <strong>${Utils.formatFCFA(rubriqueTotals[r])}</strong>
-              </button>
+              <div style="display:inline-flex; align-items:center; gap:0.25rem; margin-right:0.25rem;">
+                <button type="button" class="rubrique-chip ${activeFilter === r ? 'active' : ''}" onclick="App.onExpenseRubriqueFilterChange('${Utils.escapeHtml(r)}')">
+                  <span>${Utils.escapeHtml(r)}</span>
+                  <strong>${Utils.formatFCFA(rubriqueTotals[r])}</strong>
+                </button>
+                ${Store.isCustomExpenseRubrique(r) ? `
+                  <button type="button" class="rubrique-chip-del" onclick="App.deleteCustomRubrique('${Utils.escapeHtml(r)}')" title="Supprimer la rubrique ${Utils.escapeHtml(r)}" aria-label="Supprimer la rubrique">✕</button>
+                ` : ''}
+              </div>
             `).join('')}
           </div>
         </div>
@@ -969,7 +978,7 @@ const App = {
                     <button class="btn btn-outline-primary btn-sm" onclick="App.openEditExpenseModal('${e.id}')" title="Modifier la dépense" style="margin-right:0.35rem;">
                       ✏️ Modifier
                     </button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="App.confirmDeleteExpense('${e.id}')" title="Supprimer la dépense">
+                    <button class="btn btn-outline-danger btn-sm" onclick="App.deleteExpense('${e.id}')" title="Supprimer immédiatement cette dépense">
                       🗑️ Supprimer
                     </button>
                   </td>
@@ -2269,9 +2278,11 @@ const App = {
     const dateInput = document.getElementById('expenseDate');
     const customContainer = document.getElementById('customCategoryContainer');
     const customInput = document.getElementById('expenseCustomCategory');
+    const deleteBtn = document.getElementById('expenseModalDeleteBtn');
 
     if (titleEl) titleEl.textContent = "Ajouter une nouvelle dépense";
     if (submitBtn) submitBtn.textContent = "Enregistrer la dépense";
+    if (deleteBtn) deleteBtn.style.display = 'none';
     if (idInput) idInput.value = '';
     if (motifInput) motifInput.value = '';
     if (amountInput) amountInput.value = '';
@@ -2298,6 +2309,7 @@ const App = {
     if (!modal) return;
     const titleEl = document.getElementById('expenseModalTitle');
     const submitBtn = document.getElementById('expenseSubmitBtn');
+    const deleteBtn = document.getElementById('expenseModalDeleteBtn');
     const idInput = document.getElementById('expenseIdInput');
     const motifInput = document.getElementById('expenseMotif');
     const amountInput = document.getElementById('expenseAmount');
@@ -2307,6 +2319,10 @@ const App = {
 
     if (titleEl) titleEl.textContent = "Modifier la dépense";
     if (submitBtn) submitBtn.textContent = "Enregistrer les modifications";
+    if (deleteBtn) {
+      deleteBtn.style.display = 'inline-flex';
+      deleteBtn.setAttribute('data-expense-id', expense.id);
+    }
     if (idInput) idInput.value = expense.id;
     if (motifInput) motifInput.value = expense.motif || '';
     if (amountInput) amountInput.value = expense.amount || '';
@@ -2338,7 +2354,7 @@ const App = {
       if (category === '__NEW_CUSTOM_RUBRIQUE__') {
         const customVal = (document.getElementById('expenseCustomCategory')?.value || '').trim();
         if (!customVal) {
-          alert("Veuillez saisir le nom de votre nouvelle rubrique.");
+          this.showToast("Veuillez saisir le nom de votre nouvelle rubrique.", "warning");
           document.getElementById('expenseCustomCategory')?.focus();
           return;
         }
@@ -2347,17 +2363,17 @@ const App = {
       }
 
       if (!motif) {
-        alert("Le motif de la dépense est obligatoire.");
+        this.showToast("Le motif de la dépense est obligatoire.", "danger");
         document.getElementById('expenseMotif')?.focus();
         return;
       }
       if (!amount || amount <= 0) {
-        alert("Veuillez saisir un montant valide en FCFA supérieur à 0.");
+        this.showToast("Veuillez saisir un montant valide en FCFA supérieur à 0.", "danger");
         document.getElementById('expenseAmount')?.focus();
         return;
       }
       if (!date) {
-        alert("La date de décaissement est obligatoire.");
+        this.showToast("La date de décaissement est obligatoire.", "danger");
         document.getElementById('expenseDate')?.focus();
         return;
       }
@@ -2386,25 +2402,87 @@ const App = {
       this.navigate('expenses');
     } catch (err) {
       console.error("Erreur enregistrement dépense:", err);
-      alert("Une erreur est survenue lors de l'enregistrement de la dépense : " + (err.message || err));
+      this.showToast("Erreur lors de l'enregistrement : " + (err.message || err), "danger");
+    }
+  },
+
+  /**
+   * Suppression automatique et instantanée de dépense (§ Directives claires de la direction :
+   * aucune confirmation bloquante, suppression automatique et réintégration instantanée en trésorerie)
+   */
+  deleteExpense(id) {
+    if (!id) return;
+    const expense = Store.getExpenseById(id);
+    if (!expense) {
+      this.showToast("Dépense introuvable ou déjà supprimée.", "warning");
+      return;
+    }
+
+    const removed = Store.deleteExpense(id);
+    if (!removed) return;
+
+    this.lastDeletedExpense = removed;
+    this.closeAllModals();
+
+    const motifPreview = expense.motif ? `« ${expense.motif.slice(0, 32)}${expense.motif.length > 32 ? '...' : ''} »` : '';
+    const amountPreview = Utils.formatFCFA(expense.amount);
+
+    this.showToast(
+      `Dépense ${motifPreview} (${amountPreview}) supprimée. Trésorerie réintégrée.`,
+      'info',
+      {
+        label: '↩️ Annuler',
+        callback: () => this.undoDeleteExpense()
+      }
+    );
+
+    // Rafraîchissement automatique instantané de la vue courante
+    if (this.currentTab === 'expenses') {
+      this.renderExpenses(document.getElementById('appViewContent'));
+    } else if (this.currentTab === 'bilan') {
+      this.renderBilan(document.getElementById('appViewContent'));
+    } else {
+      this.navigate(this.currentTab, { preserveFilters: true });
     }
   },
 
   confirmDeleteExpense(id) {
-    const expense = Store.getExpenseById(id);
-    if (!expense) return;
+    // Alias vers la suppression automatique instantanée
+    this.deleteExpense(id);
+  },
 
-    if (confirm(`Confirmez-vous la suppression de la dépense "${expense.motif}" (${Utils.formatFCFA(expense.amount)}) ? Cette somme sera réintégrée dans le solde disponible.`)) {
-      Store.deleteExpense(id);
-      this.showToast("Dépense supprimée et trésorerie mise à jour.", "info");
+  undoDeleteExpense() {
+    if (!this.lastDeletedExpense) return;
+    const restored = this.lastDeletedExpense;
+    Store.addExpense(restored);
+    this.lastDeletedExpense = null;
+    this.showToast(`Dépense « ${restored.motif} » (${Utils.formatFCFA(restored.amount)}) restaurée avec succès !`, 'success');
+    if (this.currentTab === 'expenses') {
+      this.renderExpenses(document.getElementById('appViewContent'));
+    } else if (this.currentTab === 'bilan') {
+      this.renderBilan(document.getElementById('appViewContent'));
+    } else {
+      this.navigate(this.currentTab, { preserveFilters: true });
+    }
+  },
 
-      if (this.currentTab === 'expenses') {
-        this.renderExpenses(document.getElementById('appViewContent'));
-      } else if (this.currentTab === 'bilan') {
-        this.renderBilan(document.getElementById('appViewContent'));
-      } else {
-        this.navigate(this.currentTab);
-      }
+  deleteExpenseFromModal() {
+    const idInput = document.getElementById('expenseIdInput');
+    const id = idInput ? idInput.value : null;
+    if (id) {
+      this.deleteExpense(id);
+    }
+  },
+
+  deleteCustomRubrique(name) {
+    if (!name) return;
+    Store.deleteCustomExpenseRubrique(name);
+    this.showToast(`Rubrique personnalisée « ${name} » retirée.`, 'info');
+    if (this.activeExpenseRubriqueFilter === name) {
+      this.activeExpenseRubriqueFilter = 'all';
+    }
+    if (this.currentTab === 'expenses') {
+      this.renderExpenses(document.getElementById('appViewContent'));
     }
   },
 
@@ -2453,6 +2531,25 @@ const App = {
     csv += `"SOLDE RESTANT DISPONIBLE AU MOMENT T",-,${grand.net_available},-,${grand.net_available >= 0 ? 'Positif' : 'Deficit'}\n`;
 
     this._downloadFile(csv, "bilan_general_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+  },
+
+  exportStudentsCsv() {
+    const students = Store.getStudents(true);
+    let csv = "MATRICULE,PRENOM,NOM,GENRE,SECTION,DATE_NAISSANCE,STATUT,PARENT,TELEPHONE\n";
+    students.forEach(s => {
+      const matricule = (s.matricule || '').replace(/"/g, '""');
+      const first = (s.first_names || '').replace(/"/g, '""');
+      const last = (s.last_name || '').replace(/"/g, '""');
+      const gender = s.gender === 'F' ? 'Fille' : 'Garçon';
+      const className = (Store.getClassName(s.class_id) || '').replace(/"/g, '""');
+      const dob = s.birth_date || '';
+      const status = s.status === 'active' ? 'Inscrit' : 'Quitté';
+      const parent = (s.parent_name || '').replace(/"/g, '""');
+      const phone = (s.parent_phone || '').replace(/"/g, '""');
+      csv += `"${matricule}","${first}","${last}","${gender}","${className}","${dob}","${status}","${parent}","${phone}"\n`;
+    });
+    this._downloadFile(csv, "liste_eleves_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+    this.showToast("Export CSV de l'ensemble des élèves téléchargé.", "success");
   },
 
   exportExpensesCsv() {
@@ -2602,7 +2699,7 @@ const App = {
     document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('is-open'));
   },
 
-  showToast(message, type = 'info') {
+  showToast(message, type = 'info', action = null) {
     let container = document.getElementById('toastContainer');
     if (!container) {
       container = document.createElement('div');
@@ -2613,13 +2710,43 @@ const App = {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span>${type === 'success' ? '✓' : type === 'danger' ? '✕' : 'ℹ'}</span> <span>${Utils.escapeHtml(message)}</span>`;
+    const icon = type === 'success' ? '✓' : type === 'danger' ? '✕' : type === 'warning' ? '⚠️' : 'ℹ';
+
+    let actionBtnHtml = '';
+    if (action && action.label && typeof action.callback === 'function') {
+      actionBtnHtml = `<button class="toast-action-btn" type="button" style="margin-left:0.75rem; background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.45); color:inherit; font-weight:700; padding:0.25rem 0.65rem; border-radius:4px; cursor:pointer; font-size:var(--text-xs); transition:background var(--transition-fast);">${Utils.escapeHtml(action.label)}</button>`;
+    }
+
+    toast.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; width:100%;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-weight:700;">${icon}</span>
+          <span>${Utils.escapeHtml(message)}</span>
+        </div>
+        ${actionBtnHtml}
+      </div>
+    `;
+
+    if (action && typeof action.callback === 'function') {
+      const btn = toast.querySelector('.toast-action-btn');
+      if (btn) {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          action.callback();
+          toast.remove();
+        });
+      }
+    }
+
     container.appendChild(toast);
 
-    setTimeout(() => {
+    const timeout = action ? 6500 : 3500;
+    const timer = setTimeout(() => {
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 200);
-    }, 3500);
+    }, timeout);
+
+    toast.addEventListener('mouseenter', () => clearTimeout(timer));
   }
 };
 
