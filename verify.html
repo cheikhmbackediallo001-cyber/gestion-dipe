@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérification officielle de reçu — Gestion Préscolaire</title>
+  <meta name="robots" content="noindex, follow">
+
+  <!-- Préchargement immédiat du thème clair/sombre pour éviter tout flash -->
+  <script>
+    (function() {
+      try {
+        const saved = localStorage.getItem('gestion_dipe_theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = saved || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/receipt.css">
+
+  <style>
+    body {
+      background-color: var(--bg-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .verify-page-container {
+      max-width: 580px;
+      margin: 2.5rem auto;
+      padding: 0 1.25rem;
+      flex: 1;
+      width: 100%;
+    }
+
+    .verify-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .verify-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.25rem;
+      border-radius: var(--radius-full);
+      font-size: var(--text-base);
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+
+    .verify-status-valid {
+      background-color: var(--success-subtle);
+      color: var(--success-dark);
+      border: 1px solid #86EFAC;
+    }
+
+    .verify-status-cancelled {
+      background-color: var(--danger-subtle);
+      color: var(--danger-dark);
+      border: 1px solid #FECACA;
+    }
+
+    .verify-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: var(--text-sm);
+    }
+
+    .verify-row:last-child {
+      border-bottom: none;
+    }
+
+    .verify-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .verify-value {
+      font-weight: 700;
+      color: var(--text-main);
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <header style="background:var(--bg-card); border-bottom:1px solid var(--border-light); padding:1rem 0;">
+    <div style="max-width:1200px; margin:0 auto; padding:0 1.25rem; display:flex; justify-content:space-between; align-items:center;">
+      <a href="index.html" style="display:flex; align-items:center; gap:0.5rem; text-decoration:none;">
+        <div style="width:34px; height:34px; border-radius:6px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;">GP</div>
+        <span style="font-family:var(--font-heading); font-weight:700; color:var(--primary); font-size:1.1rem;">Gestion Préscolaire</span>
+      </a>
+      <span class="badge badge-info" style="font-size:11px;">Authentification Sécurisée</span>
+    </div>
+  </header>
+
+  <main class="verify-page-container">
+    <div class="verify-card" id="verifyResultCard">
+      <div style="text-align: center;" id="loadingState">
+        <p style="color: var(--text-muted); font-size: var(--text-base);">Vérification de l'authenticité du document en cours...</p>
+      </div>
+
+      <div id="verifiedState" style="display: none;">
+        <div style="text-align: center;">
+          <div id="statusBadgeContainer"></div>
+          <h1 style="font-size: var(--text-2xl); margin-bottom: 0.25rem;" id="receiptNumberDisplay">REC-2026-0001</h1>
+          <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 1.5rem;">Certificat officiel d'encaissement délivré par l'école</p>
+        </div>
+
+        <div style="background: var(--bg-subtle); border-radius: var(--radius-md); padding: 0.5rem 1rem; margin-bottom: 1.5rem;">
+          <div class="verify-row">
+            <span class="verify-label">Établissement</span>
+            <span class="verify-value" id="schoolNameDisplay">-</span>
+          </div>
+          <div class="verify-row">
+            <span class="verify-label">Date & Heure d'émission</span>
+            <span class="verify-value" id="issuedAtDisplay">-</span>
+          </div>
+          <div class="verify-row">
+            <span class="verify-label">Objet du paiement</span>
+            <span class="verify-value" id="objectDisplay">-</span>
+          </div>
+          <div class="verify-row">
+            <span class="verify-label">Montant officiel certifié</span>
+            <span class="verify-value" style="color: var(--primary); font-size: 1.15rem;" id="amountDisplay">0 FCFA</span>
+          </div>
+          <div class="verify-row">
+            <span class="verify-label">Mode de règlement</span>
+            <span class="verify-value" id="methodDisplay">-</span>
+          </div>
+        </div>
+
+        <div style="font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5; background: #F1F5F9; padding: 0.875rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary);">
+          🔒 <strong>Protection des données :</strong> Conformément à la réglementation de protection de la vie privée des enfants, les coordonnées personnelles complètes ne sont pas divulguées sur cette page publique.
+        </div>
+      </div>
+
+      <div id="notFoundState" style="display: none; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+        <h2 style="color: var(--danger); font-size: var(--text-xl);">Reçu introuvable ou jeton invalide</h2>
+        <p style="color: var(--text-muted); font-size: var(--text-sm); margin-bottom: 1.5rem;">
+          Ce reçu n'a pu être vérifié dans le registre officiel de l'école. Assurez-vous d'avoir flashé le QR code d'origine ou contactez directement l'établissement scolaire.
+        </p>
+        <a href="index.html" class="btn btn-secondary">Retour à l'accueil</a>
+      </div>
+    </div>
+  </main>
+
+  <footer style="text-align: center; padding: 1.5rem 0; font-size: var(--text-xs); color: var(--text-muted); border-top: 1px solid var(--border-light); background: var(--bg-card);">
+    Document généré et vérifié par Gestion Préscolaire — République du Sénégal
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/store.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await Store.init();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+
+      const loadingEl = document.getElementById('loadingState');
+      const verifiedEl = document.getElementById('verifiedState');
+      const notFoundEl = document.getElementById('notFoundState');
+
+      if (!token) {
+        // Si aucun token n'est passé en paramètre, on prend le premier reçu pour démo visuelle
+        const sampleReceipt = Store.getReceipts()[0];
+        if (sampleReceipt) {
+          renderVerification(Store.getReceiptByPublicToken(sampleReceipt.public_token));
+        } else {
+          showNotFound();
+        }
+        return;
+      }
+
+      const receipt = Store.getReceiptByPublicToken(token);
+      if (receipt) {
+        renderVerification(receipt);
+      } else {
+        showNotFound();
+      }
+
+      function renderVerification(data) {
+        if (!data) return showNotFound();
+        loadingEl.style.display = 'none';
+        notFoundEl.style.display = 'none';
+        verifiedEl.style.display = 'block';
+
+        const badgeContainer = document.getElementById('statusBadgeContainer');
+        if (data.status === 'valid') {
+          badgeContainer.innerHTML = `<span class="verify-status-badge verify-status-valid">✓ REÇU AUTHENTIQUE & VALIDE</span>`;
+        } else {
+          badgeContainer.innerHTML = `<span class="verify-status-badge verify-status-cancelled">✕ REÇU ANNULÉ</span>`;
+        }
+
+        document.getElementById('receiptNumberDisplay').textContent = data.receipt_number;
+        document.getElementById('schoolNameDisplay').textContent = data.school_name;
+        document.getElementById('issuedAtDisplay').textContent = Utils.formatDateTime(data.issued_at);
+        document.getElementById('objectDisplay').textContent = data.object_label;
+        document.getElementById('amountDisplay').textContent = Utils.formatFCFA(data.amount);
+
+        const methodMap = {
+          'cash': 'Espèces',
+          'wave': 'Wave Mobile Money',
+          'orange_money': 'Orange Money',
+          'cheque': 'Chèque',
+          'bank_transfer': 'Virement bancaire',
+          'other': 'Autre'
+        };
+        document.getElementById('methodDisplay').textContent = methodMap[data.method] || data.method;
+      }
+
+      function showNotFound() {
+        loadingEl.style.display = 'none';
+        verifiedEl.style.display = 'none';
+        notFoundEl.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

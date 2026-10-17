@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Préscolaire — La gestion simple et moderne des écoles préscolaires</title>
+  <meta name="description" content="Plateforme web intuitive pour écoles préscolaires au Sénégal et zone francophone : suivi des inscriptions, cotisations mensuelles, totaux automatiques en FCFA et reçus officiels avec cachet vectoriel.">
+  <meta property="og:title" content="Gestion Préscolaire — Gestion des écoles préscolaires au Sénégal">
+  <meta property="og:description" content="Gérez les inscriptions et cotisations de votre école préscolaire en quelques clics.">
+  <meta property="og:type" content="website">
+
+  <!-- Préchargement immédiat du thème clair/sombre pour éviter tout flash -->
+  <script>
+    (function() {
+      try {
+        const saved = localStorage.getItem('gestion_dipe_theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = saved || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Polices et Stylesheets -->
+  <link rel="stylesheet" href="css/design-system.css?v=4">
+  <link rel="stylesheet" href="css/landing.css?v=4">
+  <link rel="stylesheet" href="css/receipt.css?v=4">
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231E3A8A'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23FFFFFF' font-family='sans-serif' font-weight='bold'>GP</text></svg>">
+</head>
+<body>
+  <!-- Lien d'évitement accessibilité -->
+  <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
+  <!-- Lueur de fond douce -->
+  <div class="bg-mesh-glow" aria-hidden="true"></div>
+
+  <!-- Barre de navigation fixe avec effet de flou -->
+  <header class="landing-nav" role="banner">
+    <div class="landing-nav-container">
+      <a href="index.html" class="brand-link" aria-label="Accueil Gestion Préscolaire">
+        <div class="brand-icon-box" aria-hidden="true">GP</div>
+        <div class="brand-name-group">
+          <span class="brand-title">Gestion Préscolaire</span>
+          <span class="brand-tag">Établissements Préscolaires</span>
+        </div>
+      </a>
+
+      <!-- Menu bureau -->
+      <nav class="nav-links-desktop" aria-label="Navigation principale">
+        <a href="#fonctionnalites" class="nav-link-item">Fonctionnalités</a>
+        <a href="#calculateur" class="nav-link-item">Calculateur</a>
+        <a href="#temoignages" class="nav-link-item">Témoignages</a>
+        <a href="#comment-ca-marche" class="nav-link-item">Comment ça marche</a>
+        <a href="#tarifs" class="nav-link-item">Tarifs</a>
+        <a href="#faq" class="nav-link-item">FAQ</a>
+      </nav>
+
+      <!-- Actions bureau -->
+      <div class="nav-cta-group">
+        <button id="landingThemeToggleBtn" class="btn btn-secondary btn-sm" aria-label="Changer de thème (clair/sombre)" title="Mode Clair / Sombre" style="padding:0.4rem 0.75rem;">
+          <span id="landingThemeIcon">🌙</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" data-action="open-login">Se connecter</button>
+        <button class="btn btn-primary btn-sm btn-cta-glow" data-action="open-onboarding">Référencer mon école</button>
+      </div>
+
+      <!-- Hamburger mobile -->
+      <button class="nav-mobile-toggle" id="mobileMenuToggle" aria-expanded="false" aria-controls="mobileMenuDrawer" aria-label="Ouvrir le menu de navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+
+    <!-- Tiroir Mobile -->
+    <div class="mobile-menu-drawer" id="mobileMenuDrawer" role="region" aria-label="Menu mobile">
+      <ul class="mobile-menu-links">
+        <li><a href="#fonctionnalites" class="mobile-menu-link">Fonctionnalités <span>→</span></a></li>
+        <li><a href="#calculateur" class="mobile-menu-link">Calculateur d'économies <span>→</span></a></li>
+        <li><a href="#temoignages" class="mobile-menu-link">Témoignages directrices <span>→</span></a></li>
+        <li><a href="#simulateur-supports" class="mobile-menu-link">Adapté à tous les écrans <span>→</span></a></li>
+        <li><a href="#comment-ca-marche" class="mobile-menu-link">Comment ça marche <span>→</span></a></li>
+        <li><a href="#tarifs" class="mobile-menu-link">Tarifs <span>→</span></a></li>
+        <li><a href="#faq" class="mobile-menu-link">Questions fréquentes <span>→</span></a></li>
+      </ul>
+      <div class="mobile-menu-actions">
+        <button class="btn btn-secondary" id="mobileThemeToggleBtn" style="display:flex; justify-content:center; align-items:center; gap:0.5rem;">
+          <span id="mobileThemeIcon">🌙</span> <span id="mobileThemeLabel">Mode Sombre</span>
+        </button>
+        <button class="btn btn-secondary" data-action="open-login">Se connecter à mon école</button>
+        <button class="btn btn-primary" data-action="open-onboarding">Référencer mon école gratuitement</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- ==============================================================================
+         HERO SECTION ULTRA-ATTRACTIVE
+         ============================================================================== -->
+    <section class="hero-section">
+      <div class="hero-container">
+        <div class="hero-content">
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+            <div class="hero-pill-badge" style="margin-bottom:0.75rem;">
+              <span class="pulse-dot"></span>
+              <span class="hero-pill-text">🇸🇳 N°1 au Sénégal & Afrique francophone</span>
+            </div>
+            <div class="hero-social-proof-badge" style="margin-bottom:0.75rem;">
+              <div class="avatar-cluster">
+                <span class="avatar-cluster-item" style="background:#2563EB;">AB</span>
+                <span class="avatar-cluster-item" style="background:#D97706;">MD</span>
+                <span class="avatar-cluster-item" style="background:#16A34A;">FN</span>
+                <span class="avatar-cluster-item" style="background:#9333EA;">SL</span>
+              </div>
+              <div style="font-size:12px; font-weight:600;">
+                <span style="color:#F59E0B;">★★★★★</span> <strong>4.9/5</strong> · +34 écoles partenaires
+              </div>
+            </div>
+          </div>
+
+          <h1 class="hero-title">
+            Gérez les inscriptions et cotisations de votre école, <span class="highlight-gradient">en toute sérénité.</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Pointez les paiements en un geste avec deux boutons clairs <strong>Payé / Impayé</strong>, consultez vos totaux sans calculette et délivrez instantanément un reçu officiel avec le cachet de votre école.
+          </p>
+
+          <div class="hero-cta-group">
+            <button class="btn btn-accent btn-lg btn-cta-glow" data-action="open-onboarding">
+              <span>🚀 Référencer mon école gratuitement</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+            <button class="btn btn-secondary btn-lg btn-demo-glow" onclick="document.getElementById('calculateur').scrollIntoView({behavior:'smooth'})">
+              <span>⚡ Calculer mon gain de temps</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:1.25rem; margin-top:-0.75rem; margin-bottom:1.5rem; font-size:0.85rem; color:var(--text-muted); font-weight:600;">
+            <span>✓ Sans carte bancaire</span>
+            <span>✓ Prise en main en 2 min</span>
+            <span>✓ Reçu officiel offert</span>
+          </div>
+
+          <div class="hero-perks-row">
+            <div class="hero-perk-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              <span>Autonome en 10 minutes</span>
+            </div>
+            <div class="hero-perk-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              <span>Fluide sur smartphone 3G</span>
+            </div>
+            <div class="hero-perk-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              <span>Zéro calculatrice</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAQUETTE MULTI-DEVICE : ORDINATEUR, TABLETTE ET SMARTPHONE INTERACTIF -->
+        <div class="hero-multidevice-stage">
+          <div class="hero-visual-bg-glow" style="top:50%; left:50%; transform:translate(-50%, -50%);" aria-hidden="true"></div>
+
+          <!-- 1. CHÂSSIS ORDINATEUR (Tableau de bord exact de l'école) -->
+          <div class="stage-desktop-frame">
+            <div class="stage-browser-header">
+              <div class="stage-browser-dots">
+                <div class="stage-dot red"></div>
+                <div class="stage-dot yellow"></div>
+                <div class="stage-dot green"></div>
+              </div>
+              <div class="stage-address-bar">https://gestionprescolaire.sn/app.html — Session Directeur</div>
+            </div>
+
+            <!-- Contenu exact de l'application avec défilement fluide sans overflow de page -->
+            <div class="stage-desktop-scroll-area">
+              <div class="stage-desktop-inner-layout">
+              <!-- Mini Sidebar -->
+              <div class="stage-desktop-mini-sidebar" style="width:190px; background:#fff; border-right:1px solid #E2E8F0; padding:1rem 0.75rem; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.25rem;">
+                    <div style="width:28px; height:28px; border-radius:6px; background:#1E3A8A; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px;">GP</div>
+                    <div>
+                      <div style="font-weight:700; font-size:12px; color:#1E3A8A; line-height:1.1;">Gestion Préscolaire</div>
+                      <div style="font-size:9px; color:#64748B;">Établissement Préscolaire</div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                    <div style="background:#1E3A8A; color:#fff; padding:6px 10px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:6px;">
+                      <span>🏠</span> <span>Accueil</span>
+                    </div>
+                    <div style="color:#475569; padding:5px 10px; font-weight:500;">👥 Élèves</div>
+                    <div style="color:#475569; padding:5px 10px; font-weight:500;">📝 Inscriptions</div>
+                    <div style="color:#475569; padding:5px 10px; font-weight:500;">📅 Cotisations</div>
+                    <div style="color:#475569; padding:5px 10px; font-weight:500;">💰 Total Inscriptions</div>
+                    <div style="color:#475569; padding:5px 10px; font-weight:500;">📊 Bilan mensuel</div>
+                    <div style="color:#475569; padding:5px 10px; font-weight:500;">🧾 Reçus</div>
+                  </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:6px; padding-top:8px; border-top:1px solid #E2E8F0;">
+                  <div style="width:24px; height:24px; border-radius:50%; background:#2563EB; color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center;">AB</div>
+                  <div style="font-size:9px; line-height:1.2;">
+                    <strong style="display:block; color:#0F172A;">Mme Aïssatou Ba</strong>
+                    <span style="color:#64748B;">Directrice</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contenu Tableau de bord exact -->
+              <div style="flex:1; padding:1.25rem; overflow-x:hidden;">
+                <!-- Header école -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #E2E8F0; padding-bottom:0.75rem;">
+                  <div>
+                    <h3 style="font-size:15px; font-weight:700; color:#0F172A; margin-bottom:2px;">Tableau de bord</h3>
+                    <div style="font-size:10px; color:#64748B;">École Maternelle Les Papillons · Année scolaire 2026-2027</div>
+                  </div>
+                  <div style="display:flex; gap:6px;">
+                    <span class="btn btn-secondary btn-sm" style="min-height:28px; padding:2px 8px; font-size:10px;">Inscriptions</span>
+                    <span class="btn btn-primary btn-sm" style="min-height:28px; padding:2px 8px; font-size:10px;">Cotisations Octobre</span>
+                  </div>
+                </div>
+
+                <!-- 4 KPI Cards exactes du screenshot -->
+                <div class="stage-desktop-kpis" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:1rem;">
+                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
+                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Inscriptions Encaissées</div>
+                    <div style="font-size:14px; font-weight:800; color:#1E3A8A; margin:2px 0;">585 000 FCFA</div>
+                    <div style="font-size:8.5px; color:#16A34A;">22 sur 30 Inscrits (73.3%)</div>
+                  </div>
+
+                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
+                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Mois en cours (Octobre)</div>
+                    <div style="font-size:14px; font-weight:800; color:#16A34A; margin:2px 0;">288 000 FCFA</div>
+                    <div style="font-size:8.5px; color:#64748B;">Attendu : 480 000 FCFA</div>
+                  </div>
+
+                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
+                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Pourcentage du mois</div>
+                    <div style="font-size:14px; font-weight:800; color:#D97706; margin:2px 0;">60%</div>
+                    <div class="progress-bar-container" style="height:5px; margin-top:2px;">
+                      <div class="progress-bar-fill fill-medium" style="width:60%;"></div>
+                    </div>
+                  </div>
+
+                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
+                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Impayés du mois</div>
+                    <div style="font-size:14px; font-weight:800; color:#DC2626; margin:2px 0;">12</div>
+                    <div style="font-size:8.5px; color:#64748B;">Élèves à recouvrer pour Octobre</div>
+                  </div>
+                </div>
+
+                <!-- Tableau exact des paiements -->
+                <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; overflow:hidden;">
+                  <div style="padding:6px 10px; background:#F1F5F9; font-size:10px; font-weight:700; color:#475569; display:flex; justify-content:space-between;">
+                    <span>DERNIERS PAIEMENTS ENREGISTRÉS</span>
+                    <span style="color:#2563EB;">Voir tous les reçus</span>
+                  </div>
+                  <table class="data-table" style="font-size:10.5px;">
+                    <tbody>
+                      <tr>
+                        <td><strong>REC-2026-0051</strong></td>
+                        <td>DIENG El Hadji Malick</td>
+                        <td><span class="badge badge-section" style="background:#2563EB; color:#FFFFFF !important; font-weight:700; font-size:9.5px; padding:2px 8px;">Petite section</span></td>
+                        <td><strong>25 000 FCFA</strong></td>
+                        <td><span class="badge badge-success" style="font-size:9px; padding:1px 6px;">✓ Valide</span></td>
+                        <td><span class="btn btn-outline-primary btn-sm" style="min-height:22px; padding:1px 6px; font-size:9px;">Voir Reçu</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>REC-2026-0044</strong></td>
+                        <td>FALL Aminata</td>
+                        <td><span class="badge badge-section" style="background:#2563EB; color:#FFFFFF !important; font-weight:700; font-size:9.5px; padding:2px 8px;">Petite section</span></td>
+                        <td><strong>15 000 FCFA</strong></td>
+                        <td><span class="badge badge-success" style="font-size:9px; padding:1px 6px;">✓ Valide</span></td>
+                        <td><span class="btn btn-outline-primary btn-sm" style="min-height:22px; padding:1px 6px; font-size:9px;">Voir Reçu</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="stage-mobile-swipe-hint">
+            <span>👉 Faites glisser horizontalement pour explorer la démo complète</span>
+          </div>
+        </div>
+
+          <!-- 2. TABLETTE FLOTTANTE (À Gauche - État par section) -->
+          <div class="stage-tablet-frame">
+            <div style="background:#1E3A8A; color:#fff; padding:8px 12px; font-size:11px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+              <span>📊 État par section</span>
+              <span style="font-size:9px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">Octobre</span>
+            </div>
+            <div class="stage-tablet-body">
+              <div style="margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px;">
+                  <span>Petite section</span>
+                  <span style="color:#16A34A;">80.0%</span>
+                </div>
+                <div class="progress-bar-container" style="height:6px;">
+                  <div class="progress-bar-fill fill-high" style="width:80%;"></div>
+                </div>
+              </div>
+
+              <div style="margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px;">
+                  <span>Moyenne section</span>
+                  <span style="color:#16A34A;">80.0%</span>
+                </div>
+                <div class="progress-bar-container" style="height:6px;">
+                  <div class="progress-bar-fill fill-high" style="width:80%;"></div>
+                </div>
+              </div>
+
+              <div>
+                <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px;">
+                  <span>Grande section</span>
+                  <span style="color:#D97706;">60.0%</span>
+                </div>
+                <div class="progress-bar-container" style="height:6px;">
+                  <div class="progress-bar-fill fill-medium" style="width:60%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. SMARTPHONE FLOTTANT (À Droite - Boutons Payé / Impayé interactifs) -->
+          <div class="stage-phone-frame" style="position:relative;">
+            <div class="hero-demo-toast" id="heroDemoToast"><span>✓ Reçu officiel généré (+15 000 FCFA) !</span></div>
+            <div style="background:#0F172A; padding:6px; display:flex; justify-content:center;">
+              <div style="width:50px; height:6px; background:#334155; border-radius:3px;"></div>
+            </div>
+
+            <div class="stage-phone-body">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong style="font-size:11px; color:#1E3A8A;">Cotisations Octobre</strong>
+                <span class="badge badge-success" id="heroDemoPaidCount" style="font-size:9px; padding:2px 6px;">2 payés</span>
+              </div>
+
+              <!-- Lignes interactives smartphone -->
+              <div class="hero-demo-row" data-fee="15000" style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                  <strong>DIOP Mamadou</strong>
+                  <span style="color:#64748B;">Petite sect.</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-weight:700; font-size:10px; color:#1E3A8A;">15&nbsp;000&nbsp;FCFA</span>
+                  <div class="payment-toggle-group" style="padding:1px; gap:2px;">
+                    <button type="button" class="toggle-btn btn-status-paid demo-btn-paid is-active" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✓ Payé</button>
+                    <button type="button" class="toggle-btn btn-status-unpaid demo-btn-unpaid" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✕ Impayé</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hero-demo-row" data-fee="15000" style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                  <strong>SOW Fatou</strong>
+                  <span style="color:#64748B;">Moyenne s.</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-weight:700; font-size:10px; color:#1E3A8A;">15&nbsp;000&nbsp;FCFA</span>
+                  <div class="payment-toggle-group" style="padding:1px; gap:2px;">
+                    <button type="button" class="toggle-btn btn-status-paid demo-btn-paid is-active" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✓ Payé</button>
+                    <button type="button" class="toggle-btn btn-status-unpaid demo-btn-unpaid" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✕ Impayé</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hero-demo-row" data-fee="18000" style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                  <strong>NDIAYE Cheikh</strong>
+                  <span style="color:#64748B;">Grande s.</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-weight:700; font-size:10px; color:#1E3A8A;">18&nbsp;000&nbsp;FCFA</span>
+                  <div class="payment-toggle-group" style="padding:1px; gap:2px;">
+                    <button type="button" class="toggle-btn btn-status-paid demo-btn-paid" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✓ Payé</button>
+                    <button type="button" class="toggle-btn btn-status-unpaid demo-btn-unpaid is-active" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✕ Impayé</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:8px; text-align:center; font-size:9px; color:#1E3A8A; font-weight:600;">
+                ⚡ Total démo : <span id="heroDemoAmountCount">30 000 FCFA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         BANDEAU DE CONFIANCE & STATS D'IMPACT (PREUVE SOCIALE ULTRA-PRO)
+         ============================================================================== -->
+    <section class="trust-ribbon-section" aria-label="Établissements partenaires et chiffres clés">
+      <div class="trust-ribbon-inner">
+        <div class="trust-ribbon-label">
+          Recommandé par les directions d'écoles maternelles et garderies privées
+        </div>
+        <div class="trust-schools-pills">
+          <span class="trust-school-pill">🏫 École Maternelle Les Papillons <em>(Dakar-Fann)</em></span>
+          <span class="trust-school-pill">🏫 Groupe Scolaire Excellence <em>(Almadies)</em></span>
+          <span class="trust-school-pill">🏫 Maternelle Les Poussins <em>(Thiès)</em></span>
+          <span class="trust-school-pill">🏫 Académie d'Éveil <em>(Saint-Louis)</em></span>
+          <span class="trust-school-pill">🏫 Complexe Éducatif Keur Gorgui <em>(Dakar)</em></span>
+        </div>
+
+        <div class="impact-stats-grid">
+          <div class="impact-stat-card">
+            <div class="impact-stat-number">+34</div>
+            <div class="impact-stat-label">Écoles maternelles équipées</div>
+          </div>
+          <div class="impact-stat-card">
+            <div class="impact-stat-number">10 sec</div>
+            <div class="impact-stat-label">Pour encaisser & éditer un reçu</div>
+          </div>
+          <div class="impact-stat-card">
+            <div class="impact-stat-number">100%</div>
+            <div class="impact-stat-label">Sans calculette ni litige</div>
+          </div>
+          <div class="impact-stat-card">
+            <div class="impact-stat-number">24h/7j</div>
+            <div class="impact-stat-label">Données sauvegardées & RLS</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         BANDEAU DE PRESTIGE AVEC PHOTOGRAPHIES RÉELLES
+         ============================================================================== -->
+    <section class="showcase-banner-section" aria-label="Présentation en situation réelle">
+      <div class="showcase-grid">
+        <div class="showcase-image-wrapper">
+          <img src="images/preschool_hero.jpg" alt="Enfants de maternelle apprenant avec leur maîtresse dans une école de Dakar" class="showcase-image" loading="lazy">
+          <div class="showcase-overlay-tag">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Écoles maternelles & préscolaires au Sénégal</span>
+          </div>
+        </div>
+
+        <div class="showcase-image-wrapper">
+          <img src="images/director_portrait.jpg" alt="Directrice d'école préscolaire gérant son établissement avec une tablette" class="showcase-image" loading="lazy">
+          <div class="showcase-overlay-tag">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+            <span>Mme Aïssatou Ba — Directrice certifiée Gestion Préscolaire</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         SIMULATEUR INTERACTIF MULTI-SUPPORT (TÉLÉPHONES, TABLETTES, ORDINATEURS)
+         ============================================================================== -->
+    <section id="simulateur-supports" class="device-simulator-section" aria-labelledby="sim-heading">
+      <div class="section-header">
+        <span class="section-tag">Adaptabilité Totale</span>
+        <h2 id="sim-heading">Testez le rendu sur tous vos appareils</h2>
+        <p>Téléphone Android modeste, tablette d'école ou ordinateur de direction : l'interface s'ajuste parfaitement à chaque taille d'écran.</p>
+      </div>
+
+      <!-- Contrôles du simulateur -->
+      <div class="simulator-controls" role="tablist" aria-label="Choix de l'appareil">
+        <button type="button" class="simulator-btn is-active" data-simulator-target="phone" role="tab" aria-selected="true">
+          <span>📱 Téléphone (375 px)</span>
+        </button>
+        <button type="button" class="simulator-btn" data-simulator-target="tablet" role="tab" aria-selected="false">
+          <span>📱 Tablette (720 px)</span>
+        </button>
+        <button type="button" class="simulator-btn" data-simulator-target="desktop" role="tab" aria-selected="false">
+          <span>💻 Ordinateur (1050 px)</span>
+        </button>
+      </div>
+
+      <div style="text-align:center; font-size:var(--text-xs); color:var(--text-muted); margin-bottom:1.5rem;" id="simulatorDeviceLabel">
+        Affichage Mobile / Android (Cartes tactiles empilées & Barre à 5 icônes)
+      </div>
+
+      <!-- Fenêtre du simulateur -->
+      <div class="simulator-viewport-container">
+        <div class="simulator-device-frame view-phone" id="simulatorDeviceFrame">
+          <!-- Barre d'état de la fenêtre simulée -->
+          <div class="browser-topbar">
+            <div class="browser-dot dot-red"></div>
+            <div class="browser-dot dot-yellow"></div>
+            <div class="browser-dot dot-green"></div>
+            <div class="browser-url-bar">https://gestionprescolaire.sn/app.html</div>
+          </div>
+
+          <!-- CONTENU VUE TÉLÉPHONE (Cartes empilées) -->
+          <div id="simViewPhone" style="padding: 1rem; background: var(--bg-body);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <span style="font-weight:700; color:var(--primary); font-size:14px;">Inscriptions 2026-2027</span>
+              <span class="badge badge-success">22 payés / 8 impayés</span>
+            </div>
+
+            <!-- Cartes tactiles empilées -->
+            <div style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <strong style="font-size:13px;">1. DIOP Mamadou</strong>
+                <span style="font-size:11px; color:#64748B;">Petite section</span>
+              </div>
+              <div style="font-size:11px; color:#475569; margin:4px 0 8px 0;">Frais : 25 000 FCFA</div>
+              <div class="payment-toggle-group" style="width:100%; display:flex;">
+                <button class="toggle-btn btn-status-paid is-active" style="flex:1;">✓ Payé</button>
+                <button class="toggle-btn btn-status-unpaid" style="flex:1;">✕ Impayé</button>
+              </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <strong style="font-size:13px;">2. SOW Fatou</strong>
+                <span style="font-size:11px; color:#64748B;">Moyenne section</span>
+              </div>
+              <div style="font-size:11px; color:#475569; margin:4px 0 8px 0;">Frais : 25 000 FCFA</div>
+              <div class="payment-toggle-group" style="width:100%; display:flex;">
+                <button class="toggle-btn btn-status-paid" style="flex:1;">✓ Payé</button>
+                <button class="toggle-btn btn-status-unpaid is-active" style="flex:1;">✕ Impayé</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTENU VUE TABLETTE -->
+          <div id="simViewTablet" style="display:none; padding:1.5rem; background:var(--bg-body);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <div>
+                <h3 style="font-size:1.1rem; margin-bottom:2px;">État par section — Cotisation Octobre</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:0;">Vue tablette optimisée</p>
+              </div>
+              <button class="btn btn-primary btn-sm">Exporter Bilan</button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div style="background:#fff; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                  <strong>Petite section</strong>
+                  <span class="badge badge-success">80.0%</span>
+                </div>
+                <div class="progress-bar-container" style="margin-bottom:8px;">
+                  <div class="progress-bar-fill fill-high" style="width:80%;"></div>
+                </div>
+                <div style="font-size:12px; color:#64748B;">8 payés / 2 impayés · 120 000 FCFA encaissés</div>
+              </div>
+
+              <div style="background:#fff; padding:1rem; border-radius:10px; border:1px solid #E2E8F0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                  <strong>Grande section</strong>
+                  <span class="badge badge-warning">60.0%</span>
+                </div>
+                <div class="progress-bar-container" style="margin-bottom:8px;">
+                  <div class="progress-bar-fill fill-medium" style="width:60%;"></div>
+                </div>
+                <div style="font-size:12px; color:#64748B;">6 payés / 4 impayés · 108 000 FCFA encaissés</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTENU VUE ORDINATEUR -->
+          <div id="simViewDesktop" style="display:none; padding:1.5rem; background:var(--bg-body);">
+            <div style="display:grid; grid-template-columns:220px 1fr; gap:1.5rem;">
+              <!-- Sidebar simulée -->
+              <div style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; padding:1rem;">
+                <div style="font-weight:700; color:var(--primary); font-size:14px; margin-bottom:1rem;">Gestion Préscolaire</div>
+                <div style="font-size:12px; display:flex; flex-direction:column; gap:8px;">
+                  <span style="color:var(--primary); font-weight:600;">📊 Tableau de bord</span>
+                  <span style="color:#64748B;">👥 Élèves</span>
+                  <span style="color:#64748B;">📝 Inscriptions</span>
+                  <span style="color:#64748B;">📅 Cotisations</span>
+                  <span style="color:#64748B;">📈 Bilan mensuel</span>
+                </div>
+              </div>
+
+              <!-- Tableau simulé -->
+              <div style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; overflow:hidden;">
+                <table class="data-table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>Élève</th>
+                      <th>Section</th>
+                      <th>Montant dû</th>
+                      <th>Statut</th>
+                      <th>Reçu</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>DIOP Mamadou</strong></td>
+                      <td>Petite section</td>
+                      <td>25 000 FCFA</td>
+                      <td><span class="badge badge-success">✓ Payé</span></td>
+                      <td><button class="btn btn-outline-primary btn-sm" style="font-size:11px; padding:2px 8px;">Reçu</button></td>
+                    </tr>
+                    <tr>
+                      <td><strong>FALL Aminata</strong></td>
+                      <td>Grande section</td>
+                      <td>30 000 FCFA</td>
+                      <td><span class="badge badge-danger">✕ Impayé</span></td>
+                      <td>-</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         FONCTIONNALITÉS CLÉS (6 CARTES)
+         ============================================================================== -->
+    <section id="fonctionnalites" class="features-section" aria-labelledby="features-heading">
+      <div class="section-header">
+        <span class="section-tag">Conçu pour le préscolaire</span>
+        <h2 id="features-heading">Tout le nécessaire, zéro complication</h2>
+        <p>Chaque fonctionnalité a été pensée pour faire gagner un temps précieux à la direction de l'école.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          </div>
+          <h3>Inscriptions suivies</h3>
+          <p>La liste complète de tous les élèves classés par section, avec les cases exclusives <strong>Payé (vert)</strong> et <strong>Impayé (rouge)</strong>.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <h3>Cotisations mensuelles</h3>
+          <p>Naviguez mois par mois d'octobre à juin. Un seul paiement valide par élève et par mois avec unicité garantie.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <h3>État par classe coloré</h3>
+          <p>Pour chaque mois, un tableau récapitulatif par section avec barres de progression dynamiques (vert ≥ 80 %, orange 50-79 %, rouge &lt; 50 %).</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+          </div>
+          <h3>Pages financières dédiées</h3>
+          <p>Pages spécifiques pour le <strong>Total des inscriptions</strong> et le <strong>Bilan mensuel</strong> avec tableau récapitulatif détaillé et exports CSV.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h3>Reçus avec cachet officiel</h3>
+          <p>Génération instantanée dès validation d'un paiement : format A5 sobre, montant en lettres, cachet officiel vectoriel et QR code.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+          </div>
+          <h3>Sécurité RLS & Audit</h3>
+          <p>Isolation absolue des écoles par Row Level Security. En cas d'erreur, annulation avec motif obligatoire et filigrane « ANNULÉ ».</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         CALCULATEUR INTERACTIF DE GAIN DE TEMPS & D'ÉCONOMIES
+         ============================================================================== -->
+    <section id="calculateur" class="calculator-section" aria-labelledby="calc-heading">
+      <div class="calculator-container">
+        <div class="section-header">
+          <span class="section-tag" style="color:var(--primary);">Calculateur d'Impact</span>
+          <h2 id="calc-heading">Calculez le temps et l'argent que votre école va économiser</h2>
+          <p>Faites glisser le curseur selon l'effectif actuel de votre établissement pour mesurer l'impact immédiat.</p>
+        </div>
+
+        <div class="calculator-card">
+          <div class="calc-slider-box">
+            <div class="calc-slider-header">
+              <span class="calc-slider-label">Nombre d'enfants inscrits dans votre école :</span>
+              <span id="calcStudentCountBadge" class="calc-student-count-badge">80 élèves</span>
+            </div>
+            <input type="range" id="calcStudentSlider" min="20" max="250" step="5" value="80" class="calc-range-input" aria-label="Effectif de l'école">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:600;">
+              <span>20 élèves (petite garderie)</span>
+              <span>80 élèves (moyenne structure)</span>
+              <span>250 élèves (grand groupe)</span>
+            </div>
+          </div>
+
+          <div class="calc-metrics-grid">
+            <div class="calc-metric-box">
+              <div class="calc-metric-icon">⏱️</div>
+              <div id="calcHoursSaved" class="calc-metric-val">~18 h / mois</div>
+              <div class="calc-metric-sub">Temps de calcul & pointage manuel épargné à la direction</div>
+            </div>
+            <div class="calc-metric-box">
+              <div class="calc-metric-icon">💰</div>
+              <div id="calcAmountSecured" class="calc-metric-val">1 200 000 FCFA</div>
+              <div class="calc-metric-sub">Cotisations mensuelles tracées sans aucune omission</div>
+            </div>
+            <div class="calc-metric-box">
+              <div class="calc-metric-icon">🛡️</div>
+              <div class="calc-metric-val" style="color:#2563EB;">100% résolus</div>
+              <div class="calc-metric-sub">Contestations parents éliminées grâce aux reçus officiels horodatés</div>
+            </div>
+          </div>
+
+          <div class="calc-action-center">
+            <button class="btn btn-accent btn-lg btn-cta-glow" id="calcCtaBtn" data-action="open-onboarding" style="min-width:320px;">
+              <span>👉 Référencer mes 80 élèves gratuitement</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:8px; font-weight:600;">
+              ⚡ Aucun engagement • Configuration assistée en 5 minutes
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         TABLEAU COMPARATIF : AVANT VS AVEC GESTION PRÉSCOLAIRE
+         ============================================================================== -->
+    <section class="comparison-section" aria-labelledby="compare-heading">
+      <div class="calculator-container">
+        <div class="section-header">
+          <span class="section-tag" style="color:#DC2626;">Pourquoi changer ?</span>
+          <h2 id="compare-heading">Dites adieu aux méthodes d'hier</h2>
+          <p>Pourquoi les directrices d'écoles préscolaires abandonnent définitivement le cahier papier.</p>
+        </div>
+
+        <div class="comparison-grid">
+          <!-- AVANT -->
+          <div class="compare-card old-way">
+            <div class="compare-card-tag">❌ Méthode Traditionnelle (Cahier & Calculette)</div>
+            <h3 style="font-size:1.25rem; font-weight:700; color:#DC2626; margin-bottom:0.75rem;">Source d'erreurs et de stress</h3>
+            <ul class="compare-list-bullets">
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">❌</span>
+                <span><strong>Heures de calculette :</strong> Des après-midis entiers perdus chaque fin de mois à additionner les paiements ligne par ligne.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">❌</span>
+                <span><strong>Erreurs de caisse :</strong> Risques constants d'oublis, de doublons ou d'erreurs de rendu de monnaie.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">❌</span>
+                <span><strong>Contestations parents :</strong> Litiges avec des parents qui affirment avoir payé sans retrouver leur reçu papier.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">❌</span>
+                <span><strong>Reçus égarés :</strong> Carnets à souche déchirés, illisibles ou tachés difficiles à archiver.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">❌</span>
+                <span><strong>Impayés invisibles :</strong> Impossible de savoir rapidement qui doit quoi sans éplucher tout le cahier.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- AVEC GESTION PRÉSCOLAIRE -->
+          <div class="compare-card new-way">
+            <div class="compare-card-tag">✅ Avec Gestion Préscolaire (Moderne & Simple)</div>
+            <h3 style="font-size:1.25rem; font-weight:700; color:#16A34A; margin-bottom:0.75rem;">Sérénité totale & Zéro calculette</h3>
+            <ul class="compare-list-bullets">
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">✅</span>
+                <span><strong>Pointage en 2 clics :</strong> Deux gros boutons tactiles <em>Payé (vert)</em> ou <em>Impayé (rouge)</em> sur votre téléphone.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">✅</span>
+                <span><strong>Calculs 100% automatisés :</strong> Vos totaux et pourcentages de recouvrement sont calculés en temps réel au franc CFA près.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">✅</span>
+                <span><strong>Reçu officiel instantané :</strong> Document A5 certifié avec cachet vectoriel et QR code envoyé en direct sur WhatsApp.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">✅</span>
+                <span><strong>Historique infalsifiable :</strong> Traçabilité totale, aucun reçu supprimé, annulation transparente avec motif.</span>
+              </li>
+              <li class="compare-bullet-item">
+                <span class="compare-bullet-icon">✅</span>
+                <span><strong>Bilan mensuel en 1 seconde :</strong> Rapport clair par section prêt à imprimer pour la réunion de direction.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="text-align:center; margin-top:2.75rem;">
+          <button class="btn btn-primary btn-lg btn-cta-glow" data-action="open-onboarding">
+            <span>🚀 Passer à la gestion moderne dès aujourd'hui</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         EXPÉRIENCE DU PARENT SUR WHATSAPP
+         ============================================================================== -->
+    <section class="whatsapp-experience-section" aria-labelledby="wa-heading">
+      <div class="section-header">
+        <span class="section-tag" style="color:#075E54;">Zéro Friction Parent</span>
+        <h2 id="wa-heading">Le reçu arrive directement sur le WhatsApp du parent</h2>
+        <p>Aucun compte à créer ni mot de passe à mémoriser pour les familles. Un simple lien sécurisé leur permet d'ouvrir leur reçu officiel.</p>
+      </div>
+
+      <div class="wa-preview-card">
+        <div class="wa-topbar">
+          <div style="width:36px; height:36px; border-radius:50%; background:#fff; color:#075E54; display:flex; align-items:center; justify-content:center; font-weight:700;">EP</div>
+          <div>
+            <div style="font-weight:700; font-size:13px;">École Maternelle Les Papillons</div>
+            <div style="font-size:11px; opacity:0.85;">Compte Officiel</div>
+          </div>
+        </div>
+
+        <div class="wa-chat-bubble">
+          <p style="margin-bottom:6px;">Bonjour M. Diop,</p>
+          <p style="margin-bottom:6px;">Voici le reçu officiel n° <strong>REC-2026-0001</strong> pour la cotisation d'Octobre de votre enfant Mamadou (15 000 FCFA).</p>
+          <div class="wa-receipt-snippet">
+            <div style="font-weight:700; color:#1E3A8A; font-size:12px;">🎓 REÇU OFFICIEL VALIDE</div>
+            <div style="font-size:11px; color:#475569;">Montant : 15 000 FCFA — quinze mille francs CFA</div>
+            <div style="font-size:11px; color:#16A34A; font-weight:600; margin-top:2px;">✓ Avec cachet officiel et signature</div>
+          </div>
+          <div style="margin-top:8px; text-align:right; font-size:10px; color:#64748B;">10:24 ✓✓</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         COMMENT ÇA MARCHE (3 ÉTAPES)
+         ============================================================================== -->
+    <section id="comment-ca-marche" class="steps-section" aria-labelledby="steps-heading">
+      <div class="section-header">
+        <span class="section-tag">Prise en main en 10 minutes</span>
+        <h2 id="steps-heading">Simple comme bonjour</h2>
+        <p>Un parcours pensé pour les directeurs d'écoles, sans aucun jargon technique.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">01</div>
+          <h3>Référencez votre école</h3>
+          <p>Saisissez vos coordonnées et validez l'aperçu de votre cachet vectoriel officiel généré en direct.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">02</div>
+          <h3>Ajoutez vos élèves</h3>
+          <p>Inscrivez vos élèves section par section ou importez votre liste complète via notre modèle CSV en 30 secondes.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">03</div>
+          <h3>Cochez « Payé », c'est fait</h3>
+          <p>Validez le règlement en espèces, Wave ou Orange Money : le reçu A5 officiel est immédiatement prêt à être imprimé ou partagé.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         TÉMOIGNAGES DE DIRECTRICES & FONDATEURS D'ÉCOLES SÉNÉGALAISES
+         ============================================================================== -->
+    <section id="temoignages" class="testimonials-section" aria-labelledby="testimonials-heading">
+      <div class="calculator-container">
+        <div class="section-header">
+          <span class="section-tag" style="color:#D97706;">Témoignages Réels</span>
+          <h2 id="testimonials-heading">Approuvé par les directions d'écoles privées</h2>
+          <p>Voici comment Gestion Préscolaire a transformé le quotidien des établissements à Dakar et dans les régions.</p>
+        </div>
+
+        <div class="testimonials-grid">
+          <!-- TÉMOIGNAGE 1 -->
+          <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-quote">
+              « Avant Gestion Préscolaire, les fins de mois étaient un véritable cauchemar de calculs et de reçus papier égarés. Maintenant, en 5 minutes le matin depuis mon smartphone, toutes les cotisations sont pointées et les parents reçoivent leur reçu officiel sur WhatsApp. »
+            </p>
+            <div class="testimonial-author-box">
+              <div class="testimonial-avatar" style="background:linear-gradient(135deg, #1E3A8A, #2563EB);">AB</div>
+              <div>
+                <div class="testimonial-name">Mme Aïssatou Ba</div>
+                <div class="testimonial-school">Directrice · Maternelle Les Papillons (Dakar-Fann)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TÉMOIGNAGE 2 -->
+          <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-quote">
+              « La simplicité est bluffante. Notre secrétaire a pris l'outil en main en 10 minutes sans aucune formation. Plus aucune erreur de caisse et les enseignants ont enfin une visibilité claire par section. Zéro contestation depuis la rentrée ! »
+            </p>
+            <div class="testimonial-author-box">
+              <div class="testimonial-avatar" style="background:linear-gradient(135deg, #D97706, #B45309);">BN</div>
+              <div>
+                <div class="testimonial-name">M. Babacar Ndiaye</div>
+                <div class="testimonial-school">Gestionnaire · Groupe Scolaire Avenir (Thiès)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TÉMOIGNAGE 3 -->
+          <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-quote">
+              « Le cachet vectoriel avec le QR code de sécurité sur chaque reçu donne une image extrêmement sérieuse et prestigieuse à notre école auprès des familles. C'est l'investissement le plus rentable de notre année scolaire. »
+            </p>
+            <div class="testimonial-author-box">
+              <div class="testimonial-avatar" style="background:linear-gradient(135deg, #16A34A, #15803D);">MD</div>
+              <div>
+                <div class="testimonial-name">Mme Mariama Diallo</div>
+                <div class="testimonial-school">Fondatrice · La Petite Académie (Dakar Almadies)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         TARIFS PROVISOIRES
+         ============================================================================== -->
+    <section id="tarifs" class="pricing-section" aria-labelledby="pricing-heading">
+      <div class="section-header">
+        <span class="section-tag">Tarification</span>
+        <h2 id="pricing-heading">Des formules adaptées aux écoles</h2>
+        <p>Tarifs transparents sans engagement. Essayez gratuitement dès aujourd'hui.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <span class="badge badge-neutral" style="align-self:flex-start;">Sans engagement</span>
+          <h3 style="margin-top:1rem;">Formule Mensuelle</h3>
+          <p style="font-size:var(--text-sm); color:var(--text-muted);">Souplesse totale au mois le mois pendant l'année scolaire.</p>
+          <div class="pricing-amount-box">
+            <span class="pricing-val">1 890</span>
+            <span class="pricing-currency">FCFA</span>
+          </div>
+          <div class="pricing-period">Par mois / établissement · Sans engagement</div>
+          <ul class="compare-list">
+            <li class="compare-list-item"><span>✓</span><span>Élèves et classes illimités</span></li>
+            <li class="compare-list-item"><span>✓</span><span>Reçus officiels automatiques</span></li>
+            <li class="compare-list-item"><span>✓</span><span>Partage WhatsApp illimité</span></li>
+            <li class="compare-list-item"><span>✓</span><span>Exports PDF et CSV</span></li>
+          </ul>
+          <button class="btn btn-secondary" style="margin-top:auto;" data-action="open-onboarding">Tester gratuitement</button>
+        </div>
+
+        <div class="pricing-card featured">
+          <span class="badge badge-warning" style="align-self:flex-start;">Recommandé</span>
+          <h3 style="margin-top:1rem;">Année Scolaire Complète</h3>
+          <p style="font-size:var(--text-sm); color:var(--text-muted);">Sérénité pour les 9 mois de l'année scolaire (octobre à juin).</p>
+          <div class="pricing-amount-box">
+            <span class="pricing-val">12 390</span>
+            <span class="pricing-currency">FCFA</span>
+          </div>
+          <div class="pricing-period">Pour toute l'année scolaire · Paiement unique annuel</div>
+          <ul class="compare-list">
+            <li class="compare-list-item"><span>✓</span><span>Toutes les fonctionnalités incluses</span></li>
+            <li class="compare-list-item"><span>✓</span><span>Cachet vectoriel officiel sur-mesure</span></li>
+            <li class="compare-list-item"><span>✓</span><span>Assistance prioritaire sur WhatsApp</span></li>
+            <li class="compare-list-item"><span>✓</span><span>Archivage et sauvegardes garanties</span></li>
+          </ul>
+          <button class="btn btn-primary" style="margin-top:auto;" data-action="open-onboarding">Choisir la formule annuelle</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         FAQ ACCORDÉON (6 QUESTIONS EXACTES DU CAHIER DES CHARGES)
+         ============================================================================== -->
+    <section id="faq" class="faq-section" aria-labelledby="faq-heading">
+      <div class="section-header">
+        <span class="section-tag">FAQ</span>
+        <h2 id="faq-heading">Foire aux questions</h2>
+        <p>Les réponses à vos interrogations les plus fréquentes.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question-btn" aria-expanded="false">
+            <span>Faut-il un compte pour les parents ?</span>
+            <span class="faq-icon-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>Non, aucun compte n'est requis pour les parents.</strong> Dès la validation d'un paiement, le parent reçoit un lien sécurisé unique par WhatsApp ou SMS lui permettant de consulter son reçu officiel en ligne sans mot de passe.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question-btn" aria-expanded="false">
+            <span>Les données sont-elles sécurisées ?</span>
+            <span class="faq-icon-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>Oui, absolument.</strong> Notre base de données intègre le mécanisme de Row Level Security (RLS) : chaque école est hermétiquement isolée. Les données personnelles des enfants ne sont jamais divulguées sur la page publique de vérification par QR code.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question-btn" aria-expanded="false">
+            <span>Peut-on importer la liste des élèves ?</span>
+            <span class="faq-icon-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>Oui, un import en masse par fichier CSV est prévu.</strong> Vous pouvez télécharger notre modèle de fichier CSV et inscrire 100 % de votre effectif en un seul clic.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question-btn" aria-expanded="false">
+            <span>Que se passe-t-il si je me trompe sur un paiement ?</span>
+            <span class="faq-icon-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>La rectification est transparente et encadrée.</strong> Seul le directeur peut repasser un élève de « Payé » à « Impayé », avec un motif obligatoire. Le reçu correspondant n'est jamais supprimé : il porte le filigrane officiel « ANNULÉ » et l'action est tracée dans l'audit.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question-btn" aria-expanded="false">
+            <span>Fonctionne-t-il sur téléphone ?</span>
+            <span class="faq-icon-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>Oui, la plateforme est 100 % mobile-first.</strong> Elle est spécialement calibrée pour les smartphones Android d'entrée de gamme et les connexions 3G, avec des boutons larges (≥ 44 px) et des cartes tactiles confortables.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question-btn" aria-expanded="false">
+            <span>Comment est généré le reçu ?</span>
+            <span class="faq-icon-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>Le reçu est généré de manière automatique et instantanée.</strong> Dès la validation, le document A5 sobre est produit avec son numéro séquentiel unique, le montant en lettres françaises, le cachet officiel vectoriel et son QR code de sécurité.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         APPEL À L'ACTION FINAL
+         ============================================================================== -->
+    <section class="cta-banner-section" aria-labelledby="cta-heading">
+      <div class="cta-banner-container">
+        <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); padding:0.35rem 1rem; border-radius:var(--radius-full); font-size:0.85rem; font-weight:700; margin-bottom:1.25rem;">
+          <span>✨</span> <span>Offre de rentrée scolaire · Essai 100% offert</span>
+        </div>
+        <h2 id="cta-heading" class="cta-banner-title">Prêt à dire adieu aux calculs manuels et aux litiges de paiement ?</h2>
+        <p class="cta-banner-sub">Rejoignez dès aujourd'hui les directeurs et directrices qui gagnent plus de 15 heures chaque mois. Activez votre établissement en 2 minutes chrono.</p>
+        
+        <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+          <button class="btn btn-accent btn-lg btn-cta-glow" data-action="open-onboarding">
+            <span>🚀 Référencer mon école gratuitement</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+          <a href="https://wa.me/221770000000?text=Bonjour,%20je%20souhaite%20des%20informations%20sur%20Gestion%20Pr%C3%A9scolaire" target="_blank" rel="noopener" class="btn btn-secondary btn-lg btn-demo-glow" style="display:inline-flex; align-items:center; gap:0.5rem; text-decoration:none !important; color:#FFFFFF !important; border-color:rgba(255,255,255,0.3) !important;">
+            <span>💬 Échanger sur WhatsApp (+221)</span>
+          </a>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap; font-size:0.85rem; color:#CBD5E1; font-weight:600;">
+          <span>✓ Zéro carte bancaire</span>
+          <span>✓ Configuration assistée offerte</span>
+          <span>✓ Conforme Sénégal & UEMOA</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==============================================================================
+       PIED DE PAGE
+       ============================================================================== -->
+  <footer class="landing-footer" role="contentinfo">
+    <div class="footer-container">
+      <div>
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
+          <div class="brand-icon-box" style="background:#2563EB;">GP</div>
+          <span style="font-family:var(--font-heading); font-weight:800; font-size:1.3rem; color:#fff;">Gestion Préscolaire</span>
+        </div>
+        <p style="font-size:var(--text-sm); line-height:1.6; color:#94A3B8;">
+          La solution web de référence pour le suivi des inscriptions, cotisations et bilans des écoles préscolaires et structures d'accueil de la petite enfance en zone francophone.
+        </p>
+      </div>
+
+      <div>
+        <h4 style="color:#fff; font-size:var(--text-sm); text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.5px;">Navigation</h4>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:0.5rem;">
+          <li><a href="#fonctionnalites" style="color:#94A3B8;">Fonctionnalités</a></li>
+          <li><a href="#simulateur-supports" style="color:#94A3B8;">Tous les supports</a></li>
+          <li><a href="#comment-ca-marche" style="color:#94A3B8;">Comment ça marche</a></li>
+          <li><a href="#tarifs" style="color:#94A3B8;">Tarifs</a></li>
+          <li><a href="#faq" style="color:#94A3B8;">Questions fréquentes</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="color:#fff; font-size:var(--text-sm); text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.5px;">Espace École</h4>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:0.5rem;">
+          <li><a href="#" data-action="open-login" style="color:#94A3B8;">Connexion Direction</a></li>
+          <li><a href="#" data-action="open-onboarding" style="color:#94A3B8;">Référencer mon école</a></li>
+          <li><a href="verify.html" style="color:#94A3B8;">Vérification de reçu</a></li>
+          <li><a href="app.html" style="color:#94A3B8;">Accès démo immédiat</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="color:#fff; font-size:var(--text-sm); text-transform:uppercase; margin-bottom:1rem; letter-spacing:0.5px;">Contact & Support</h4>
+        <p style="color:#94A3B8; font-size:var(--text-sm); margin-bottom:0.5rem;">
+          Email : <a href="mailto:contact@gestionprescolaire.sn" style="color:#fff; text-decoration:underline;">contact@gestionprescolaire.sn</a>
+        </p>
+        <p style="color:#94A3B8; font-size:var(--text-sm); margin-bottom:0.5rem;">
+          Tél : <a href="tel:+221338000000" style="color:#fff; text-decoration:none;">+221 33 800 00 00</a>
+        </p>
+        <p style="color:#94A3B8; font-size:var(--text-sm); margin-bottom:0.5rem;">
+          WhatsApp : <a href="https://wa.me/221770000000" target="_blank" rel="noopener" style="color:#22C55E; font-weight:600; text-decoration:none;">+221 77 000 00 00</a>
+        </p>
+        <p style="color:#94A3B8; font-size:var(--text-xs); margin-top:1rem;">
+          Dakar, République du Sénégal
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>
+        © 2026 Gestion Préscolaire. Tous droits réservés.
+      </div>
+      <div style="display:flex; gap:1.5rem;">
+        <a href="#" style="color:#94A3B8;">Mentions légales</a>
+        <a href="#" style="color:#94A3B8;">Confidentialité & Données</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==============================================================================
+       MODALE DE RÉFÉRENCEMENT D'ÉCOLE (WIZARD EN 4 ÉTAPES)
+       ============================================================================== -->
+  <div class="modal-backdrop" id="onboardingModal" role="dialog" aria-modal="true" aria-labelledby="onboardingModalTitle">
+    <div class="modal-container" style="max-width: 640px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="onboardingModalTitle">Référencer mon école</h2>
+        <button class="modal-close-btn" id="closeOnboardingModal" aria-label="Fermer la boîte de dialogue">✕</button>
+      </div>
+
+      <div style="padding: 1rem 1.5rem 0 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+          <div id="stepIndicator1" class="badge badge-neutral" style="width:30px; height:30px; border-radius:50%; justify-content:center; font-weight:700;">1</div>
+          <span style="font-size:11px; color:var(--text-muted); margin-top:4px;">Identité</span>
+        </div>
+        <div style="flex:1; height:2px; background:var(--border-light);"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+          <div id="stepIndicator2" class="badge badge-neutral" style="width:30px; height:30px; border-radius:50%; justify-content:center; font-weight:700;">2</div>
+          <span style="font-size:11px; color:var(--text-muted); margin-top:4px;">Localisation</span>
+        </div>
+        <div style="flex:1; height:2px; background:var(--border-light);"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+          <div id="stepIndicator3" class="badge badge-neutral" style="width:30px; height:30px; border-radius:50%; justify-content:center; font-weight:700;">3</div>
+          <span style="font-size:11px; color:var(--text-muted); margin-top:4px;">Classes</span>
+        </div>
+        <div style="flex:1; height:2px; background:var(--border-light);"></div>
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+          <div id="stepIndicator4" class="badge badge-neutral" style="width:30px; height:30px; border-radius:50%; justify-content:center; font-weight:700;">4</div>
+          <span style="font-size:11px; color:var(--text-muted); margin-top:4px;">Cachet</span>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- Étape 1 -->
+        <div id="onboardStep1">
+          <div class="form-group" id="groupSchoolName">
+            <label class="form-label" for="onboardSchoolName">Nom de l'école <span class="required">*</span></label>
+            <input type="text" id="onboardSchoolName" class="form-input" placeholder="Ex. École Maternelle Les Papillons" required>
+            <div class="form-helper">Ce nom apparaîtra en majuscules sur votre cachet officiel et tous vos reçus.</div>
+            <div class="form-error">Veuillez renseigner le nom de l'établissement.</div>
+          </div>
+
+          <div class="form-group" id="groupDirectorName">
+            <label class="form-label" for="onboardDirectorName">Nom complet du directeur / de la directrice <span class="required">*</span></label>
+            <input type="text" id="onboardDirectorName" class="form-input" placeholder="Ex. Mme Aïssatou Ba" required>
+            <div class="form-error">Le nom du directeur est obligatoire pour le cachet.</div>
+          </div>
+
+          <div class="form-group" id="groupDirectorPhone">
+            <label class="form-label" for="onboardDirectorPhone">Numéro de téléphone du directeur <span class="required">*</span></label>
+            <input type="tel" id="onboardDirectorPhone" class="form-input" placeholder="+221 77 123 45 67" required>
+            <div class="form-helper">Validation format sénégalais (+221 7X XXX XX XX). Apparaît sur le cachet.</div>
+            <div class="form-error">Numéro sénégalais invalide (ex: +221 77 123 45 67).</div>
+          </div>
+
+          <div class="form-group" id="groupEmail">
+            <label class="form-label" for="onboardEmail">Adresse e-mail <span class="required">*</span></label>
+            <input type="email" id="onboardEmail" class="form-input" placeholder="directeur@ecole.sn" required>
+            <div class="form-error">Adresse e-mail invalide.</div>
+          </div>
+
+          <div class="form-group" id="groupPassword">
+            <label class="form-label" for="onboardPassword">Mot de passe <span class="required">*</span></label>
+            <input type="password" id="onboardPassword" class="form-input" placeholder="Au moins 6 caractères" required minlength="6">
+            <div class="form-error">Le mot de passe doit comporter au moins 6 caractères.</div>
+          </div>
+        </div>
+
+        <!-- Étape 2 -->
+        <div id="onboardStep2" style="display: none;">
+          <div class="form-group">
+            <label class="form-label" for="onboardRegion">Région <span class="required">*</span></label>
+            <select id="onboardRegion" class="form-select"></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="onboardDepartment">Département <span class="required">*</span></label>
+            <select id="onboardDepartment" class="form-select"></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="onboardCommune">Commune / Quartier <span class="required">*</span></label>
+            <select id="onboardCommune" class="form-select"></select>
+            <div class="form-helper">Figure sur l'arc inférieur du cachet officiel.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="onboardAddress">Adresse précise de l'école (facultatif)</label>
+            <input type="text" id="onboardAddress" class="form-input" placeholder="Ex. 12 Rue Félix Faure, Dakar-Plateau">
+            <div class="form-helper">Cette adresse complète figurera dans l'en-tête de vos reçus A5.</div>
+          </div>
+        </div>
+
+        <!-- Étape 3 -->
+        <div id="onboardStep3" style="display: none;">
+          <div class="form-group">
+            <label class="form-label" for="onboardSchoolYear">Année scolaire <span class="required">*</span></label>
+            <input type="text" id="onboardSchoolYear" class="form-input" value="2026-2027" required>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label">Configuration des sections et tarifs (en FCFA)</label>
+            <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 0.75rem;">
+              Modifiable ultérieurement dans les paramètres.
+            </p>
+
+            <div style="background: var(--bg-subtle); padding: 0.875rem; border-radius: var(--radius-md); margin-bottom: 0.75rem;">
+              <strong style="font-size: var(--text-sm);">Petite section</strong>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.35rem;">
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted);">Inscription (FCFA)</label>
+                  <input type="number" id="feePsReg" class="form-input" value="25000" min="0">
+                </div>
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted);">Mensualité (FCFA)</label>
+                  <input type="number" id="feePsMonth" class="form-input" value="15000" min="0">
+                </div>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-subtle); padding: 0.875rem; border-radius: var(--radius-md); margin-bottom: 0.75rem;">
+              <strong style="font-size: var(--text-sm);">Moyenne section</strong>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.35rem;">
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted);">Inscription (FCFA)</label>
+                  <input type="number" id="feeMsReg" class="form-input" value="25000" min="0">
+                </div>
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted);">Mensualité (FCFA)</label>
+                  <input type="number" id="feeMsMonth" class="form-input" value="15000" min="0">
+                </div>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-subtle); padding: 0.875rem; border-radius: var(--radius-md);">
+              <strong style="font-size: var(--text-sm);">Grande section</strong>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.35rem;">
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted);">Inscription (FCFA)</label>
+                  <input type="number" id="feeGsReg" class="form-input" value="30000" min="0">
+                </div>
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted);">Mensualité (FCFA)</label>
+                  <input type="number" id="feeGsMonth" class="form-input" value="18000" min="0">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Étape 4 : Aperçu cachet -->
+        <div id="onboardStep4" style="display: none;">
+          <div style="text-align: center; margin-bottom: 1.25rem;">
+            <h3>Votre cachet officiel est généré</h3>
+            <p style="font-size: var(--text-sm); color: var(--text-muted);">
+              Cachet vectoriel à double contour bleu encre (#1E3A8A). Il figurera sur tous vos reçus et documents officiels.
+            </p>
+          </div>
+
+          <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;" id="onboardStampPreview">
+            <!-- Rendu SVG dynamique injecté par Onboarding.renderStampPreview() -->
+          </div>
+
+          <div id="onboardStampSummary" style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+            <!-- Résumé textuel -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="onboardingPrevBtn" style="display: none;">Précédent</button>
+        <button type="button" class="btn btn-primary" id="onboardingNextBtn">Suivant</button>
+        <button type="button" class="btn btn-accent" id="onboardingSubmitBtn" style="display: none;">Valider et accéder à mon école</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
+       MODALE DE CONNEXION DIRECTEUR
+       ============================================================================== -->
+  <!-- ==============================================================================
+       MODALE DE CONNEXION DIRECTEUR (WHATSAPP / SMS & GMAIL AVEC CODE OTP À 4 CHIFFRES)
+       ============================================================================== -->
+  <div class="modal-backdrop" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="loginModalTitle">Connexion Établissement</h2>
+          <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.25rem;">Accédez à votre espace école en toute sécurité</p>
+        </div>
+        <button class="modal-close-btn" id="closeLoginModal" aria-label="Fermer la boîte de dialogue">✕</button>
+      </div>
+
+      <!-- Onglets des canaux : Téléphone vs Gmail -->
+      <div class="login-channel-tabs" role="tablist">
+        <button type="button" class="login-channel-tab is-active" id="tabChannelPhone" role="tab" aria-selected="true" data-channel="phone">
+          <span>📱</span> Par Téléphone
+        </button>
+        <button type="button" class="login-channel-tab" id="tabChannelEmail" role="tab" aria-selected="false" data-channel="email">
+          <span>✉️</span> Par Gmail / E-mail
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding-top:0.5rem;">
+        <!-- Étape 1 : Saisie de l'identifiant (Téléphone ou Email) -->
+        <div id="loginStep1">
+          <!-- Panneau Téléphone -->
+          <div id="panelPhoneChannel">
+            <div class="form-group">
+              <label class="form-label" for="loginPhone">Numéro de téléphone portable</label>
+              <div style="display:flex; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.35rem; padding:0.6rem 0.75rem; background:var(--bg-subtle); border:1px solid var(--border-medium); border-radius:var(--radius-md); font-weight:700; font-size:var(--text-sm);">
+                  <span>🇸🇳</span> +221
+                </div>
+                <input type="tel" id="loginPhone" class="form-input" placeholder="77 123 45 67" value="77 842 10 99" style="flex:1;" required>
+              </div>
+              <span class="form-help">Numéro Orange, Wave, Free ou Expresso du directeur ou gestionnaire.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Canal de réception du code (OTP) :</label>
+              <div class="channel-pill-group">
+                <label class="channel-pill-label">
+                  <input type="radio" name="otpDelivery" value="whatsapp" checked style="accent-color:#16A34A;">
+                  <span>🟢 WhatsApp (Recommandé)</span>
+                </label>
+                <label class="channel-pill-label">
+                  <input type="radio" name="otpDelivery" value="sms" style="accent-color:#16A34A;">
+                  <span>💬 SMS direct</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panneau Email -->
+          <div id="panelEmailChannel" style="display:none;">
+            <div class="form-group">
+              <label class="form-label" for="loginEmail">Adresse Gmail ou professionnelle</label>
+              <input type="email" id="loginEmail" class="form-input" placeholder="direction@gmail.com" value="aissatou.ba@lespapillons.sn">
+              <span class="form-help">Un code de vérification à 4 chiffres sera envoyé à cette adresse.</span>
+            </div>
+          </div>
+
+          <!-- Accès démo immédiat -->
+          <div style="margin: 1.25rem 0; padding: 0.75rem 1rem; background: var(--primary-subtle); border-radius: var(--radius-md); font-size: var(--text-xs); color: var(--primary); display:flex; align-items:center; justify-content:space-between; gap:0.75rem;">
+            <div>
+              💡 <strong>Compte de démonstration :</strong>
+              <div>École Maternelle Les Papillons (Dakar)</div>
+            </div>
+            <button type="button" id="btnQuickDemoLogin" class="btn btn-secondary btn-sm" style="background:#FFFFFF; border-color:var(--border-medium); white-space:nowrap;">
+              Accès 1 clic →
+            </button>
+          </div>
+
+          <button type="button" id="btnSendOtp" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">
+            <span>Recevoir mon code à 4 chiffres</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- Étape 2 : Saisie du code OTP à 4 chiffres & mot de passe -->
+        <div id="loginStep2" style="display:none;">
+          <div class="otp-simulation-banner" id="otpSimulationBanner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+            <div style="flex:1;">
+              <div>Code de validation envoyé à <strong id="otpTargetDisplay">+221 77 842 10 99</strong> :</div>
+              <div style="margin-top:0.35rem;">
+                Code de vérification : <span class="otp-code-highlight" id="simulatedOtpCode" title="Cliquer pour auto-remplir" style="cursor:pointer;">4821</span>
+                <span style="font-size:11px; margin-left:6px; opacity:0.85;">(Cliquez pour copier)</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center; margin-bottom:0.5rem;">
+            <label class="form-label" style="display:block; margin-bottom:0.5rem;">Saisissez le code à 4 chiffres :</label>
+            <div class="otp-boxes-wrapper">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box-digit" id="otpDigit1" data-index="1" autocomplete="one-time-code" autofocus>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box-digit" id="otpDigit2" data-index="2">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box-digit" id="otpDigit3" data-index="3">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box-digit" id="otpDigit4" data-index="4">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:1rem;">
+            <label class="form-label" for="loginPassword">Mot de passe de l'école</label>
+            <div style="position:relative;">
+              <input type="password" id="loginPassword" class="form-input" value="motdepasse123" placeholder="Entrez ou définissez votre mot de passe" required style="padding-right:2.5rem;">
+              <button type="button" id="togglePasswordBtn" style="position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;" aria-label="Afficher ou masquer le mot de passe">👁️</button>
+            </div>
+            <span class="form-help">Protège l'accès aux fiches financières et encaissements.</span>
+          </div>
+
+          <button type="button" id="btnVerifyAndLogin" class="btn btn-primary" style="width:100%; margin-top:1.25rem;">
+            <span>Valider et accéder à mon école</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; font-size:var(--text-xs);">
+            <button type="button" id="btnBackToStep1" style="background:none; border:none; color:var(--text-muted); cursor:pointer; text-decoration:underline;">← Modifier le numéro / canal</button>
+            <button type="button" id="btnResendOtp" style="background:none; border:none; color:var(--primary); font-weight:600; cursor:pointer;">Renvoyer un code</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre d'appel à l'action persistante haute conversion au scroll -->
+  <aside class="sticky-bottom-bar" id="stickyBottomBar" aria-label="Action rapide de référencement">
+    <div class="sticky-bottom-text">
+      <span style="font-size:1.35rem;" aria-hidden="true">🎓</span>
+      <span><strong>Gestion Préscolaire</strong> · <em>Inscriptions, cotisations & reçus officiels</em></span>
+    </div>
+    <button class="btn btn-accent btn-sm btn-cta-glow sticky-bottom-btn" data-action="open-onboarding">
+      <span>Référencer mon école ➔</span>
+    </button>
+  </aside>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/stamp.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/onboarding.js"></script>
+  <script src="js/landing.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+/* ==============================================================================
+   STYLES DU REÇU OFFICIEL (FORMAT A5 SÉCURISÉ) & IMPRESSION NOIR & BLANC / COULEUR
+   Conforme à la spécification § 7 :
+   - Format A5 sobre et lisible
+   - En-tête école + Cachet officiel vectoriel
+   - QR code d'authenticité
+   - Filigrane « ANNULÉ » si le statut est annulé
+   - Optimisation print & mobile
+   ============================================================================== */
+
+.receipt-modal-container {
+  max-width: 680px !important;
+  width: 95% !important;
+}
+
+/* Document A5 standard */
+.receipt-document {
+  background: #FFFFFF;
+  color: #0F172A;
+  border: 1px solid #CBD5E1;
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Filigrane ANNULÉ */
+.receipt-watermark-cancelled {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-family: 'Poppins', sans-serif;
+  font-size: 5rem;
+  font-weight: 900;
+  color: rgba(220, 38, 38, 0.18);
+  border: 8px solid rgba(220, 38, 38, 0.25);
+  padding: 0.5rem 3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5rem;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+}
+
+/* En-tête */
+.receipt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #0F172A;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.receipt-school-info h2 {
+  font-size: 1.25rem;
+  color: #1E3A8A;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.receipt-school-meta {
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.receipt-title-box {
+  text-align: right;
+  min-width: 170px;
+}
+
+.receipt-badge-title {
+  display: inline-block;
+  background-color: #1E3A8A;
+  color: #FFFFFF;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+}
+
+.receipt-number {
+  font-family: monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-top: 0.35rem;
+}
+
+.receipt-datetime {
+  font-size: 0.8rem;
+  color: #64748B;
+  margin-top: 0.2rem;
+}
+
+/* Corps du reçu : Grille d'informations */
+.receipt-body {
+  margin-bottom: 1.25rem;
+}
+
+.receipt-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.875rem 1.5rem;
+  background-color: #F8FAFC;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #E2E8F0;
+  margin-bottom: 1.25rem;
+}
+
+.receipt-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.receipt-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748B;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.2rem;
+}
+
+.receipt-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.receipt-value-highlight {
+  color: #1E3A8A;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Cadre du montant officiel */
+.receipt-amount-card {
+  border: 2px solid #CBD5E1;
+  background-color: #FFFFFF;
+  border-radius: var(--radius-sm);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.receipt-amount-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px dashed #E2E8F0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.receipt-amount-figures {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #16A34A;
+}
+
+.receipt-amount-words {
+  font-size: 0.875rem;
+  font-style: italic;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.receipt-payment-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.825rem;
+  color: #475569;
+  margin-top: 0.5rem;
+}
+
+/* Zone signatures, Cachet et QR Code */
+.receipt-signatures-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid #E2E8F0;
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.receipt-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.receipt-qr-box .qr-wrapper {
+  background: #FFFFFF;
+  padding: 4px;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+}
+
+.receipt-qr-caption {
+  font-size: 0.7rem;
+  color: #64748B;
+  margin-top: 0.25rem;
+  max-width: 110px;
+  line-height: 1.2;
+}
+
+.receipt-stamp-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 155px;
+}
+
+.receipt-director-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 160px;
+}
+
+.receipt-signature-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 3.5rem; /* Espace pour la signature manuscrite */
+}
+
+.receipt-signature-line {
+  width: 140px;
+  border-bottom: 1px solid #94A3B8;
+  margin-bottom: 0.35rem;
+}
+
+.receipt-director-name {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+/* Pied de page du reçu */
+.receipt-footer-text {
+  border-top: 1px solid #F1F5F9;
+  padding-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.725rem;
+  color: #94A3B8;
+}
+
+/* Barre d'actions sous le reçu (Impression, PDF, WhatsApp) */
+.receipt-actions-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.receipt-actions-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Bouton spécifique WhatsApp */
+.btn-whatsapp {
+  background-color: #25D366;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.btn-whatsapp:hover {
+  background-color: #1EBE5D;
+  color: #FFFFFF;
+}
+
+/* ==============================================================================
+   RÈGLES D'IMPRESSION (FORMAT A5 STRICT)
+   ============================================================================== */
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 8mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-document, .receipt-document * {
+    visibility: visible;
+  }
+
+  .receipt-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #FFFFFF !important;
+  }
+
+  .modal-backdrop, .modal-header, .modal-footer, .receipt-actions-toolbar, .btn, .no-print {
+    display: none !important;
+  }
+}

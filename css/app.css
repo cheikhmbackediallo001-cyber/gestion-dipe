@@ -1,0 +1,852 @@
+/* ==============================================================================
+   STYLES DE L'APPLICATION DE GESTION - GESTION DIPE
+   Mobile-first, Table-to-card, Boutons Payé/Impayé exclusifs, Barres de progression
+   ============================================================================== */
+
+/* Layout global de l'application */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-body);
+}
+
+/* Sidebar Desktop */
+.app-sidebar {
+  display: none;
+  width: 260px;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-light);
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 50;
+}
+
+.sidebar-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-brand-name {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.sidebar-nav {
+  padding: 1rem 0.75rem;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  text-decoration: none !important;
+  border: 1px solid transparent;
+}
+
+.sidebar-nav-item:hover {
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.sidebar-nav-item.active {
+  background-color: var(--primary);
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-nav-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--border-light);
+  background-color: var(--bg-subtle);
+}
+
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+/* Zone de contenu principal */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  padding-bottom: 72px; /* Dégagement pour barre mobile */
+}
+
+/* En-tête supérieur de l'application */
+.app-topbar {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0.875rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.topbar-school-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  #themeToggleLabel {
+    display: none;
+  }
+  .topbar-school-title {
+    font-size: 0.95rem;
+  }
+}
+
+.app-container {
+  padding: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* En-tête d'écran */
+.view-header {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.view-title-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.view-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0;
+}
+
+.view-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+/* Compteurs en bandeau (§ 3.3 : ex. "42 payés — 18 impayés") */
+.stats-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.stat-pill-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-paid { background-color: var(--success); }
+.dot-unpaid { background-color: var(--danger); }
+.dot-total { background-color: var(--primary); }
+
+/* Filtres et recherche */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.search-input {
+  width: 100%;
+  padding-left: 2.5rem;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ==============================================================================
+   SÉLECTEUR DE MOIS COMPACT AVEC NAVIGATION PAR FLÈCHES
+   Au lieu de la liste complète de tous les mois, affiche le mois sélectionné
+   avec boutons Précédent ◀ / Suivant ▶ et sélecteur direct au clic.
+   ============================================================================== */
+.month-navigator-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 0.875rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  gap: 0.75rem;
+}
+
+.month-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 42px;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-medium);
+  color: var(--text-main);
+  transition: all var(--transition-fast);
+}
+
+.month-nav-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: #FFFFFF;
+  border-color: var(--primary);
+}
+
+.month-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.month-navigator-current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+}
+
+.month-picker-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.2rem 0.75rem;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+
+.month-picker-wrapper:hover {
+  background: var(--bg-subtle);
+}
+
+.month-badge-pill {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: var(--primary-subtle);
+  padding: 0.15rem 0.65rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 0.2rem;
+  letter-spacing: 0.5px;
+}
+
+.month-current-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.month-dropdown-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ==============================================================================
+   SOUS-ONGLETS BILAN ANNUEL (Bilan Total, Bilan Inscription, Bilan Cotisation)
+   ============================================================================== */
+.bilan-subtabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-subtle);
+  padding: 0.35rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-medium);
+  overflow-x: auto;
+}
+
+.bilan-subtab-btn {
+  flex: 1;
+  min-width: 170px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.bilan-subtab-btn:hover {
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.bilan-subtab-btn.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-medium);
+}
+
+.bilan-subtab-btn .badge-pill {
+  font-size: 11px;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------------------
+   BOUTONS PAYÉ / IMPAYÉ MUTUELLEMENT EXCLUSIFS (§ 3.3, § 3.4)
+   - Payé : Vert #16A34A (texte blanc quand coché) + Icône ✓ + Libellé
+   - Impayé : Rouge #DC2626 (texte blanc quand coché) + Icône ✕ + Libellé
+   - Zone tactile >= 44x44px
+   ------------------------------------------------------------------------------ */
+.payment-toggle-group {
+  display: inline-flex;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-subtle);
+  padding: 3px;
+  gap: 4px;
+}
+
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 42px;
+  padding: 0.4rem 0.875rem;
+  border-radius: calc(var(--radius-md) - 3px);
+  border: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  color: var(--text-muted);
+  min-width: 96px;
+}
+
+/* État actif : PAYÉ */
+.toggle-btn.btn-status-paid.is-active {
+  background-color: var(--success) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+.toggle-btn.btn-status-paid:not(.is-active):hover {
+  background-color: var(--success-subtle);
+  color: var(--success-dark);
+}
+
+/* État actif : IMPAYÉ */
+.toggle-btn.btn-status-unpaid.is-active {
+  background-color: var(--danger) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
+}
+
+.toggle-btn.btn-status-unpaid:not(.is-active):hover {
+  background-color: var(--danger-subtle);
+  color: var(--danger-dark);
+}
+
+/* ------------------------------------------------------------------------------
+   RESPONSIVE TABLE-TO-CARDS (§ 8.3)
+   - Mobile (< 768px) : Cartes empilées avec boutons spacieux
+   - Desktop (>= 768px) : Vrai tableau avec en-tête fixe
+   ------------------------------------------------------------------------------ */
+.data-table-container {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th {
+  background-color: var(--bg-subtle);
+  padding: 0.875rem 1rem;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-light);
+  font-size: var(--text-sm);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  background-color: var(--bg-subtle);
+}
+
+/* Version Carte pour Mobile */
+@media (max-width: 767px) {
+  .data-table-container {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .data-table, .data-table thead, .data-table tbody, .data-table th, .data-table td, .data-table tr {
+    display: block;
+  }
+
+  .data-table thead {
+    display: none; /* Masqué sur mobile au profit de la carte structurée */
+  }
+
+  .data-table tr {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 1.1rem;
+    margin-bottom: 0.875rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .data-table td {
+    padding: 0.4rem 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .data-table td.cell-actions {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-light);
+    justify-content: center;
+  }
+
+  .data-table td.cell-actions::before {
+    display: none;
+  }
+
+  .data-table td.cell-actions .payment-toggle-group {
+    width: 100%;
+    display: flex;
+  }
+
+  .data-table td.cell-actions .toggle-btn {
+    flex: 1;
+  }
+}
+
+/* ------------------------------------------------------------------------------
+   BARRES DE PROGRESSION COLORÉES (§ 3.4)
+   - Vert >= 80%
+   - Orange 50-79%
+   - Rouge < 50%
+   ------------------------------------------------------------------------------ */
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 400ms ease;
+}
+
+.fill-high { background-color: var(--success); }   /* >= 80% */
+.fill-medium { background-color: var(--warning); } /* 50 - 79% */
+.fill-low { background-color: var(--danger); }     /* < 50% */
+
+/* Cartes KPI (Dashboard et Pages dédiées) */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.kpi-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-title {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.kpi-figure {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.kpi-meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* Barre de navigation Mobile (Fixe au bas de l'écran, 5 icônes) */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: var(--bg-card);
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none !important;
+  flex: 1;
+  height: 100%;
+  min-width: var(--touch-min);
+  transition: color var(--transition-fast);
+}
+
+.mobile-nav-item svg {
+  width: 22px;
+  height: 22px;
+}
+
+.mobile-nav-item.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* Graphique en barres mensuelles léger SVG natif */
+.chart-container-svg {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Bouton d'envoi WhatsApp compact pour tables et reçus */
+.btn-whatsapp {
+  background-color: #25D366 !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-whatsapp:hover {
+  background-color: #1EBE5D !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+}
+
+/* Responsivité desktop */
+@media (min-width: 1024px) {
+  .app-sidebar {
+    display: flex;
+  }
+
+  .mobile-bottom-nav {
+    display: none;
+  }
+
+  .app-main {
+    padding-bottom: 2rem;
+  }
+}
+
+/* ==============================================================================
+   MODE SOMBRE - APPLICATION DE GESTION ([data-theme="dark"])
+   ============================================================================== */
+[data-theme="dark"] .sidebar-header {
+  border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .sidebar-footer {
+  background-color: var(--bg-subtle);
+  border-top-color: var(--border-light);
+}
+
+[data-theme="dark"] .sidebar-nav-item {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .sidebar-nav-item:hover {
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .sidebar-nav-item.active {
+  background-color: #2563EB;
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .topbar-school-title {
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .month-nav-btn {
+  background: var(--bg-card);
+  border-color: var(--border-medium);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .month-nav-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: #090D16;
+}
+
+[data-theme="dark"] .month-current-title {
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .month-badge-pill {
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .bilan-subtabs-nav {
+  background: var(--bg-subtle);
+  border-color: var(--border-medium);
+}
+
+[data-theme="dark"] .bilan-subtab-btn {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .bilan-subtab-btn:hover {
+  background: var(--bg-card);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .bilan-subtab-btn.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  border-color: var(--border-medium);
+}
+
+[data-theme="dark"] .payment-toggle-group {
+  background: var(--bg-subtle);
+  border-color: var(--border-medium);
+}
+
+[data-theme="dark"] .toggle-btn {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .toggle-btn.btn-status-paid:not(.is-active):hover {
+  background-color: var(--success-subtle);
+  color: var(--success);
+}
+
+[data-theme="dark"] .toggle-btn.btn-status-unpaid:not(.is-active):hover {
+  background-color: var(--danger-subtle);
+  color: var(--danger);
+}
+
+[data-theme="dark"] .mobile-bottom-nav {
+  background-color: var(--bg-card);
+  border-top-color: var(--border-light);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .mobile-nav-item {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .mobile-nav-item.active {
+  color: var(--primary);
+}
+

@@ -1,0 +1,24 @@
+# Dépendances & environnements
+node_modules/
+.env
+.env*.local
+*.pem
+*.key
+
+# Vercel artifacts
+.vercel/
+
+# Fichiers OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
