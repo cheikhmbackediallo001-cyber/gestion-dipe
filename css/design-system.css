@@ -301,6 +301,41 @@ img, svg {
   background-color: var(--primary-subtle);
 }
 
+.btn-danger {
+  background-color: #DC2626;
+  color: #FFFFFF !important;
+  border: 1px solid #B91C1C;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger:hover {
+  background-color: #B91C1C;
+  border-color: #991B1B;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+[data-theme="dark"] .btn-danger {
+  background-color: #DC2626;
+  border-color: #EF4444;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+  background-color: #EF4444;
+}
+
 .btn-sm {
   min-height: 38px;
   padding: 0.4rem 0.875rem;

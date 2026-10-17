@@ -169,8 +169,9 @@ const App = {
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button class="btn btn-outline-primary btn-sm" onclick="App.navigate('registrations')">Inscriptions</button>
             <button class="btn btn-primary btn-sm" onclick="App.navigate('monthly')">Cotisations ${Utils.escapeHtml(metrics.current_month.label)}</button>
-            <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 3px rgba(239,68,68,0.3);">
-              <span>➕</span> <span>Nouvelle dépense</span>
+            <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Nouvelle dépense</span>
             </button>
           </div>
         </div>
@@ -864,8 +865,9 @@ const App = {
             <button class="btn btn-secondary btn-sm" onclick="App.exportExpensesCsv()">
               📄 Exporter CSV
             </button>
-            <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 3px rgba(239,68,68,0.3);">
-              <span>➕</span> <span>Ajouter une dépense</span>
+            <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Ajouter une dépense</span>
             </button>
           </div>
         </div>
@@ -930,8 +932,9 @@ const App = {
               <option value="${Utils.escapeHtml(r)}"${activeFilter === r ? ' selected' : ''}>📂 ${Utils.escapeHtml(r)} ${rubriqueTotals[r] ? `(${Utils.formatFCFA(rubriqueTotals[r])})` : '(0 F)'}</option>
             `).join('')}
           </select>
-          <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:0.35rem;">
-            <span>➕</span> <span>Nouvelle dépense</span>
+          <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()" style="white-space:nowrap;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Nouvelle dépense</span>
           </button>
         </div>
       </div>
@@ -961,8 +964,9 @@ const App = {
                     <div style="font-size:2.5rem; margin-bottom:0.5rem;">💸</div>
                     <p style="font-weight:700; font-size:var(--text-base); margin-bottom:0.25rem;">Aucune dépense trouvée</p>
                     <p style="font-size:var(--text-sm); margin-bottom:1.25rem;">Enregistrez vos frais et sorties de caisse (fournitures, factures, salaires, cantine...)</p>
-                    <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; padding:0.5rem 1.25rem;">
-                      ➕ Ajouter une nouvelle dépense
+                    <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()" style="padding:0.5rem 1.25rem;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                      <span>Ajouter une nouvelle dépense</span>
                     </button>
                   </td>
                 </tr>
@@ -1306,8 +1310,9 @@ const App = {
       <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem; margin-top:1.5rem;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
           <h2 style="font-size:var(--text-lg); margin-bottom:0;">Ventilation des dépenses par rubrique budgétaire</h2>
-          <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem;">
-            <span>➕</span> <span>Ajouter une dépense</span>
+          <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Ajouter une dépense</span>
           </button>
         </div>
 
