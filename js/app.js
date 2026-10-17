@@ -169,10 +169,6 @@ const App = {
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button class="btn btn-outline-primary btn-sm" onclick="App.navigate('registrations')">Inscriptions</button>
             <button class="btn btn-primary btn-sm" onclick="App.navigate('monthly')">Cotisations ${Utils.escapeHtml(metrics.current_month.label)}</button>
-            <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>Nouvelle dépense</span>
-            </button>
           </div>
         </div>
       </div>
@@ -202,17 +198,6 @@ const App = {
           </div>
           <div class="progress-bar-container">
             <div class="progress-bar-fill ${metrics.current_month.percentage >= 80 ? 'fill-high' : metrics.current_month.percentage >= 50 ? 'fill-medium' : 'fill-low'}" style="width: ${metrics.current_month.percentage}%;"></div>
-          </div>
-        </div>
-
-        <div class="kpi-card" style="border-top:4px solid var(--danger);">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="kpi-title">Dépenses Décaissées</span>
-            <button class="btn btn-outline-danger btn-sm" onclick="App.navigate('expenses')" style="font-size:11px; padding:2px 8px;">Gérer →</button>
-          </div>
-          <div class="kpi-figure" style="color:var(--danger);">${Utils.formatFCFA(expensesSummary.total_amount)}</div>
-          <div class="kpi-meta">
-            ${expensesSummary.count} dépenses · Solde dispo : <strong style="color:var(--success);">${Utils.formatFCFA(grand.net_available)}</strong>
           </div>
         </div>
 
@@ -2339,63 +2324,69 @@ const App = {
 
   handleExpenseSubmit(event) {
     if (event) event.preventDefault();
-    const id = (document.getElementById('expenseIdInput')?.value || '').trim();
-    const motif = (document.getElementById('expenseMotif')?.value || '').trim();
-    const amount = parseInt(document.getElementById('expenseAmount')?.value, 10);
-    const date = document.getElementById('expenseDate')?.value;
-    const categorySelect = document.getElementById('expenseCategory');
-    let category = categorySelect ? categorySelect.value : 'Fournitures scolaires & papeterie';
+    try {
+      const id = (document.getElementById('expenseIdInput')?.value || '').trim();
+      const motif = (document.getElementById('expenseMotif')?.value || '').trim();
+      const rawAmount = document.getElementById('expenseAmount')?.value || '';
+      // Supporte les saisies avec espaces ou séparateurs (ex: 25 000 ou 25.000)
+      const cleanAmountStr = String(rawAmount).replace(/\s/g, '').replace(/,/g, '.');
+      const amount = Math.round(parseFloat(cleanAmountStr)) || 0;
+      const date = document.getElementById('expenseDate')?.value;
+      const categorySelect = document.getElementById('expenseCategory');
+      let category = categorySelect ? categorySelect.value : 'Fournitures scolaires & papeterie';
 
-    if (category === '__NEW_CUSTOM_RUBRIQUE__') {
-      const customVal = (document.getElementById('expenseCustomCategory')?.value || '').trim();
-      if (!customVal) {
-        alert("Veuillez saisir le nom de votre nouvelle rubrique.");
-        document.getElementById('expenseCustomCategory')?.focus();
+      if (category === '__NEW_CUSTOM_RUBRIQUE__') {
+        const customVal = (document.getElementById('expenseCustomCategory')?.value || '').trim();
+        if (!customVal) {
+          alert("Veuillez saisir le nom de votre nouvelle rubrique.");
+          document.getElementById('expenseCustomCategory')?.focus();
+          return;
+        }
+        category = customVal;
+        Store.addCustomExpenseRubrique(customVal);
+      }
+
+      if (!motif) {
+        alert("Le motif de la dépense est obligatoire.");
+        document.getElementById('expenseMotif')?.focus();
         return;
       }
-      category = customVal;
-      Store.addCustomExpenseRubrique(customVal);
-    }
+      if (!amount || amount <= 0) {
+        alert("Veuillez saisir un montant valide en FCFA supérieur à 0.");
+        document.getElementById('expenseAmount')?.focus();
+        return;
+      }
+      if (!date) {
+        alert("La date de décaissement est obligatoire.");
+        document.getElementById('expenseDate')?.focus();
+        return;
+      }
 
-    if (!motif) {
-      alert("Le motif de la dépense est obligatoire.");
-      return;
-    }
-    if (!amount || amount <= 0) {
-      alert("Veuillez saisir un montant valide en FCFA supérieur à 0.");
-      return;
-    }
-    if (!date) {
-      alert("La date de décaissement est obligatoire.");
-      return;
-    }
+      if (id) {
+        Store.updateExpense(id, {
+          motif: motif,
+          amount: amount,
+          date: date,
+          category: category
+        });
+        this.closeAllModals();
+        this.showToast("Dépense modifiée avec succès !", "success");
+      } else {
+        Store.addExpense({
+          motif: motif,
+          amount: amount,
+          date: date,
+          category: category
+        });
+        this.closeAllModals();
+        this.showToast(`Dépense de ${Utils.formatFCFA(amount)} enregistrée avec succès !`, "success");
+      }
 
-    if (id) {
-      Store.updateExpense(id, {
-        motif: motif,
-        amount: amount,
-        date: date,
-        category: category
-      });
-      this.closeAllModals();
-      this.showToast("Dépense modifiée avec succès !", "success");
-    } else {
-      Store.addExpense({
-        motif: motif,
-        amount: amount,
-        date: date,
-        category: category
-      });
-      this.closeAllModals();
-      this.showToast(`Dépense enregistrée sous la rubrique « ${category} » !`, "success");
-    }
-
-    if (this.currentTab === 'expenses') {
-      this.renderExpenses(document.getElementById('appViewContent'));
-    } else if (this.currentTab === 'bilan') {
-      this.renderBilan(document.getElementById('appViewContent'));
-    } else {
-      this.navigate(this.currentTab);
+      // Rediriger immédiatement vers la rubrique des dépenses pour visualiser immédiatement le résultat
+      this.navigate('expenses');
+    } catch (err) {
+      console.error("Erreur enregistrement dépense:", err);
+      alert("Une erreur est survenue lors de l'enregistrement de la dépense : " + (err.message || err));
     }
   },
 

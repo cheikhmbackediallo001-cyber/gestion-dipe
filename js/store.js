@@ -666,12 +666,33 @@ const Store = {
     }
   },
 
+  logAudit(action, details = {}) {
+    if (!this.data) return;
+    if (!Array.isArray(this.data.audit_log)) {
+      this.data.audit_log = [];
+    }
+    const schoolId = (this.data.school && this.data.school.id) ? this.data.school.id : '11111111-1111-1111-1111-111111111111';
+    this.data.audit_log.push({
+      id: 'audit_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      school_id: schoolId,
+      user_id: this.currentUser ? this.currentUser.id : 'director-user-id',
+      action: action,
+      details: details,
+      created_at: new Date().toISOString()
+    });
+    if (this.data.audit_log.length > 200) {
+      this.data.audit_log = this.data.audit_log.slice(-200);
+    }
+  },
+
   addExpense(expenseData) {
-    if (!this.data.expenses) this.data.expenses = [];
+    if (!this.data) this.data = DemoData.getInitialState();
+    if (!Array.isArray(this.data.expenses)) this.data.expenses = [];
     const category = (expenseData.category || 'Fournitures scolaires & papeterie').trim();
+    const schoolId = (this.data.school && this.data.school.id) ? this.data.school.id : '11111111-1111-1111-1111-111111111111';
     const newExpense = {
       id: 'expense_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      school_id: this.data.school.id,
+      school_id: schoolId,
       motif: (expenseData.motif || '').trim(),
       amount: parseInt(expenseData.amount, 10) || 0,
       date: expenseData.date || new Date().toISOString().split('T')[0],
@@ -682,20 +703,24 @@ const Store = {
     this.addCustomExpenseRubrique(category);
     this.persist();
 
-    // Trace dans l'audit
-    this.logAudit('EXPENSE_ADDED', {
-      expense_id: newExpense.id,
-      motif: newExpense.motif,
-      amount: newExpense.amount,
-      category: newExpense.category,
-      date: newExpense.date
-    });
+    // Trace dans l'audit en toute sécurité
+    try {
+      this.logAudit('EXPENSE_ADDED', {
+        expense_id: newExpense.id,
+        motif: newExpense.motif,
+        amount: newExpense.amount,
+        category: newExpense.category,
+        date: newExpense.date
+      });
+    } catch (e) {
+      console.warn("Audit log notice:", e);
+    }
 
     return newExpense;
   },
 
   updateExpense(id, expenseData) {
-    if (!this.data.expenses) return null;
+    if (!this.data || !Array.isArray(this.data.expenses)) return null;
     const index = this.data.expenses.findIndex(e => e.id === id);
     if (index !== -1) {
       const existing = this.data.expenses[index];
@@ -711,29 +736,37 @@ const Store = {
       this.data.expenses[index] = updated;
       this.addCustomExpenseRubrique(category);
       this.persist();
-      this.logAudit('EXPENSE_UPDATED', {
-        expense_id: id,
-        motif: updated.motif,
-        amount: updated.amount,
-        category: updated.category,
-        date: updated.date
-      });
+      try {
+        this.logAudit('EXPENSE_UPDATED', {
+          expense_id: id,
+          motif: updated.motif,
+          amount: updated.amount,
+          category: updated.category,
+          date: updated.date
+        });
+      } catch (e) {
+        console.warn("Audit log notice:", e);
+      }
       return updated;
     }
     return null;
   },
 
   deleteExpense(id) {
-    if (!this.data.expenses) return false;
+    if (!this.data || !Array.isArray(this.data.expenses)) return false;
     const index = this.data.expenses.findIndex(e => e.id === id);
     if (index !== -1) {
       const removed = this.data.expenses.splice(index, 1)[0];
       this.persist();
-      this.logAudit('EXPENSE_DELETED', {
-        expense_id: id,
-        motif: removed.motif,
-        amount: removed.amount
-      });
+      try {
+        this.logAudit('EXPENSE_DELETED', {
+          expense_id: id,
+          motif: removed.motif,
+          amount: removed.amount
+        });
+      } catch (e) {
+        console.warn("Audit log notice:", e);
+      }
       return true;
     }
     return false;
