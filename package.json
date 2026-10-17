@@ -2,8 +2,5 @@
   "name": "gestion-prescolaire",
   "version": "1.0.0",
   "private": true,
-  "description": "Plateforme SaaS de gestion des écoles préscolaires au Sénégal",
-  "scripts": {
-    "start": "npx serve ."
-  }
+  "description": "Plateforme SaaS de gestion des écoles préscolaires au Sénégal"
 }
