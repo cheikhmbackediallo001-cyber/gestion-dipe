@@ -135,23 +135,80 @@
   gap: 1rem;
 }
 
+/* Contrôles navigation mobile & bouton hamburger */
+.nav-mobile-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 900px) {
+  .nav-mobile-controls {
+    display: none;
+  }
+}
+
+.nav-theme-toggle-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  font-size: 1.15rem;
+  cursor: pointer;
+  color: #0F172A;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-theme-toggle-mobile:hover {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+}
+
 .nav-mobile-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: #F1F5F9;
-  border: 1px solid var(--border-medium);
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-medium);
   cursor: pointer;
-  color: var(--text-main);
+  color: #0F172A;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-mobile-toggle svg {
+  stroke: #0F172A;
+  transition: stroke var(--transition-fast);
 }
 
 .nav-mobile-toggle:hover {
   background: var(--primary-subtle);
+  border-color: var(--primary);
   color: var(--primary);
+}
+
+.nav-mobile-toggle:hover svg {
+  stroke: var(--primary);
+}
+
+.nav-mobile-toggle.is-active,
+.nav-mobile-toggle[aria-expanded="true"] {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.nav-mobile-toggle.is-active svg,
+.nav-mobile-toggle[aria-expanded="true"] svg {
+  stroke: var(--primary);
 }
 
 /* Tiroir Mobile */
@@ -1524,10 +1581,47 @@ html, body {
   color: #38BDF8;
 }
 
+[data-theme="dark"] .nav-theme-toggle-mobile {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .nav-theme-toggle-mobile:hover {
+  background: rgba(56, 189, 248, 0.2) !important;
+  border-color: #38BDF8 !important;
+}
+
+/* Bouton hamburger 3 traits : contraste maximal en mode sombre */
+[data-theme="dark"] .nav-mobile-toggle {
+  background: #1E293B !important;
+  border-color: #475569 !important;
+  color: #F8FAFC !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .nav-mobile-toggle svg {
+  stroke: #FFFFFF !important; /* 3 traits blancs ultra nets et éclatants */
+}
+
+[data-theme="dark"] .nav-mobile-toggle:hover,
+[data-theme="dark"] .nav-mobile-toggle.is-active,
+[data-theme="dark"] .nav-mobile-toggle[aria-expanded="true"] {
+  background: rgba(56, 189, 248, 0.2) !important;
+  border-color: #38BDF8 !important;
+  color: #38BDF8 !important;
+}
+
+[data-theme="dark"] .nav-mobile-toggle:hover svg,
+[data-theme="dark"] .nav-mobile-toggle.is-active svg,
+[data-theme="dark"] .nav-mobile-toggle[aria-expanded="true"] svg {
+  stroke: #38BDF8 !important; /* Traits cyan lumineux lors de l'ouverture */
+}
+
 [data-theme="dark"] .mobile-menu-drawer {
-  background: var(--bg-card);
-  border-bottom-color: var(--border-light);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  background: #0F172A !important;
+  border-bottom: 2px solid #1E293B !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7) !important;
 }
 
 [data-theme="dark"] .mobile-menu-link {

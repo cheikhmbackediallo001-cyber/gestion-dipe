@@ -26,10 +26,12 @@ function initThemeSwitcher() {
   const applyTheme = (theme) => {
     document.documentElement.setAttribute('data-theme', theme);
     const landingIcon = document.getElementById('landingThemeIcon');
+    const mobileHeaderIcon = document.getElementById('mobileHeaderThemeIcon');
     const mobileIcon = document.getElementById('mobileThemeIcon');
     const mobileLabel = document.getElementById('mobileThemeLabel');
 
     if (landingIcon) landingIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if (mobileHeaderIcon) mobileHeaderIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
     if (mobileIcon) mobileIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
     if (mobileLabel) mobileLabel.textContent = theme === 'dark' ? 'Mode Clair' : 'Mode Sombre';
   };
@@ -50,6 +52,9 @@ function initThemeSwitcher() {
 
   const desktopBtn = document.getElementById('landingThemeToggleBtn');
   if (desktopBtn) desktopBtn.addEventListener('click', toggleTheme);
+
+  const mobileHeaderBtn = document.getElementById('mobileHeaderThemeBtn');
+  if (mobileHeaderBtn) mobileHeaderBtn.addEventListener('click', toggleTheme);
 
   const mobileBtn = document.getElementById('mobileThemeToggleBtn');
   if (mobileBtn) mobileBtn.addEventListener('click', toggleTheme);
