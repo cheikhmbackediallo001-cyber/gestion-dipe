@@ -603,7 +603,7 @@ const Store = {
   },
 
   // ----------------------------------------------------------------------------
-  // GESTION DES DÉPENSES (§ SORTIES DE CAISSE, MOTIF, SOMME, DATE)
+  // GESTION DES DÉPENSES & RUBRIQUES BUDGÉTAIRES (§ SORTIES DE CAISSE)
   // ----------------------------------------------------------------------------
   getExpenses() {
     if (!this.data.expenses) this.data.expenses = [];
@@ -615,18 +615,71 @@ const Store = {
     return this.data.expenses.find(e => e.id === id);
   },
 
+  getExpenseRubriques() {
+    const defaultRubriques = [
+      "Fournitures scolaires & papeterie",
+      "Factures (Eau, Senelec, Internet)",
+      "Goûter, cantine & alimentation",
+      "Entretien & hygiène",
+      "Maintenance & réparations locaux",
+      "Salaires & primes personnel",
+      "Transport, sorties & carburant",
+      "Pharmacie & premiers secours",
+      "Fêtes & cérémonies scolaires",
+      "Autre dépense de fonctionnement"
+    ];
+
+    if (!this.data.custom_expense_rubriques) {
+      this.data.custom_expense_rubriques = [];
+    }
+
+    const combined = [...defaultRubriques];
+
+    // Inclut toute catégorie déjà enregistrée dans les dépenses réelles
+    if (Array.isArray(this.data.expenses)) {
+      this.data.expenses.forEach(e => {
+        if (e.category && !combined.includes(e.category)) {
+          combined.push(e.category);
+        }
+      });
+    }
+
+    // Inclut les rubriques personnalisées créées par l'utilisateur
+    this.data.custom_expense_rubriques.forEach(r => {
+      if (r && !combined.includes(r)) {
+        combined.push(r);
+      }
+    });
+
+    return combined;
+  },
+
+  addCustomExpenseRubrique(name) {
+    if (!name || !name.trim()) return;
+    const clean = name.trim();
+    if (!this.data.custom_expense_rubriques) {
+      this.data.custom_expense_rubriques = [];
+    }
+    if (!this.data.custom_expense_rubriques.includes(clean)) {
+      this.data.custom_expense_rubriques.push(clean);
+      this.persist();
+    }
+  },
+
   addExpense(expenseData) {
     if (!this.data.expenses) this.data.expenses = [];
+    const category = (expenseData.category || 'Fournitures scolaires & papeterie').trim();
     const newExpense = {
       id: 'expense_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       school_id: this.data.school.id,
       motif: (expenseData.motif || '').trim(),
       amount: parseInt(expenseData.amount, 10) || 0,
       date: expenseData.date || new Date().toISOString().split('T')[0],
-      category: expenseData.category || 'Général',
+      category: category,
       created_at: new Date().toISOString()
     };
     this.data.expenses.push(newExpense);
+    this.addCustomExpenseRubrique(category);
     this.persist();
 
     // Trace dans l'audit
@@ -634,6 +687,7 @@ const Store = {
       expense_id: newExpense.id,
       motif: newExpense.motif,
       amount: newExpense.amount,
+      category: newExpense.category,
       date: newExpense.date
     });
 
@@ -645,20 +699,23 @@ const Store = {
     const index = this.data.expenses.findIndex(e => e.id === id);
     if (index !== -1) {
       const existing = this.data.expenses[index];
+      const category = (expenseData.category !== undefined ? expenseData.category : (existing.category || 'Général')).trim();
       const updated = {
         ...existing,
         motif: (expenseData.motif !== undefined ? expenseData.motif : existing.motif).trim(),
         amount: expenseData.amount !== undefined ? (parseInt(expenseData.amount, 10) || 0) : existing.amount,
         date: expenseData.date || existing.date,
-        category: expenseData.category || existing.category || 'Général',
+        category: category,
         updated_at: new Date().toISOString()
       };
       this.data.expenses[index] = updated;
+      this.addCustomExpenseRubrique(category);
       this.persist();
       this.logAudit('EXPENSE_UPDATED', {
         expense_id: id,
         motif: updated.motif,
         amount: updated.amount,
+        category: updated.category,
         date: updated.date
       });
       return updated;

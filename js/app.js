@@ -10,6 +10,7 @@ const App = {
   currentMonthId: null,
   activeClassFilter: 'all',
   activeStatusFilter: 'all',
+  activeExpenseRubriqueFilter: 'all',
   searchTerm: '',
 
   async init() {
@@ -155,6 +156,8 @@ const App = {
   renderDashboard(container) {
     const metrics = Store.getDashboardMetrics();
     const school = Store.getSchool();
+    const expensesSummary = Store.getExpensesSummary();
+    const grand = Store.getGrandTotalSummary();
 
     container.innerHTML = `
       <div class="view-header">
@@ -163,9 +166,12 @@ const App = {
             <h1 class="view-title">Tableau de bord</h1>
             <p class="view-subtitle">${Utils.escapeHtml(school.name)} · Année scolaire ${Utils.escapeHtml(school.school_year)}</p>
           </div>
-          <div style="display:flex; gap:0.5rem;">
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button class="btn btn-outline-primary btn-sm" onclick="App.navigate('registrations')">Inscriptions</button>
             <button class="btn btn-primary btn-sm" onclick="App.navigate('monthly')">Cotisations ${Utils.escapeHtml(metrics.current_month.label)}</button>
+            <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 3px rgba(239,68,68,0.3);">
+              <span>➕</span> <span>Nouvelle dépense</span>
+            </button>
           </div>
         </div>
       </div>
@@ -195,6 +201,17 @@ const App = {
           </div>
           <div class="progress-bar-container">
             <div class="progress-bar-fill ${metrics.current_month.percentage >= 80 ? 'fill-high' : metrics.current_month.percentage >= 50 ? 'fill-medium' : 'fill-low'}" style="width: ${metrics.current_month.percentage}%;"></div>
+          </div>
+        </div>
+
+        <div class="kpi-card" style="border-top:4px solid var(--danger);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="kpi-title">Dépenses Décaissées</span>
+            <button class="btn btn-outline-danger btn-sm" onclick="App.navigate('expenses')" style="font-size:11px; padding:2px 8px;">Gérer →</button>
+          </div>
+          <div class="kpi-figure" style="color:var(--danger);">${Utils.formatFCFA(expensesSummary.total_amount)}</div>
+          <div class="kpi-meta">
+            ${expensesSummary.count} dépenses · Solde dispo : <strong style="color:var(--success);">${Utils.formatFCFA(grand.net_available)}</strong>
           </div>
         </div>
 
@@ -810,34 +827,45 @@ const App = {
   },
 
   // ----------------------------------------------------------------------------
-  // VUE 5 : GESTION DES DÉPENSES (§ SORTIES DE CAISSE DE L'ÉCOLE)
-  // Motifs, Somme en FCFA et Date déduits en temps réel de la trésorerie
+  // VUE 5 : GESTION DES DÉPENSES & RUBRIQUES (§ SORTIES DE CAISSE DE L'ÉCOLE)
+  // Motifs, Rubrique budgétaire, Somme en FCFA et Date déduits en temps réel
   // ----------------------------------------------------------------------------
   renderExpenses(container, options = {}) {
     const expenses = Store.getExpenses();
     const expensesSummary = Store.getExpensesSummary();
     const grand = Store.getGrandTotalSummary();
+    const rubriques = Store.getExpenseRubriques();
+
+    // Calcul des totaux par rubrique
+    const rubriqueTotals = {};
+    expenses.forEach(e => {
+      const cat = e.category || 'Fournitures scolaires & papeterie';
+      rubriqueTotals[cat] = (rubriqueTotals[cat] || 0) + (parseInt(e.amount, 10) || 0);
+    });
+
+    const activeFilter = this.activeExpenseRubriqueFilter || 'all';
 
     const filtered = expenses.filter(e => {
       const matchSearch = !this.searchTerm 
         || (e.motif && e.motif.toLowerCase().includes(this.searchTerm.toLowerCase()))
         || (e.category && e.category.toLowerCase().includes(this.searchTerm.toLowerCase()));
-      return matchSearch;
+      const matchRubrique = activeFilter === 'all' || e.category === activeFilter;
+      return matchSearch && matchRubrique;
     });
 
     container.innerHTML = `
       <div class="view-header">
         <div class="view-title-group">
           <div>
-            <h1 class="view-title">Gestion des dépenses</h1>
-            <p class="view-subtitle">Suivi des décaissements et sorties de caisse de l'établissement</p>
+            <h1 class="view-title">Rubrique Gestion des Dépenses</h1>
+            <p class="view-subtitle">Enregistrement et suivi des sorties de caisse de l'école par rubrique budgétaire</p>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="App.exportExpensesCsv()">
-              Exporter CSV
+              📄 Exporter CSV
             </button>
-            <button class="btn btn-primary btn-sm" onclick="App.openAddExpenseModal()">
-              + Enregistrer une dépense
+            <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 3px rgba(239,68,68,0.3);">
+              <span>➕</span> <span>Ajouter une dépense</span>
             </button>
           </div>
         </div>
@@ -848,7 +876,7 @@ const App = {
         <div class="kpi-card" style="border-top:4px solid var(--danger);">
           <span class="kpi-title">Total Dépenses Décaissées</span>
           <div class="kpi-figure" style="color:var(--danger);">${Utils.formatFCFA(expensesSummary.total_amount)}</div>
-          <div class="kpi-meta">${expensesSummary.count} dépenses enregistrées à ce jour</div>
+          <div class="kpi-meta">${expensesSummary.count} dépenses dans ${Object.keys(rubriqueTotals).length} rubriques</div>
         </div>
 
         <div class="kpi-card" style="border-top:4px solid var(--primary);">
@@ -867,11 +895,44 @@ const App = {
         </div>
       </div>
 
-      <!-- Barre de recherche -->
-      <div class="filter-bar" style="margin-top:1.5rem;">
+      <!-- Barre de synthèse par Rubrique (Chips cliquables) -->
+      ${Object.keys(rubriqueTotals).length > 0 ? `
+        <div style="margin-top:1.25rem;">
+          <div style="font-size:var(--text-xs); font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">
+            Répartition par rubrique budgétaire :
+          </div>
+          <div class="rubriques-summary-bar">
+            <button type="button" class="rubrique-chip ${activeFilter === 'all' ? 'active' : ''}" onclick="App.onExpenseRubriqueFilterChange('all')">
+              <span>📂 Toutes</span>
+              <strong style="color:var(--danger);">${Utils.formatFCFA(expensesSummary.total_amount)}</strong>
+            </button>
+            ${Object.keys(rubriqueTotals).map(r => `
+              <button type="button" class="rubrique-chip ${activeFilter === r ? 'active' : ''}" onclick="App.onExpenseRubriqueFilterChange('${Utils.escapeHtml(r)}')">
+                <span>${Utils.escapeHtml(r)}</span>
+                <strong>${Utils.formatFCFA(rubriqueTotals[r])}</strong>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Barre de filtres et recherche -->
+      <div class="filter-bar" style="margin-top:1rem;">
         <div class="search-box">
           <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" class="form-input search-input" placeholder="Rechercher par motif ou catégorie..." value="${Utils.escapeHtml(this.searchTerm)}" oninput="App.onSearchInput(this.value)">
+          <input type="text" class="form-input search-input" placeholder="Rechercher par motif ou rubrique..." value="${Utils.escapeHtml(this.searchTerm)}" oninput="App.onSearchInput(this.value)">
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <select class="form-select" style="min-width:240px;" onchange="App.onExpenseRubriqueFilterChange(this.value)">
+            <option value="all">📂 Filtrer : Toutes les rubriques (${expenses.length})</option>
+            ${rubriques.map(r => `
+              <option value="${Utils.escapeHtml(r)}"${activeFilter === r ? ' selected' : ''}>📂 ${Utils.escapeHtml(r)} ${rubriqueTotals[r] ? `(${Utils.formatFCFA(rubriqueTotals[r])})` : '(0 F)'}</option>
+            `).join('')}
+          </select>
+          <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:0.35rem;">
+            <span>➕</span> <span>Nouvelle dépense</span>
+          </button>
         </div>
       </div>
 
@@ -879,7 +940,7 @@ const App = {
       <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
           <h2 style="font-size:var(--text-lg); margin-bottom:0;">Registre des dépenses</h2>
-          <span class="badge badge-info">${filtered.length} sortie(s) de caisse</span>
+          <span class="badge badge-info">${filtered.length} sortie(s) affichée(s)</span>
         </div>
 
         <div class="data-table-container">
@@ -888,7 +949,7 @@ const App = {
               <tr>
                 <th>Date</th>
                 <th>Motif de la dépense</th>
-                <th>Catégorie</th>
+                <th>Rubrique budgétaire</th>
                 <th>Somme Décaissée</th>
                 <th style="text-align:right;">Action</th>
               </tr>
@@ -897,20 +958,22 @@ const App = {
               ${filtered.length === 0 ? `
                 <tr>
                   <td colspan="5" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
-                    <div style="font-size:2rem; margin-bottom:0.5rem;">💸</div>
-                    <p style="font-weight:600; margin-bottom:0.25rem;">Aucune dépense trouvée</p>
-                    <p style="font-size:var(--text-xs); margin-bottom:1rem;">Enregistrez vos frais de fonctionnement (fournitures, factures, salaires...)</p>
-                    <button class="btn btn-primary btn-sm" onclick="App.openAddExpenseModal()">+ Enregistrer une dépense</button>
+                    <div style="font-size:2.5rem; margin-bottom:0.5rem;">💸</div>
+                    <p style="font-weight:700; font-size:var(--text-base); margin-bottom:0.25rem;">Aucune dépense trouvée</p>
+                    <p style="font-size:var(--text-sm); margin-bottom:1.25rem;">Enregistrez vos frais et sorties de caisse (fournitures, factures, salaires, cantine...)</p>
+                    <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; padding:0.5rem 1.25rem;">
+                      ➕ Ajouter une nouvelle dépense
+                    </button>
                   </td>
                 </tr>
               ` : filtered.map(e => `
                 <tr>
                   <td data-label="Date"><strong>${Utils.formatDate(e.date)}</strong></td>
-                  <td data-label="Motif">${Utils.escapeHtml(e.motif)}</td>
-                  <td data-label="Catégorie">
-                    <span class="badge badge-info">${Utils.escapeHtml(e.category || 'Général')}</span>
+                  <td data-label="Motif"><strong>${Utils.escapeHtml(e.motif)}</strong></td>
+                  <td data-label="Rubrique">
+                    <span class="badge-rubrique">📂 ${Utils.escapeHtml(e.category || 'Général')}</span>
                   </td>
-                  <td data-label="Somme" style="color:var(--danger); font-weight:700;">
+                  <td data-label="Somme" style="color:var(--danger); font-weight:800;">
                     - ${Utils.formatFCFA(e.amount)}
                   </td>
                   <td data-label="Action" style="text-align:right; white-space:nowrap;">
@@ -927,8 +990,10 @@ const App = {
             ${filtered.length > 0 ? `
               <tfoot>
                 <tr style="background:var(--bg-subtle); font-weight:700; font-size:var(--text-base);">
-                  <td colspan="3">TOTAL DES DÉPENSES DÉCAISSÉES</td>
-                  <td style="color:var(--danger); font-size:var(--text-base);">- ${Utils.formatFCFA(expensesSummary.total_amount)}</td>
+                  <td colspan="3">TOTAL DÉPENSES DÉCAISSÉES ${activeFilter !== 'all' ? `(${Utils.escapeHtml(activeFilter)})` : ''}</td>
+                  <td style="color:var(--danger); font-size:var(--text-base); font-weight:800;">
+                    - ${Utils.formatFCFA(filtered.reduce((sum, e) => sum + (parseInt(e.amount, 10) || 0), 0))}
+                  </td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1237,18 +1302,20 @@ const App = {
         </div>
       </div>
 
-      <!-- Répartition des charges par catégorie -->
+      <!-- Répartition des charges par rubrique -->
       <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem; margin-top:1.5rem;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-          <h2 style="font-size:var(--text-lg); margin-bottom:0;">Ventilation des dépenses par catégorie</h2>
-          <button class="btn btn-primary btn-sm" onclick="App.openAddExpenseModal()">+ Nouvelle dépense</button>
+          <h2 style="font-size:var(--text-lg); margin-bottom:0;">Ventilation des dépenses par rubrique budgétaire</h2>
+          <button class="btn btn-sm" onclick="App.openAddExpenseModal()" style="background:#EF4444; color:#FFFFFF; border:none; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem;">
+            <span>➕</span> <span>Ajouter une dépense</span>
+          </button>
         </div>
 
         <div class="data-table-container">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Catégorie de charge</th>
+                <th>Rubrique budgétaire</th>
                 <th>Nombre d'opérations</th>
                 <th>Total Décaissé</th>
                 <th>Part du budget dépenses</th>
@@ -2160,9 +2227,48 @@ const App = {
   },
 
   // ----------------------------------------------------------------------------
-  // GESTION MODALE DÉPENSES (MOTIF, SOMME EN FCFA, DATE - AJOUT ET MODIFICATION)
+  // GESTION MODALE DÉPENSES (MOTIF, SOMME EN FCFA, RUBRIQUE, DATE)
   // ----------------------------------------------------------------------------
-  openAddExpenseModal() {
+  populateExpenseRubriques(selectedRubrique = '') {
+    const select = document.getElementById('expenseCategory');
+    if (!select) return;
+    const rubriques = Store.getExpenseRubriques();
+
+    let html = '';
+    rubriques.forEach(r => {
+      const isSelected = r === selectedRubrique;
+      html += `<option value="${Utils.escapeHtml(r)}"${isSelected ? ' selected' : ''}>📂 ${Utils.escapeHtml(r)}</option>`;
+    });
+    html += `<option value="__NEW_CUSTOM_RUBRIQUE__">➕ Ajouter une nouvelle rubrique personnalisée...</option>`;
+    select.innerHTML = html;
+  },
+
+  onExpenseCategoryChange(value) {
+    const container = document.getElementById('customCategoryContainer');
+    const input = document.getElementById('expenseCustomCategory');
+    if (value === '__NEW_CUSTOM_RUBRIQUE__') {
+      if (container) container.style.display = 'block';
+      if (input) {
+        input.required = true;
+        input.focus();
+      }
+    } else {
+      if (container) container.style.display = 'none';
+      if (input) {
+        input.required = false;
+        input.value = '';
+      }
+    }
+  },
+
+  onExpenseRubriqueFilterChange(rubrique) {
+    this.activeExpenseRubriqueFilter = rubrique;
+    if (this.currentTab === 'expenses') {
+      this.renderExpenses(document.getElementById('appViewContent'));
+    }
+  },
+
+  openAddExpenseModal(defaultRubrique = '') {
     const modal = document.getElementById('expenseModal');
     if (!modal) return;
     const titleEl = document.getElementById('expenseModalTitle');
@@ -2171,17 +2277,27 @@ const App = {
     const motifInput = document.getElementById('expenseMotif');
     const amountInput = document.getElementById('expenseAmount');
     const dateInput = document.getElementById('expenseDate');
-    const categorySelect = document.getElementById('expenseCategory');
+    const customContainer = document.getElementById('customCategoryContainer');
+    const customInput = document.getElementById('expenseCustomCategory');
 
-    if (titleEl) titleEl.textContent = "Enregistrer une dépense";
+    if (titleEl) titleEl.textContent = "Ajouter une nouvelle dépense";
     if (submitBtn) submitBtn.textContent = "Enregistrer la dépense";
     if (idInput) idInput.value = '';
     if (motifInput) motifInput.value = '';
     if (amountInput) amountInput.value = '';
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-    if (categorySelect) categorySelect.value = 'Fournitures';
+    if (customContainer) customContainer.style.display = 'none';
+    if (customInput) {
+      customInput.value = '';
+      customInput.required = false;
+    }
+
+    this.populateExpenseRubriques(defaultRubrique || "Fournitures scolaires & papeterie");
 
     modal.classList.add('is-open');
+    setTimeout(() => {
+      if (motifInput) motifInput.focus();
+    }, 100);
   },
 
   openEditExpenseModal(id) {
@@ -2196,7 +2312,8 @@ const App = {
     const motifInput = document.getElementById('expenseMotif');
     const amountInput = document.getElementById('expenseAmount');
     const dateInput = document.getElementById('expenseDate');
-    const categorySelect = document.getElementById('expenseCategory');
+    const customContainer = document.getElementById('customCategoryContainer');
+    const customInput = document.getElementById('expenseCustomCategory');
 
     if (titleEl) titleEl.textContent = "Modifier la dépense";
     if (submitBtn) submitBtn.textContent = "Enregistrer les modifications";
@@ -2204,7 +2321,13 @@ const App = {
     if (motifInput) motifInput.value = expense.motif || '';
     if (amountInput) amountInput.value = expense.amount || '';
     if (dateInput) dateInput.value = expense.date || new Date().toISOString().split('T')[0];
-    if (categorySelect) categorySelect.value = expense.category || 'Fournitures';
+    if (customContainer) customContainer.style.display = 'none';
+    if (customInput) {
+      customInput.value = '';
+      customInput.required = false;
+    }
+
+    this.populateExpenseRubriques(expense.category || "Fournitures scolaires & papeterie");
 
     modal.classList.add('is-open');
   },
@@ -2215,7 +2338,19 @@ const App = {
     const motif = (document.getElementById('expenseMotif')?.value || '').trim();
     const amount = parseInt(document.getElementById('expenseAmount')?.value, 10);
     const date = document.getElementById('expenseDate')?.value;
-    const category = document.getElementById('expenseCategory')?.value || 'Fournitures';
+    const categorySelect = document.getElementById('expenseCategory');
+    let category = categorySelect ? categorySelect.value : 'Fournitures scolaires & papeterie';
+
+    if (category === '__NEW_CUSTOM_RUBRIQUE__') {
+      const customVal = (document.getElementById('expenseCustomCategory')?.value || '').trim();
+      if (!customVal) {
+        alert("Veuillez saisir le nom de votre nouvelle rubrique.");
+        document.getElementById('expenseCustomCategory')?.focus();
+        return;
+      }
+      category = customVal;
+      Store.addCustomExpenseRubrique(customVal);
+    }
 
     if (!motif) {
       alert("Le motif de la dépense est obligatoire.");
@@ -2247,7 +2382,7 @@ const App = {
         category: category
       });
       this.closeAllModals();
-      this.showToast("Dépense enregistrée et déduite de la trésorerie !", "success");
+      this.showToast(`Dépense enregistrée sous la rubrique « ${category} » !`, "success");
     }
 
     if (this.currentTab === 'expenses') {

@@ -659,7 +659,7 @@
   margin-top: 0.5rem;
 }
 
-/* Barre de navigation Mobile (Fixe au bas de l'écran, 5 icônes) */
+/* Barre de navigation Mobile (Fixe au bas de l'écran, réactive et fluide) */
 .mobile-bottom-nav {
   position: fixed;
   bottom: 0;
@@ -673,6 +673,13 @@
   align-items: center;
   z-index: 100;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-bottom-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-nav-item {
@@ -682,23 +689,76 @@
   justify-content: center;
   gap: 2px;
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10.5px;
+  font-weight: 600;
   text-decoration: none !important;
-  flex: 1;
+  flex: 1 0 auto;
   height: 100%;
-  min-width: var(--touch-min);
-  transition: color var(--transition-fast);
+  min-width: 48px;
+  padding: 0 3px;
+  transition: color var(--transition-fast), transform var(--transition-fast);
 }
 
 .mobile-nav-item svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .mobile-nav-item.active {
   color: var(--primary);
   font-weight: 700;
+}
+
+/* Badge de rubrique budgétaire */
+.badge-rubrique {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-medium);
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .badge-rubrique {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #F8FAFC;
+}
+
+.rubriques-summary-bar {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  scrollbar-width: thin;
+}
+
+.rubrique-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.rubrique-chip:hover, .rubrique-chip.active {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary);
 }
 
 /* Graphique en barres mensuelles léger SVG natif */
