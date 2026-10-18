@@ -1,18 +1,44 @@
 {
-  "name": "Gestion Préscolaire",
-  "short_name": "Gestion Préscolaire",
-  "description": "Plateforme web simple et fiable pour la gestion des inscriptions et cotisations préscolaires au Sénégal et en zone francophone.",
+  "name": "Gestion DIPE — Gestion Préscolaire",
+  "short_name": "Gestion DIPE",
+  "description": "Plateforme moderne de suivi des inscriptions, cotisations mensuelles en FCFA et reçus officiels certifiés avec cachet vectoriel pour écoles préscolaires et garderies.",
+  "id": "/gestion-dipe",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#1E3A8A",
+  "orientation": "portrait-primary",
+  "background_color": "#0F172A",
+  "theme_color": "#16A34A",
   "lang": "fr-SN",
+  "categories": ["education", "finance", "business"],
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231E3A8A'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23FFFFFF' font-family='sans-serif' font-weight='bold'>D</text></svg>",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Espace Direction",
+      "short_name": "Direction",
+      "description": "Ouvrir le tableau de bord de l'école",
+      "url": "./app.html",
+      "icons": [{ "src": "images/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Vérifier un reçu",
+      "short_name": "Vérification",
+      "description": "Contrôler l'authenticité d'un reçu avec QR code",
+      "url": "./verify.html",
+      "icons": [{ "src": "images/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

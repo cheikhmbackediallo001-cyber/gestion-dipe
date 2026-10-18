@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initDeviceSimulator();
   initTimeSavingsCalculator();
   initStickyBottomBar();
+  initMotionNarrative();
+  initPwaInstall();
 });
 
 /**
@@ -549,6 +551,259 @@ function initStickyBottomBar() {
     } else {
       bar.classList.remove('is-visible');
     }
+  });
+}
+
+/**
+ * Animation narrative Motion Design (3 Actes : Arrivée -> Règlement 10 000 FCFA -> Reçu certifié WhatsApp)
+ * Style : Vert / Noir / Blanc avec progression fluide et commandes interactives
+ */
+function initMotionNarrative() {
+  const slides = document.querySelectorAll('.motion-scene-slide');
+  const stepButtons = document.querySelectorAll('.motion-step-btn');
+  const playPauseBtn = document.getElementById('motionPlayPauseBtn');
+  const playIcon = document.getElementById('motionPlayIcon');
+  const playLabel = document.getElementById('motionPlayLabel');
+  const stageCard = document.getElementById('motionStageCard');
+
+  if (!slides.length || !stepButtons.length) return;
+
+  const SLIDE_DURATION = 6000; // 6 secondes par acte
+  let currentStep = 1;
+  let isPlaying = true;
+  let startTime = null;
+  let animationFrameId = null;
+  let elapsedBeforePause = 0;
+
+  function showSlide(stepNumber, resetProgress = true) {
+    currentStep = stepNumber;
+
+    slides.forEach((slide) => {
+      const slideStep = parseInt(slide.getAttribute('data-slide'), 10);
+      if (slideStep === currentStep) {
+        slide.style.display = 'grid';
+        slide.classList.add('is-active');
+      } else {
+        slide.style.display = 'none';
+        slide.classList.remove('is-active');
+      }
+    });
+
+    stepButtons.forEach((btn) => {
+      const btnStep = parseInt(btn.getAttribute('data-step'), 10);
+      const fill = btn.querySelector('.step-progress-fill');
+      
+      if (btnStep < currentStep) {
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-selected', 'false');
+        if (fill) fill.style.width = '100%';
+      } else if (btnStep === currentStep) {
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-selected', 'true');
+        if (fill) fill.style.width = '0%';
+      } else {
+        btn.classList.remove('is-active');
+        btn.setAttribute('aria-selected', 'false');
+        if (fill) fill.style.width = '0%';
+      }
+    });
+
+    if (resetProgress) {
+      elapsedBeforePause = 0;
+      startTime = performance.now();
+    }
+  }
+
+  function tick(now) {
+    if (!isPlaying) return;
+
+    if (!startTime) startTime = now - elapsedBeforePause;
+    const elapsed = now - startTime;
+    const progress = Math.min(100, (elapsed / SLIDE_DURATION) * 100);
+
+    const activeBtn = document.querySelector(`.motion-step-btn[data-step="${currentStep}"]`);
+    if (activeBtn) {
+      const fill = activeBtn.querySelector('.step-progress-fill');
+      if (fill) fill.style.width = `${progress}%`;
+    }
+
+    if (elapsed >= SLIDE_DURATION) {
+      const nextStep = currentStep === 3 ? 1 : currentStep + 1;
+      showSlide(nextStep, true);
+    }
+
+    animationFrameId = requestAnimationFrame(tick);
+  }
+
+  function pause() {
+    if (!isPlaying) return;
+    isPlaying = false;
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (startTime) elapsedBeforePause = performance.now() - startTime;
+    if (playIcon) playIcon.textContent = '▶️';
+    if (playLabel) playLabel.textContent = 'Reprendre la lecture';
+    if (playPauseBtn) playPauseBtn.setAttribute('aria-label', "Reprendre l'animation");
+  }
+
+  function play() {
+    if (isPlaying) return;
+    isPlaying = true;
+    startTime = performance.now() - elapsedBeforePause;
+    if (playIcon) playIcon.textContent = '⏸️';
+    if (playLabel) playLabel.textContent = 'Animation automatique en cours';
+    if (playPauseBtn) playPauseBtn.setAttribute('aria-label', "Mettre en pause l'animation");
+    animationFrameId = requestAnimationFrame(tick);
+  }
+
+  // Clic sur les boutons d'étapes (01, 02, 03)
+  stepButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const step = parseInt(btn.getAttribute('data-step'), 10);
+      showSlide(step, true);
+    });
+  });
+
+  // Boutons Suivant / Précédent dans les diapositives
+  document.querySelectorAll('.motion-next-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const nextStep = currentStep === 3 ? 1 : currentStep + 1;
+      showSlide(nextStep, true);
+    });
+  });
+
+  document.querySelectorAll('.motion-prev-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const prevStep = currentStep === 1 ? 3 : currentStep - 1;
+      showSlide(prevStep, true);
+    });
+  });
+
+  // Bouton Lecture / Pause
+  if (playPauseBtn) {
+    playPauseBtn.addEventListener('click', () => {
+      if (isPlaying) pause();
+      else play();
+    });
+  }
+
+  // Pause sur survol pour confort de lecture
+  if (stageCard) {
+    stageCard.addEventListener('mouseenter', () => {
+      if (isPlaying) pause();
+    });
+    stageCard.addEventListener('mouseleave', () => {
+      if (!isPlaying && playIcon && playIcon.textContent === '⏸️') play();
+    });
+  }
+
+  // Démarrer la première scène et la boucle
+  showSlide(1, true);
+  animationFrameId = requestAnimationFrame(tick);
+}
+
+/**
+ * Progressive Web App (PWA) - Détection et installation en 1 clic
+ * Support Android / Chrome (beforeinstallprompt) & iOS Safari (Guide Ajout à l'écran d'accueil)
+ */
+function initPwaInstall() {
+  let deferredPrompt = null;
+  const installBanner = document.getElementById('pwaInstallBanner');
+  const bannerCloseBtn = document.getElementById('pwaBannerCloseBtn');
+  const allInstallTriggers = document.querySelectorAll('.pwa-install-trigger');
+  const iosModal = document.getElementById('iosInstallModal');
+  const iosCloseBtn = document.getElementById('iosModalCloseBtn');
+  const iosDoneBtn = document.getElementById('iosModalDoneBtn');
+
+  // Détection iOS
+  const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) && !window.MSStream;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+  // Si déjà installé en mode standalone, masquer les boutons et la bannière
+  if (isStandalone) {
+    console.log('[PWA] Application déjà lancée en mode autonome (PWA installée).');
+    allInstallTriggers.forEach((btn) => {
+      btn.style.display = 'none';
+    });
+    return;
+  }
+
+  // Rendre visibles tous les déclencheurs d'installation (nav, tiroir mobile)
+  allInstallTriggers.forEach((btn) => {
+    btn.style.display = 'inline-flex';
+  });
+
+  // Interception de l'événement natif Chrome/Android
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Afficher la bannière si non fermée précédemment dans la session
+    const isDismissed = sessionStorage.getItem('pwa_banner_dismissed') === '1';
+    if (!isDismissed && installBanner) {
+      setTimeout(() => {
+        installBanner.style.display = 'flex';
+      }, 2500); // Apparition douce après 2.5s
+    }
+  });
+
+  // Action d'installation au clic sur n'importe quel bouton PWA
+  allInstallTriggers.forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      if (deferredPrompt) {
+        // Déclencheur Chrome / Edge / Samsung Internet
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('[PWA] Résultat installation :', outcome);
+        if (outcome === 'accepted') {
+          if (installBanner) installBanner.style.display = 'none';
+        }
+        deferredPrompt = null;
+      } else if (isIos) {
+        // Safari iOS : afficher le guide pas à pas
+        if (iosModal) iosModal.style.display = 'flex';
+      } else {
+        // Navigateur desktop ou Android sans prompt actif : ouvrir bannière ou instructions
+        if (installBanner) {
+          installBanner.style.display = 'flex';
+        }
+        alert("📲 Pour installer Gestion DIPE sur votre écran d'accueil :\n\n• Sur Google Chrome / Edge : Cliquez sur l'icône « Installer » (⊕) située à droite de la barre d'adresse.\n• Sur Safari (iPhone/iPad) : Touchez l'icône Partager puis « Sur l'écran d'accueil ».");
+      }
+    });
+  });
+
+  // Fermeture de la bannière flottante
+  if (bannerCloseBtn && installBanner) {
+    bannerCloseBtn.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+      try {
+        sessionStorage.setItem('pwa_banner_dismissed', '1');
+      } catch (e) {}
+    });
+  }
+
+  // Gestion de la modale iOS
+  const closeIosModal = () => {
+    if (iosModal) iosModal.style.display = 'none';
+  };
+
+  if (iosCloseBtn) iosCloseBtn.addEventListener('click', closeIosModal);
+  if (iosDoneBtn) iosDoneBtn.addEventListener('click', closeIosModal);
+  if (iosModal) {
+    iosModal.addEventListener('click', (e) => {
+      if (e.target === iosModal) closeIosModal();
+    });
+  }
+
+  // Événement quand l'installation est terminée
+  window.addEventListener('appinstalled', () => {
+    console.log('[PWA] Application installée avec succès !');
+    if (installBanner) installBanner.style.display = 'none';
+    allInstallTriggers.forEach((btn) => {
+      btn.style.display = 'none';
+    });
+    deferredPrompt = null;
   });
 }
 

@@ -21,12 +21,20 @@
     })();
   </script>
 
-  <!-- Polices et Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=10">
-  <link rel="stylesheet" href="css/landing.css?v=10">
-  <link rel="stylesheet" href="css/receipt.css?v=10">
+  <!-- PWA Manifest & Paramètres Mobiles -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gestion DIPE">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
 
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231E3A8A'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23FFFFFF' font-family='sans-serif' font-weight='bold'>GP</text></svg>">
+  <!-- Polices et Stylesheets -->
+  <link rel="stylesheet" href="css/design-system.css?v=11">
+  <link rel="stylesheet" href="css/landing.css?v=11">
+  <link rel="stylesheet" href="css/receipt.css?v=11">
+
+  <link rel="icon" type="image/png" href="images/icon-192.png">
 </head>
 <body>
   <!-- Lien d'évitement accessibilité -->
@@ -38,16 +46,17 @@
   <!-- Barre de navigation fixe avec effet de flou -->
   <header class="landing-nav" role="banner">
     <div class="landing-nav-container">
-      <a href="index.html" class="brand-link" aria-label="Accueil Gestion Préscolaire">
-        <div class="brand-icon-box" aria-hidden="true">GP</div>
+      <a href="index.html" class="brand-link" aria-label="Accueil Gestion DIPE">
+        <div class="brand-icon-box" style="background:#16A34A; color:#FFFFFF;" aria-hidden="true">GP</div>
         <div class="brand-name-group">
-          <span class="brand-title">Gestion Préscolaire</span>
+          <span class="brand-title">Gestion DIPE</span>
           <span class="brand-tag">Établissements Préscolaires</span>
         </div>
       </a>
 
       <!-- Menu bureau -->
       <nav class="nav-links-desktop" aria-label="Navigation principale">
+        <a href="#motion-design" class="nav-link-item" style="color:#22C55E; font-weight:700;">✨ Démo 3 Actes</a>
         <a href="#fonctionnalites" class="nav-link-item">Fonctionnalités</a>
         <a href="#calculateur" class="nav-link-item">Calculateur</a>
         <a href="#temoignages" class="nav-link-item">Témoignages</a>
@@ -61,12 +70,18 @@
         <button id="landingThemeToggleBtn" class="btn btn-secondary btn-sm" aria-label="Changer de thème (clair/sombre)" title="Mode Clair / Sombre" style="padding:0.4rem 0.75rem;">
           <span id="landingThemeIcon">🌙</span>
         </button>
+        <button id="btnPwaInstallNav" class="btn btn-secondary btn-sm pwa-install-trigger" style="display:none; border-color:#22C55E; color:#16A34A; font-weight:700;">
+          <span>📲 Installer l'App</span>
+        </button>
         <button class="btn btn-secondary btn-sm" data-action="open-login">Se connecter</button>
         <button class="btn btn-primary btn-sm btn-cta-glow" data-action="open-onboarding">Référencer mon école</button>
       </div>
 
       <!-- Contrôles mobile (Bouton Thème + Hamburger 3 traits haute visibilité) -->
       <div class="nav-mobile-controls">
+        <button id="btnPwaInstallMobile" class="btn btn-secondary btn-sm pwa-install-trigger" style="display:none; padding:0.35rem 0.65rem; border-color:#22C55E; color:#16A34A; font-size:11px; font-weight:700;">
+          <span>📲 Installer</span>
+        </button>
         <button id="mobileHeaderThemeBtn" class="nav-theme-toggle-mobile" aria-label="Changer de thème (clair/sombre)" title="Mode Clair / Sombre">
           <span id="mobileHeaderThemeIcon">🌙</span>
         </button>
@@ -79,6 +94,7 @@
     <!-- Tiroir Mobile -->
     <div class="mobile-menu-drawer" id="mobileMenuDrawer" role="region" aria-label="Menu mobile">
       <ul class="mobile-menu-links">
+        <li><a href="#motion-design" class="mobile-menu-link" style="color:#16A34A; font-weight:700;">✨ Démo Animée (3 Actes) <span>→</span></a></li>
         <li><a href="#fonctionnalites" class="mobile-menu-link">Fonctionnalités <span>→</span></a></li>
         <li><a href="#calculateur" class="mobile-menu-link">Calculateur d'économies <span>→</span></a></li>
         <li><a href="#temoignages" class="mobile-menu-link">Témoignages directrices <span>→</span></a></li>
@@ -88,6 +104,9 @@
         <li><a href="#faq" class="mobile-menu-link">Questions fréquentes <span>→</span></a></li>
       </ul>
       <div class="mobile-menu-actions">
+        <button class="btn btn-accent pwa-install-trigger" id="btnPwaInstallDrawer" style="display:none; justify-content:center; align-items:center; gap:0.5rem; width:100%; font-weight:700;">
+          <span>📲 Installer l'application sur mon téléphone</span>
+        </button>
         <button class="btn btn-secondary" id="mobileThemeToggleBtn" style="display:flex; justify-content:center; align-items:center; gap:0.5rem;">
           <span id="mobileThemeIcon">🌙</span> <span id="mobileThemeLabel">Mode Sombre</span>
         </button>
@@ -451,6 +470,183 @@
           <div class="showcase-overlay-tag">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/></svg>
             <span>Mme Aïssatou Ba — Directrice certifiée Gestion Préscolaire</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================================================
+         MOTION DESIGN NARRATIF : L'EXPÉRIENCE COMPLÈTE EN 3 ACTES (VERT, NOIR, BLANC)
+         ============================================================================== -->
+    <section id="motion-design" class="motion-narrative-section" aria-labelledby="motion-heading">
+      <div class="motion-narrative-container">
+        <div class="section-header motion-header">
+          <div class="motion-pill-badge">
+            <span class="motion-pulse-dot"></span>
+            <span>Motion Design Interactif · Processus 100% Transparent</span>
+          </div>
+          <h2 id="motion-heading" class="motion-title">
+            Du pas de la porte au reçu certifié : <span class="highlight-green">3 gestes simples</span>
+          </h2>
+          <p class="motion-subtitle">
+            Regardez comment une maman d'élève règle la cotisation en espèces et repart l'esprit tranquille avec son reçu officiel sur WhatsApp en moins de 15 secondes.
+          </p>
+        </div>
+
+        <!-- Stepper interactif de progression -->
+        <div class="motion-stepper-wrapper" role="tablist" aria-label="Étapes de la transaction">
+          <button type="button" class="motion-step-btn is-active" data-step="1" role="tab" aria-selected="true" id="stepBtn1">
+            <div class="step-num">01</div>
+            <div class="step-info">
+              <span class="step-title">Arrivée à l'école</span>
+              <span class="step-desc">Mère & enfant avec sac à dos</span>
+            </div>
+            <div class="step-progress-bar"><div class="step-progress-fill" style="width: 100%;"></div></div>
+          </button>
+
+          <button type="button" class="motion-step-btn" data-step="2" role="tab" aria-selected="false" id="stepBtn2">
+            <div class="step-num">02</div>
+            <div class="step-info">
+              <span class="step-title">Règlement 10 000 FCFA</span>
+              <span class="step-desc">Remise transparente en espèces</span>
+            </div>
+            <div class="step-progress-bar"><div class="step-progress-fill"></div></div>
+          </button>
+
+          <button type="button" class="motion-step-btn" data-step="3" role="tab" aria-selected="false" id="stepBtn3">
+            <div class="step-num">03</div>
+            <div class="step-info">
+              <span class="step-title">Reçu certifié direct</span>
+              <span class="step-desc">Pointage express & WhatsApp</span>
+            </div>
+            <div class="step-progress-bar"><div class="step-progress-fill"></div></div>
+          </button>
+        </div>
+
+        <!-- Scène Motion Design (Écran principal avec transitions animées) -->
+        <div class="motion-stage-card" id="motionStageCard">
+          <!-- Acte 1 : Arrivée à l'école -->
+          <div class="motion-scene-slide is-active" data-slide="1" id="motionSlide1">
+            <div class="motion-scene-media">
+              <img src="images/scene_arrival.jpg" alt="Mère bienveillante tenant la main de son enfant avec son sac à dos arrivant à l'école maternelle" class="motion-scene-img" loading="lazy">
+              <div class="motion-floating-badge">
+                <span>🎒</span>
+                <span>Rentrée scolaire & Inscriptions</span>
+              </div>
+              <div class="motion-floating-card">
+                <div class="card-avatar-sm" style="background:#16A34A;">Mme Ba</div>
+                <div>
+                  <strong style="color:#FFFFFF; font-size:12px;">Accueil chaleureux à la direction</strong>
+                  <div style="font-size:11px; color:#CBD5E1;">École Maternelle Les Papillons (Dakar)</div>
+                </div>
+              </div>
+            </div>
+            <div class="motion-scene-narrative">
+              <div class="narrative-tag">Acte 1 · Accueil & Bienveillance</div>
+              <h3 class="narrative-heading">La maman accompagne son enfant avec sérénité</h3>
+              <p class="narrative-text">
+                Fini l'angoisse des files d'attente et des cahiers à souche introuvables. La directrice retrouve immédiatement le dossier de l'enfant dans l'application en tapant les premières lettres de son prénom.
+              </p>
+              <div class="narrative-points">
+                <div class="narrative-point-item">
+                  <span class="point-check">✓</span>
+                  <span>Fiche élève instantanément identifiée</span>
+                </div>
+                <div class="narrative-point-item">
+                  <span class="point-check">✓</span>
+                  <span>Montant de la cotisation affiché sans calculatrice</span>
+                </div>
+              </div>
+              <div class="narrative-nav-controls">
+                <button type="button" class="btn btn-accent btn-sm motion-next-btn">Étape suivante : 10 000 FCFA ➔</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acte 2 : Remise des 10 000 FCFA -->
+          <div class="motion-scene-slide" data-slide="2" id="motionSlide2" style="display:none;">
+            <div class="motion-scene-media">
+              <img src="images/scene_payment.jpg" alt="Remise des billets de 10 000 francs CFA de la main à la main sur le bureau de direction" class="motion-scene-img" loading="lazy">
+              <div class="motion-floating-badge badge-gold">
+                <span>💵</span>
+                <span>Versement officiel en Francs CFA</span>
+              </div>
+              <div class="motion-floating-card card-currency">
+                <div class="currency-tag">RÈGLEMENT VALIDÉ EN DIRECT</div>
+                <div class="currency-amount">10 000 FCFA</div>
+                <div class="currency-words">Dix mille francs CFA · Espèces remises</div>
+              </div>
+            </div>
+            <div class="motion-scene-narrative">
+              <div class="narrative-tag narrative-tag-gold">Acte 2 · Transaction transparente</div>
+              <h3 class="narrative-heading">Remise de la cotisation de la main à la main</h3>
+              <p class="narrative-text">
+                La maman remet le billet de 10 000 FCFA au bureau de direction. Zéro risque de monnaie erronée, zéro divergence de caisse : chaque montant est scrupuleusement tracé et horodaté.
+              </p>
+              <div class="narrative-points">
+                <div class="narrative-point-item">
+                  <span class="point-check">✓</span>
+                  <span>Espèces, Wave, Orange Money ou chèque</span>
+                </div>
+                <div class="narrative-point-item">
+                  <span class="point-check">✓</span>
+                  <span>Montant converti automatiquement en toutes lettres</span>
+                </div>
+              </div>
+              <div class="narrative-nav-controls">
+                <button type="button" class="btn btn-secondary btn-sm motion-prev-btn">← Précédent</button>
+                <button type="button" class="btn btn-accent btn-sm motion-next-btn">Étape suivante : Reçu certifié ➔</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acte 3 : Saisie directrice & Reçu certifié WhatsApp -->
+          <div class="motion-scene-slide" data-slide="3" id="motionSlide3" style="display:none;">
+            <div class="motion-scene-media">
+              <img src="images/scene_receipt.jpg" alt="Directrice saisissant le reçu sur tablette et mère recevant le reçu certifié sur son smartphone" class="motion-scene-img" loading="lazy">
+              <div class="motion-floating-badge badge-green">
+                <span>🎓</span>
+                <span>Reçu N° REC-2026-0042 Certifié</span>
+              </div>
+              <div class="motion-floating-card">
+                <span class="pulse-green-dot"></span>
+                <div>
+                  <strong style="color:#22C55E; font-size:12px;">Reçu WhatsApp délivré instantanément ✓✓</strong>
+                  <div style="font-size:11px; color:#CBD5E1;">Montant : <strong>10 000 FCFA</strong> · Validé avec Cachet</div>
+                </div>
+              </div>
+            </div>
+            <div class="motion-scene-narrative">
+              <div class="narrative-tag narrative-tag-green">Acte 3 · Reçu instantané infalsifiable</div>
+              <h3 class="narrative-heading">La directrice valide, le reçu arrive sur le WhatsApp du parent</h3>
+              <p class="narrative-text">
+                En un seul clic sur le bouton vert « Payé », le reçu officiel au format A5 avec le cachet vectoriel de l'école et son QR code de sécurité est envoyé directement sur le téléphone de la maman. Plus aucun carnet papier déchiré ni contestation !
+              </p>
+              <div class="narrative-points">
+                <div class="narrative-point-item">
+                  <span class="point-check">✓</span>
+                  <span>Cachet officiel vert/bleu & QR code d'authenticité</span>
+                </div>
+                <div class="narrative-point-item">
+                  <span class="point-check">✓</span>
+                  <span>Archivage perpétuel et vérifiable à tout instant</span>
+                </div>
+              </div>
+              <div class="narrative-nav-controls">
+                <button type="button" class="btn btn-secondary btn-sm motion-prev-btn">← Précédent</button>
+                <button type="button" class="btn btn-primary btn-sm btn-cta-glow" data-action="open-onboarding">Référencer mon école gratuitement ➔</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contrôles du Motion Design (Lecture/Pause) -->
+        <div class="motion-playback-bar">
+          <button type="button" class="motion-play-pause-btn" id="motionPlayPauseBtn" aria-label="Mettre en pause l'animation">
+            <span id="motionPlayIcon">⏸️</span> <span id="motionPlayLabel">Animation automatique en cours</span>
+          </button>
+          <div style="font-size:0.8rem; color:#94A3B8;">
+            <span>💡 Touchez une étape pour naviguer manuellement</span>
           </div>
         </div>
       </div>
@@ -1476,6 +1672,54 @@
     </button>
   </aside>
 
+  <!-- Bannière d'installation PWA -->
+  <div id="pwaInstallBanner" class="pwa-install-banner" style="display:none;" role="dialog" aria-label="Installer l'application">
+    <div class="pwa-banner-content">
+      <img src="images/icon-192.png" alt="Logo Gestion DIPE" class="pwa-banner-icon">
+      <div class="pwa-banner-text">
+        <strong>Installer l'application école</strong>
+        <span>Accès 1 clic sur votre écran d'accueil sans passer par Play Store ou App Store.</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button type="button" class="btn btn-sm btn-primary pwa-install-trigger" id="pwaBannerInstallBtn" style="flex:1;">
+        <span>📲 Installer sur mon appareil</span>
+      </button>
+      <button type="button" class="pwa-banner-close" id="pwaBannerCloseBtn" aria-label="Fermer la bannière">&times;</button>
+    </div>
+  </div>
+
+  <!-- Modale Instructions iOS PWA Safari -->
+  <div id="iosInstallModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="iosModalTitle">
+    <div class="modal-dialog ios-install-box" style="max-width:440px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <h3 id="iosModalTitle" style="margin:0; font-size:1.15rem; color:#FFFFFF;">📲 Installer sur votre iPhone / iPad</h3>
+        <button type="button" id="iosModalCloseBtn" style="background:none; border:none; color:#94A3B8; font-size:1.5rem; cursor:pointer;" aria-label="Fermer">&times;</button>
+      </div>
+      <p style="font-size:0.88rem; color:#CBD5E1; margin-bottom:1.25rem;">Apple Safari permet d'installer l'application directement sans passer par l'App Store en 2 étapes rapides :</p>
+      
+      <div class="ios-install-step">
+        <span class="ios-step-icon">1️⃣</span>
+        <div>
+          <strong style="display:block; color:#FFFFFF;">Appuyez sur Partager</strong>
+          <span style="color:#94A3B8;">Touchez l'icône de partage <strong><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; vertical-align:middle;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></strong> en bas de votre écran Safari.</span>
+        </div>
+      </div>
+      
+      <div class="ios-install-step">
+        <span class="ios-step-icon">2️⃣</span>
+        <div>
+          <strong style="display:block; color:#FFFFFF;">Sur l'écran d'accueil</strong>
+          <span style="color:#94A3B8;">Faites défiler le menu et sélectionnez <strong>« Sur l'écran d'accueil »</strong> (<span style="font-size:1.1rem;">➕</span>).</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="iosModalDoneBtn" style="width:100%; margin-top:0.75rem;">
+        <span>Compris, merci !</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
@@ -1483,6 +1727,17 @@
   <script src="js/demo-data.js"></script>
   <script src="js/store.js"></script>
   <script src="js/onboarding.js"></script>
-  <script src="js/landing.js?v=10"></script>
+  <script src="js/landing.js?v=11"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          console.log('[PWA] Service Worker actif:', reg.scope);
+        }).catch(err => {
+          console.warn('[PWA] Enregistrement Service Worker échoué:', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
