@@ -106,7 +106,7 @@ BEGIN
     -- 6. Enregistrement d'un lot de paiements d'inscriptions (environ 22 payés / 8 impayés)
     -- Inscriptions Petite section (7 payés sur 10)
     FOR i IN 1..7 LOOP
-        v_s_id := ('44444444-000' || TRIM(TO_CHAR(i, '09')) || '-1111-1111-111111111111')::UUID;
+        v_s_id := ('44444444-' || LPAD(i::text, 4, '0') || '-1111-1111-111111111111')::UUID;
         INSERT INTO public.payments (school_id, student_id, kind, amount, method, paid_at, status)
         VALUES (v_school_id, v_s_id, 'registration', 25000, 'wave', timezone('utc'::text, now() - INTERVAL '15 days'), 'valid')
         RETURNING id INTO v_p_id;
@@ -117,7 +117,7 @@ BEGIN
 
     -- Inscriptions Moyenne section (8 payés sur 10)
     FOR i IN 11..18 LOOP
-        v_s_id := ('44444444-00' || TRIM(TO_CHAR(i, '99')) || '-1111-1111-111111111111')::UUID;
+        v_s_id := ('44444444-' || LPAD(i::text, 4, '0') || '-1111-1111-111111111111')::UUID;
         INSERT INTO public.payments (school_id, student_id, kind, amount, method, paid_at, status)
         VALUES (v_school_id, v_s_id, 'registration', 25000, 'cash', timezone('utc'::text, now() - INTERVAL '12 days'), 'valid')
         RETURNING id INTO v_p_id;
@@ -128,7 +128,7 @@ BEGIN
 
     -- Inscriptions Grande section (8 payés sur 10)
     FOR i IN 21..28 LOOP
-        v_s_id := ('44444444-00' || TRIM(TO_CHAR(i, '99')) || '-1111-1111-111111111111')::UUID;
+        v_s_id := ('44444444-' || LPAD(i::text, 4, '0') || '-1111-1111-111111111111')::UUID;
         INSERT INTO public.payments (school_id, student_id, kind, amount, method, paid_at, status)
         VALUES (v_school_id, v_s_id, 'registration', 30000, 'orange_money', timezone('utc'::text, now() - INTERVAL '10 days'), 'valid')
         RETURNING id INTO v_p_id;
@@ -142,7 +142,7 @@ BEGIN
 
     -- 7. Cotisations d'Octobre (20 payés)
     FOR i IN 1..6 LOOP
-        v_s_id := ('44444444-000' || TRIM(TO_CHAR(i, '09')) || '-1111-1111-111111111111')::UUID;
+        v_s_id := ('44444444-' || LPAD(i::text, 4, '0') || '-1111-1111-111111111111')::UUID;
         INSERT INTO public.payments (school_id, student_id, kind, month_id, amount, method, paid_at, status)
         VALUES (v_school_id, v_s_id, 'monthly', v_m_oct, 15000, 'wave', timezone('utc'::text, now() - INTERVAL '5 days'), 'valid')
         RETURNING id INTO v_p_id;
