@@ -139,6 +139,7 @@ function initModals() {
   openOnboardBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      if (loginBackdrop) loginBackdrop.classList.remove('is-open');
       if (onboardBackdrop) {
         onboardBackdrop.classList.add('is-open');
         if (window.Onboarding) {
@@ -186,6 +187,7 @@ function initModals() {
   openLoginBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      if (onboardBackdrop) onboardBackdrop.classList.remove('is-open');
       if (loginBackdrop) {
         loginBackdrop.classList.add('is-open');
         // Réinitialise à l'étape 1
@@ -531,7 +533,7 @@ function initTimeSavingsCalculator() {
       amountEl.textContent = Utils.formatFCFA(count * avgFee);
     }
     if (btnEl) {
-      btnEl.innerHTML = `<span>👉 Référencer mes ${count} élèves gratuitement</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`;
+      btnEl.innerHTML = `<span>👉 S'inscrire et gérer mes ${count} élèves</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`;
     }
   };
 
