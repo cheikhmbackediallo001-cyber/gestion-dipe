@@ -31,7 +31,7 @@
 
   <!-- Polices et Stylesheets -->
   <link rel="stylesheet" href="css/design-system.css?v=11">
-  <link rel="stylesheet" href="css/landing.css?v=11">
+  <link rel="stylesheet" href="css/landing.css?v=12">
   <link rel="stylesheet" href="css/receipt.css?v=11">
 
   <link rel="icon" type="image/png" href="images/icon-192.png">
@@ -120,10 +120,11 @@
     <!-- ==============================================================================
          HERO SECTION ULTRA-ATTRACTIVE
          ============================================================================== -->
-    <section class="hero-section">
+    <section id="motion-design" class="hero-section hero-motion-unified">
       <div class="hero-container">
+        <!-- En-tête accrocheur épuré -->
         <div class="hero-content">
-          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; justify-content:center;">
             <div class="hero-pill-badge" style="margin-bottom:0.75rem;">
               <span class="pulse-dot"></span>
               <span class="hero-pill-text">🇸🇳 N°1 au Sénégal & Afrique francophone</span>
@@ -141,512 +142,190 @@
             </div>
           </div>
 
-          <h1 class="hero-title">
-            Gérez les inscriptions et cotisations de votre école, <span class="highlight-gradient">en toute sérénité.</span>
+          <h1 class="hero-title" style="text-align:center;">
+            Gérez les inscriptions et cotisations de votre école, <span class="highlight-green">en toute sérénité.</span>
           </h1>
 
-          <p class="hero-subtitle">
-            Pointez les paiements en un geste avec deux boutons clairs <strong>Payé / Impayé</strong>, consultez vos totaux sans calculette et délivrez instantanément un reçu officiel avec le cachet de votre école.
+          <p class="hero-subtitle" style="text-align:center; max-width:760px; margin:0 auto 1.5rem auto;">
+            Pointez les paiements en un geste avec deux boutons clairs <strong>Payé / Impayé</strong>, sans calculette, et délivrez instantanément un reçu officiel certifié avec cachet sur le WhatsApp du parent.
           </p>
 
-          <div class="hero-cta-group">
+          <div class="hero-cta-group" style="justify-content:center;">
             <button class="btn btn-accent btn-lg btn-cta-glow" data-action="open-onboarding">
               <span>🚀 Référencer mon école gratuitement</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
-            <button class="btn btn-secondary btn-lg btn-demo-glow" onclick="document.getElementById('calculateur').scrollIntoView({behavior:'smooth'})">
-              <span>⚡ Calculer mon gain de temps</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            <button class="btn btn-secondary btn-lg pwa-install-trigger" style="display:none; border-color:#22C55E; color:#16A34A; font-weight:700;">
+              <span>📲 Installer l'App</span>
             </button>
           </div>
 
-          <div style="display:flex; flex-wrap:wrap; gap:1.25rem; margin-top:-0.75rem; margin-bottom:1.5rem; font-size:0.85rem; color:var(--text-muted); font-weight:600;">
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1.25rem; margin-top:1.25rem; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted); font-weight:600;">
             <span>✓ Sans carte bancaire</span>
             <span>✓ Prise en main en 2 min</span>
             <span>✓ Reçu officiel offert</span>
-          </div>
-
-          <div class="hero-perks-row">
-            <div class="hero-perk-item">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-              <span>Autonome en 10 minutes</span>
-            </div>
-            <div class="hero-perk-item">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-              <span>Fluide sur smartphone 3G</span>
-            </div>
-            <div class="hero-perk-item">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-              <span>Zéro calculatrice</span>
-            </div>
+            <span>✓ Fluide sur smartphone 3G</span>
+            <span>✓ Zéro calculatrice</span>
           </div>
         </div>
 
-        <!-- MAQUETTE MULTI-DEVICE : ORDINATEUR, TABLETTE ET SMARTPHONE INTERACTIF -->
-        <div class="hero-multidevice-stage">
-          <div class="hero-visual-bg-glow" style="top:50%; left:50%; transform:translate(-50%, -50%);" aria-hidden="true"></div>
-
-          <!-- 1. CHÂSSIS ORDINATEUR (Tableau de bord exact de l'école) -->
-          <div class="stage-desktop-frame">
-            <div class="stage-browser-header">
-              <div class="stage-browser-dots">
-                <div class="stage-dot red"></div>
-                <div class="stage-dot yellow"></div>
-                <div class="stage-dot green"></div>
+        <!-- THÉÂTRE DU MOTION DESIGN 3 ACTES (Directement visible dans le Hero) -->
+        <div class="hero-motion-wrapper" style="width:100%; max-width:1050px; margin:1rem auto 0 auto;">
+          <!-- Stepper interactif de progression -->
+          <div class="motion-stepper-wrapper" role="tablist" aria-label="Étapes de la transaction">
+            <button type="button" class="motion-step-btn is-active" data-step="1" role="tab" aria-selected="true" id="stepBtn1">
+              <div class="step-num">01</div>
+              <div class="step-info">
+                <span class="step-title">Arrivée à l'école</span>
+                <span class="step-desc">Mère & enfant avec sac à dos</span>
               </div>
-              <div class="stage-address-bar">https://gestionprescolaire.sn/app.html — Session Directeur</div>
-            </div>
+              <div class="step-progress-bar"><div class="step-progress-fill" style="width: 100%;"></div></div>
+            </button>
 
-            <!-- Contenu exact de l'application avec défilement fluide sans overflow de page -->
-            <div class="stage-desktop-scroll-area">
-              <div class="stage-desktop-inner-layout">
-              <!-- Mini Sidebar -->
-              <div class="stage-desktop-mini-sidebar" style="width:190px; background:#fff; border-right:1px solid #E2E8F0; padding:1rem 0.75rem; display:flex; flex-direction:column; justify-content:space-between;">
-                <div>
-                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.25rem;">
-                    <div style="width:28px; height:28px; border-radius:6px; background:#1E3A8A; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px;">GP</div>
-                    <div>
-                      <div style="font-weight:700; font-size:12px; color:#1E3A8A; line-height:1.1;">Gestion Préscolaire</div>
-                      <div style="font-size:9px; color:#64748B;">Établissement Préscolaire</div>
-                    </div>
-                  </div>
-
-                  <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
-                    <div style="background:#1E3A8A; color:#fff; padding:6px 10px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:6px;">
-                      <span>🏠</span> <span>Accueil</span>
-                    </div>
-                    <div style="color:#475569; padding:5px 10px; font-weight:500;">👥 Élèves</div>
-                    <div style="color:#475569; padding:5px 10px; font-weight:500;">📝 Inscriptions</div>
-                    <div style="color:#475569; padding:5px 10px; font-weight:500;">📅 Cotisations</div>
-                    <div style="color:#475569; padding:5px 10px; font-weight:500;">💰 Total Inscriptions</div>
-                    <div style="color:#475569; padding:5px 10px; font-weight:500;">📊 Bilan mensuel</div>
-                    <div style="color:#475569; padding:5px 10px; font-weight:500;">🧾 Reçus</div>
-                  </div>
-                </div>
-
-                <div style="display:flex; align-items:center; gap:6px; padding-top:8px; border-top:1px solid #E2E8F0;">
-                  <div style="width:24px; height:24px; border-radius:50%; background:#2563EB; color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center;">AB</div>
-                  <div style="font-size:9px; line-height:1.2;">
-                    <strong style="display:block; color:#0F172A;">Mme Aïssatou Ba</strong>
-                    <span style="color:#64748B;">Directrice</span>
-                  </div>
-                </div>
+            <button type="button" class="motion-step-btn" data-step="2" role="tab" aria-selected="false" id="stepBtn2">
+              <div class="step-num">02</div>
+              <div class="step-info">
+                <span class="step-title">Règlement 10 000 FCFA</span>
+                <span class="step-desc">Remise transparente en espèces</span>
               </div>
+              <div class="step-progress-bar"><div class="step-progress-fill"></div></div>
+            </button>
 
-              <!-- Contenu Tableau de bord exact -->
-              <div style="flex:1; padding:1.25rem; overflow-x:hidden;">
-                <!-- Header école -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #E2E8F0; padding-bottom:0.75rem;">
+            <button type="button" class="motion-step-btn" data-step="3" role="tab" aria-selected="false" id="stepBtn3">
+              <div class="step-num">03</div>
+              <div class="step-info">
+                <span class="step-title">Reçu certifié direct</span>
+                <span class="step-desc">Pointage express & WhatsApp</span>
+              </div>
+              <div class="step-progress-bar"><div class="step-progress-fill"></div></div>
+            </button>
+          </div>
+
+          <!-- Scène Motion Design (Écran principal avec transitions animées) -->
+          <div class="motion-stage-card" id="motionStageCard">
+            <!-- Acte 1 : Arrivée à l'école -->
+            <div class="motion-scene-slide is-active" data-slide="1" id="motionSlide1">
+              <div class="motion-scene-media">
+                <img src="images/scene_arrival.jpg" alt="Mère bienveillante tenant la main de son enfant avec son sac à dos arrivant à l'école maternelle" class="motion-scene-img" loading="lazy">
+                <div class="motion-floating-badge">
+                  <span>🎒</span>
+                  <span>Rentrée scolaire & Inscriptions</span>
+                </div>
+                <div class="motion-floating-card">
+                  <div class="card-avatar-sm" style="background:#16A34A;">Mme Ba</div>
                   <div>
-                    <h3 style="font-size:15px; font-weight:700; color:#0F172A; margin-bottom:2px;">Tableau de bord</h3>
-                    <div style="font-size:10px; color:#64748B;">École Maternelle Les Papillons · Année scolaire 2026-2027</div>
-                  </div>
-                  <div style="display:flex; gap:6px;">
-                    <span class="btn btn-secondary btn-sm" style="min-height:28px; padding:2px 8px; font-size:10px;">Inscriptions</span>
-                    <span class="btn btn-primary btn-sm" style="min-height:28px; padding:2px 8px; font-size:10px;">Cotisations Octobre</span>
-                  </div>
-                </div>
-
-                <!-- 4 KPI Cards exactes du screenshot -->
-                <div class="stage-desktop-kpis" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:1rem;">
-                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
-                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Inscriptions Encaissées</div>
-                    <div style="font-size:14px; font-weight:800; color:#1E3A8A; margin:2px 0;">585 000 FCFA</div>
-                    <div style="font-size:8.5px; color:#16A34A;">22 sur 30 Inscrits (73.3%)</div>
-                  </div>
-
-                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
-                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Mois en cours (Octobre)</div>
-                    <div style="font-size:14px; font-weight:800; color:#16A34A; margin:2px 0;">288 000 FCFA</div>
-                    <div style="font-size:8.5px; color:#64748B;">Attendu : 480 000 FCFA</div>
-                  </div>
-
-                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
-                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Pourcentage du mois</div>
-                    <div style="font-size:14px; font-weight:800; color:#D97706; margin:2px 0;">60%</div>
-                    <div class="progress-bar-container" style="height:5px; margin-top:2px;">
-                      <div class="progress-bar-fill fill-medium" style="width:60%;"></div>
-                    </div>
-                  </div>
-
-                  <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
-                    <div style="font-size:9px; text-transform:uppercase; color:#64748B; font-weight:700;">Impayés du mois</div>
-                    <div style="font-size:14px; font-weight:800; color:#DC2626; margin:2px 0;">12</div>
-                    <div style="font-size:8.5px; color:#64748B;">Élèves à recouvrer pour Octobre</div>
-                  </div>
-                </div>
-
-                <!-- Tableau exact des paiements -->
-                <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; overflow:hidden;">
-                  <div style="padding:6px 10px; background:#F1F5F9; font-size:10px; font-weight:700; color:#475569; display:flex; justify-content:space-between;">
-                    <span>DERNIERS PAIEMENTS ENREGISTRÉS</span>
-                    <span style="color:#2563EB;">Voir tous les reçus</span>
-                  </div>
-                  <table class="data-table" style="font-size:10.5px;">
-                    <tbody>
-                      <tr>
-                        <td><strong>REC-2026-0051</strong></td>
-                        <td>DIENG El Hadji Malick</td>
-                        <td><span class="badge badge-section" style="background:#2563EB; color:#FFFFFF !important; font-weight:700; font-size:9.5px; padding:2px 8px;">Petite section</span></td>
-                        <td><strong>25 000 FCFA</strong></td>
-                        <td><span class="badge badge-success" style="font-size:9px; padding:1px 6px;">✓ Valide</span></td>
-                        <td><span class="btn btn-outline-primary btn-sm" style="min-height:22px; padding:1px 6px; font-size:9px;">Voir Reçu</span></td>
-                      </tr>
-                      <tr>
-                        <td><strong>REC-2026-0044</strong></td>
-                        <td>FALL Aminata</td>
-                        <td><span class="badge badge-section" style="background:#2563EB; color:#FFFFFF !important; font-weight:700; font-size:9.5px; padding:2px 8px;">Petite section</span></td>
-                        <td><strong>15 000 FCFA</strong></td>
-                        <td><span class="badge badge-success" style="font-size:9px; padding:1px 6px;">✓ Valide</span></td>
-                        <td><span class="btn btn-outline-primary btn-sm" style="min-height:22px; padding:1px 6px; font-size:9px;">Voir Reçu</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="stage-mobile-swipe-hint">
-            <span>👉 Faites glisser horizontalement pour explorer la démo complète</span>
-          </div>
-        </div>
-
-          <!-- 2. TABLETTE FLOTTANTE (À Gauche - État par section) -->
-          <div class="stage-tablet-frame">
-            <div style="background:#1E3A8A; color:#fff; padding:8px 12px; font-size:11px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
-              <span>📊 État par section</span>
-              <span style="font-size:9px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">Octobre</span>
-            </div>
-            <div class="stage-tablet-body">
-              <div style="margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px;">
-                  <span>Petite section</span>
-                  <span style="color:#16A34A;">80.0%</span>
-                </div>
-                <div class="progress-bar-container" style="height:6px;">
-                  <div class="progress-bar-fill fill-high" style="width:80%;"></div>
-                </div>
-              </div>
-
-              <div style="margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px;">
-                  <span>Moyenne section</span>
-                  <span style="color:#16A34A;">80.0%</span>
-                </div>
-                <div class="progress-bar-container" style="height:6px;">
-                  <div class="progress-bar-fill fill-high" style="width:80%;"></div>
-                </div>
-              </div>
-
-              <div>
-                <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:2px;">
-                  <span>Grande section</span>
-                  <span style="color:#D97706;">60.0%</span>
-                </div>
-                <div class="progress-bar-container" style="height:6px;">
-                  <div class="progress-bar-fill fill-medium" style="width:60%;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. SMARTPHONE FLOTTANT (À Droite - Boutons Payé / Impayé interactifs) -->
-          <div class="stage-phone-frame" style="position:relative;">
-            <div class="hero-demo-toast" id="heroDemoToast"><span>✓ Reçu officiel généré (+15 000 FCFA) !</span></div>
-            <div style="background:#0F172A; padding:6px; display:flex; justify-content:center;">
-              <div style="width:50px; height:6px; background:#334155; border-radius:3px;"></div>
-            </div>
-
-            <div class="stage-phone-body">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <strong style="font-size:11px; color:#1E3A8A;">Cotisations Octobre</strong>
-                <span class="badge badge-success" id="heroDemoPaidCount" style="font-size:9px; padding:2px 6px;">2 payés</span>
-              </div>
-
-              <!-- Lignes interactives smartphone -->
-              <div class="hero-demo-row" data-fee="15000" style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px; margin-bottom:6px;">
-                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
-                  <strong>DIOP Mamadou</strong>
-                  <span style="color:#64748B;">Petite sect.</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-weight:700; font-size:10px; color:#1E3A8A;">15&nbsp;000&nbsp;FCFA</span>
-                  <div class="payment-toggle-group" style="padding:1px; gap:2px;">
-                    <button type="button" class="toggle-btn btn-status-paid demo-btn-paid is-active" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✓ Payé</button>
-                    <button type="button" class="toggle-btn btn-status-unpaid demo-btn-unpaid" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✕ Impayé</button>
+                    <strong style="color:#FFFFFF; font-size:12px;">Accueil chaleureux à la direction</strong>
+                    <div style="font-size:11px; color:#CBD5E1;">École Maternelle Les Papillons (Dakar)</div>
                   </div>
                 </div>
               </div>
-
-              <div class="hero-demo-row" data-fee="15000" style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px; margin-bottom:6px;">
-                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
-                  <strong>SOW Fatou</strong>
-                  <span style="color:#64748B;">Moyenne s.</span>
+              <div class="motion-scene-narrative">
+                <div class="narrative-tag">Acte 1 · Accueil & Bienveillance</div>
+                <h3 class="narrative-heading">La maman accompagne son enfant avec sérénité</h3>
+                <p class="narrative-text">
+                  Fini l'angoisse des files d'attente et des cahiers à souche introuvables. La directrice retrouve immédiatement le dossier de l'enfant dans l'application en tapant les premières lettres de son prénom.
+                </p>
+                <div class="narrative-points">
+                  <div class="narrative-point-item">
+                    <span class="point-check">✓</span>
+                    <span>Fiche élève instantanément identifiée</span>
+                  </div>
+                  <div class="narrative-point-item">
+                    <span class="point-check">✓</span>
+                    <span>Montant de la cotisation affiché sans calculatrice</span>
+                  </div>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-weight:700; font-size:10px; color:#1E3A8A;">15&nbsp;000&nbsp;FCFA</span>
-                  <div class="payment-toggle-group" style="padding:1px; gap:2px;">
-                    <button type="button" class="toggle-btn btn-status-paid demo-btn-paid is-active" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✓ Payé</button>
-                    <button type="button" class="toggle-btn btn-status-unpaid demo-btn-unpaid" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✕ Impayé</button>
+                <div class="narrative-nav-controls">
+                  <button type="button" class="btn btn-accent btn-sm motion-next-btn">Étape suivante : 10 000 FCFA ➔</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acte 2 : Remise des 10 000 FCFA -->
+            <div class="motion-scene-slide" data-slide="2" id="motionSlide2" style="display:none;">
+              <div class="motion-scene-media">
+                <img src="images/scene_payment.jpg" alt="Remise des billets de 10 000 francs CFA de la main à la main sur le bureau de direction" class="motion-scene-img" loading="lazy">
+                <div class="motion-floating-badge badge-gold">
+                  <span>💵</span>
+                  <span>Versement officiel en Francs CFA</span>
+                </div>
+                <div class="motion-floating-card card-currency">
+                  <div class="currency-tag">RÈGLEMENT VALIDÉ EN DIRECT</div>
+                  <div class="currency-amount">10 000 FCFA</div>
+                  <div class="currency-words">Dix mille francs CFA · Espèces remises</div>
+                </div>
+              </div>
+              <div class="motion-scene-narrative">
+                <div class="narrative-tag narrative-tag-gold">Acte 2 · Transaction transparente</div>
+                <h3 class="narrative-heading">Remise de la cotisation de la main à la main</h3>
+                <p class="narrative-text">
+                  La maman remet le billet de 10 000 FCFA au bureau de direction. Zéro risque de monnaie erronée, zéro divergence de caisse : chaque montant est scrupuleusement tracé et horodaté.
+                </p>
+                <div class="narrative-points">
+                  <div class="narrative-point-item">
+                    <span class="point-check">✓</span>
+                    <span>Espèces, Wave, Orange Money ou chèque</span>
+                  </div>
+                  <div class="narrative-point-item">
+                    <span class="point-check">✓</span>
+                    <span>Montant converti automatiquement en toutes lettres</span>
+                  </div>
+                </div>
+                <div class="narrative-nav-controls">
+                  <button type="button" class="btn btn-secondary btn-sm motion-prev-btn">← Précédent</button>
+                  <button type="button" class="btn btn-accent btn-sm motion-next-btn">Étape suivante : Reçu certifié ➔</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acte 3 : Saisie directrice & Reçu certifié WhatsApp -->
+            <div class="motion-scene-slide" data-slide="3" id="motionSlide3" style="display:none;">
+              <div class="motion-scene-media">
+                <img src="images/scene_receipt.jpg" alt="Directrice saisissant le reçu sur tablette et mère recevant le reçu certifié sur son smartphone" class="motion-scene-img" loading="lazy">
+                <div class="motion-floating-badge badge-green">
+                  <span>🎓</span>
+                  <span>Reçu N° REC-2026-0042 Certifié</span>
+                </div>
+                <div class="motion-floating-card">
+                  <span class="pulse-green-dot"></span>
+                  <div>
+                    <strong style="color:#22C55E; font-size:12px;">Reçu WhatsApp délivré instantanément ✓✓</strong>
+                    <div style="font-size:11px; color:#CBD5E1;">Montant : <strong>10 000 FCFA</strong> · Validé avec Cachet</div>
                   </div>
                 </div>
               </div>
-
-              <div class="hero-demo-row" data-fee="18000" style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:8px;">
-                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
-                  <strong>NDIAYE Cheikh</strong>
-                  <span style="color:#64748B;">Grande s.</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-weight:700; font-size:10px; color:#1E3A8A;">18&nbsp;000&nbsp;FCFA</span>
-                  <div class="payment-toggle-group" style="padding:1px; gap:2px;">
-                    <button type="button" class="toggle-btn btn-status-paid demo-btn-paid" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✓ Payé</button>
-                    <button type="button" class="toggle-btn btn-status-unpaid demo-btn-unpaid is-active" style="min-height:24px; min-width:48px; font-size:9.5px; padding:2px 4px;">✕ Impayé</button>
+              <div class="motion-scene-narrative">
+                <div class="narrative-tag narrative-tag-green">Acte 3 · Reçu instantané infalsifiable</div>
+                <h3 class="narrative-heading">La directrice valide, le reçu arrive sur le WhatsApp du parent</h3>
+                <p class="narrative-text">
+                  En un seul clic sur le bouton vert « Payé », le reçu officiel au format A5 avec le cachet vectoriel de l'école et son QR code de sécurité est envoyé directement sur le téléphone de la maman. Plus aucun carnet papier déchiré ni contestation !
+                </p>
+                <div class="narrative-points">
+                  <div class="narrative-point-item">
+                    <span class="point-check">✓</span>
+                    <span>Cachet officiel vert/bleu & QR code d'authenticité</span>
+                  </div>
+                  <div class="narrative-point-item">
+                    <span class="point-check">✓</span>
+                    <span>Archivage perpétuel et vérifiable à tout instant</span>
                   </div>
                 </div>
-              </div>
-
-              <div style="margin-top:8px; text-align:center; font-size:9px; color:#1E3A8A; font-weight:600;">
-                ⚡ Total démo : <span id="heroDemoAmountCount">30 000 FCFA</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==============================================================================
-         BANDEAU DE CONFIANCE & STATS D'IMPACT (PREUVE SOCIALE ULTRA-PRO)
-         ============================================================================== -->
-    <section class="trust-ribbon-section" aria-label="Établissements partenaires et chiffres clés">
-      <div class="trust-ribbon-inner">
-        <div class="trust-ribbon-label">
-          Recommandé par les directions d'écoles maternelles et garderies privées
-        </div>
-        <div class="trust-schools-pills">
-          <span class="trust-school-pill">🏫 École Maternelle Les Papillons <em>(Dakar-Fann)</em></span>
-          <span class="trust-school-pill">🏫 Groupe Scolaire Excellence <em>(Almadies)</em></span>
-          <span class="trust-school-pill">🏫 Maternelle Les Poussins <em>(Thiès)</em></span>
-          <span class="trust-school-pill">🏫 Académie d'Éveil <em>(Saint-Louis)</em></span>
-          <span class="trust-school-pill">🏫 Complexe Éducatif Keur Gorgui <em>(Dakar)</em></span>
-        </div>
-
-        <div class="impact-stats-grid">
-          <div class="impact-stat-card">
-            <div class="impact-stat-number">+34</div>
-            <div class="impact-stat-label">Écoles maternelles équipées</div>
-          </div>
-          <div class="impact-stat-card">
-            <div class="impact-stat-number">10 sec</div>
-            <div class="impact-stat-label">Pour encaisser & éditer un reçu</div>
-          </div>
-          <div class="impact-stat-card">
-            <div class="impact-stat-number">100%</div>
-            <div class="impact-stat-label">Sans calculette ni litige</div>
-          </div>
-          <div class="impact-stat-card">
-            <div class="impact-stat-number">24h/7j</div>
-            <div class="impact-stat-label">Données sauvegardées & RLS</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==============================================================================
-         BANDEAU DE PRESTIGE AVEC PHOTOGRAPHIES RÉELLES
-         ============================================================================== -->
-    <section class="showcase-banner-section" aria-label="Présentation en situation réelle">
-      <div class="showcase-grid">
-        <div class="showcase-image-wrapper">
-          <img src="images/preschool_hero.jpg" alt="Enfants de maternelle apprenant avec leur maîtresse dans une école de Dakar" class="showcase-image" loading="lazy">
-          <div class="showcase-overlay-tag">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Écoles maternelles & préscolaires au Sénégal</span>
-          </div>
-        </div>
-
-        <div class="showcase-image-wrapper">
-          <img src="images/director_portrait.jpg" alt="Directrice d'école préscolaire gérant son établissement avec une tablette" class="showcase-image" loading="lazy">
-          <div class="showcase-overlay-tag">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/></svg>
-            <span>Mme Aïssatou Ba — Directrice certifiée Gestion Préscolaire</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==============================================================================
-         MOTION DESIGN NARRATIF : L'EXPÉRIENCE COMPLÈTE EN 3 ACTES (VERT, NOIR, BLANC)
-         ============================================================================== -->
-    <section id="motion-design" class="motion-narrative-section" aria-labelledby="motion-heading">
-      <div class="motion-narrative-container">
-        <div class="section-header motion-header">
-          <div class="motion-pill-badge">
-            <span class="motion-pulse-dot"></span>
-            <span>Motion Design Interactif · Processus 100% Transparent</span>
-          </div>
-          <h2 id="motion-heading" class="motion-title">
-            Du pas de la porte au reçu certifié : <span class="highlight-green">3 gestes simples</span>
-          </h2>
-          <p class="motion-subtitle">
-            Regardez comment une maman d'élève règle la cotisation en espèces et repart l'esprit tranquille avec son reçu officiel sur WhatsApp en moins de 15 secondes.
-          </p>
-        </div>
-
-        <!-- Stepper interactif de progression -->
-        <div class="motion-stepper-wrapper" role="tablist" aria-label="Étapes de la transaction">
-          <button type="button" class="motion-step-btn is-active" data-step="1" role="tab" aria-selected="true" id="stepBtn1">
-            <div class="step-num">01</div>
-            <div class="step-info">
-              <span class="step-title">Arrivée à l'école</span>
-              <span class="step-desc">Mère & enfant avec sac à dos</span>
-            </div>
-            <div class="step-progress-bar"><div class="step-progress-fill" style="width: 100%;"></div></div>
-          </button>
-
-          <button type="button" class="motion-step-btn" data-step="2" role="tab" aria-selected="false" id="stepBtn2">
-            <div class="step-num">02</div>
-            <div class="step-info">
-              <span class="step-title">Règlement 10 000 FCFA</span>
-              <span class="step-desc">Remise transparente en espèces</span>
-            </div>
-            <div class="step-progress-bar"><div class="step-progress-fill"></div></div>
-          </button>
-
-          <button type="button" class="motion-step-btn" data-step="3" role="tab" aria-selected="false" id="stepBtn3">
-            <div class="step-num">03</div>
-            <div class="step-info">
-              <span class="step-title">Reçu certifié direct</span>
-              <span class="step-desc">Pointage express & WhatsApp</span>
-            </div>
-            <div class="step-progress-bar"><div class="step-progress-fill"></div></div>
-          </button>
-        </div>
-
-        <!-- Scène Motion Design (Écran principal avec transitions animées) -->
-        <div class="motion-stage-card" id="motionStageCard">
-          <!-- Acte 1 : Arrivée à l'école -->
-          <div class="motion-scene-slide is-active" data-slide="1" id="motionSlide1">
-            <div class="motion-scene-media">
-              <img src="images/scene_arrival.jpg" alt="Mère bienveillante tenant la main de son enfant avec son sac à dos arrivant à l'école maternelle" class="motion-scene-img" loading="lazy">
-              <div class="motion-floating-badge">
-                <span>🎒</span>
-                <span>Rentrée scolaire & Inscriptions</span>
-              </div>
-              <div class="motion-floating-card">
-                <div class="card-avatar-sm" style="background:#16A34A;">Mme Ba</div>
-                <div>
-                  <strong style="color:#FFFFFF; font-size:12px;">Accueil chaleureux à la direction</strong>
-                  <div style="font-size:11px; color:#CBD5E1;">École Maternelle Les Papillons (Dakar)</div>
+                <div class="narrative-nav-controls">
+                  <button type="button" class="btn btn-secondary btn-sm motion-prev-btn">← Précédent</button>
+                  <button type="button" class="btn btn-primary btn-sm btn-cta-glow" data-action="open-onboarding">Référencer mon école gratuitement ➔</button>
                 </div>
               </div>
             </div>
-            <div class="motion-scene-narrative">
-              <div class="narrative-tag">Acte 1 · Accueil & Bienveillance</div>
-              <h3 class="narrative-heading">La maman accompagne son enfant avec sérénité</h3>
-              <p class="narrative-text">
-                Fini l'angoisse des files d'attente et des cahiers à souche introuvables. La directrice retrouve immédiatement le dossier de l'enfant dans l'application en tapant les premières lettres de son prénom.
-              </p>
-              <div class="narrative-points">
-                <div class="narrative-point-item">
-                  <span class="point-check">✓</span>
-                  <span>Fiche élève instantanément identifiée</span>
-                </div>
-                <div class="narrative-point-item">
-                  <span class="point-check">✓</span>
-                  <span>Montant de la cotisation affiché sans calculatrice</span>
-                </div>
-              </div>
-              <div class="narrative-nav-controls">
-                <button type="button" class="btn btn-accent btn-sm motion-next-btn">Étape suivante : 10 000 FCFA ➔</button>
-              </div>
-            </div>
           </div>
 
-          <!-- Acte 2 : Remise des 10 000 FCFA -->
-          <div class="motion-scene-slide" data-slide="2" id="motionSlide2" style="display:none;">
-            <div class="motion-scene-media">
-              <img src="images/scene_payment.jpg" alt="Remise des billets de 10 000 francs CFA de la main à la main sur le bureau de direction" class="motion-scene-img" loading="lazy">
-              <div class="motion-floating-badge badge-gold">
-                <span>💵</span>
-                <span>Versement officiel en Francs CFA</span>
-              </div>
-              <div class="motion-floating-card card-currency">
-                <div class="currency-tag">RÈGLEMENT VALIDÉ EN DIRECT</div>
-                <div class="currency-amount">10 000 FCFA</div>
-                <div class="currency-words">Dix mille francs CFA · Espèces remises</div>
-              </div>
+          <!-- Contrôles du Motion Design (Lecture/Pause) -->
+          <div class="motion-playback-bar">
+            <button type="button" class="motion-play-pause-btn" id="motionPlayPauseBtn" aria-label="Mettre en pause l'animation">
+              <span id="motionPlayIcon">⏸️</span> <span id="motionPlayLabel">Animation automatique en cours</span>
+            </button>
+            <div style="font-size:0.8rem; color:#94A3B8;">
+              <span>💡 Touchez une étape pour naviguer manuellement</span>
             </div>
-            <div class="motion-scene-narrative">
-              <div class="narrative-tag narrative-tag-gold">Acte 2 · Transaction transparente</div>
-              <h3 class="narrative-heading">Remise de la cotisation de la main à la main</h3>
-              <p class="narrative-text">
-                La maman remet le billet de 10 000 FCFA au bureau de direction. Zéro risque de monnaie erronée, zéro divergence de caisse : chaque montant est scrupuleusement tracé et horodaté.
-              </p>
-              <div class="narrative-points">
-                <div class="narrative-point-item">
-                  <span class="point-check">✓</span>
-                  <span>Espèces, Wave, Orange Money ou chèque</span>
-                </div>
-                <div class="narrative-point-item">
-                  <span class="point-check">✓</span>
-                  <span>Montant converti automatiquement en toutes lettres</span>
-                </div>
-              </div>
-              <div class="narrative-nav-controls">
-                <button type="button" class="btn btn-secondary btn-sm motion-prev-btn">← Précédent</button>
-                <button type="button" class="btn btn-accent btn-sm motion-next-btn">Étape suivante : Reçu certifié ➔</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Acte 3 : Saisie directrice & Reçu certifié WhatsApp -->
-          <div class="motion-scene-slide" data-slide="3" id="motionSlide3" style="display:none;">
-            <div class="motion-scene-media">
-              <img src="images/scene_receipt.jpg" alt="Directrice saisissant le reçu sur tablette et mère recevant le reçu certifié sur son smartphone" class="motion-scene-img" loading="lazy">
-              <div class="motion-floating-badge badge-green">
-                <span>🎓</span>
-                <span>Reçu N° REC-2026-0042 Certifié</span>
-              </div>
-              <div class="motion-floating-card">
-                <span class="pulse-green-dot"></span>
-                <div>
-                  <strong style="color:#22C55E; font-size:12px;">Reçu WhatsApp délivré instantanément ✓✓</strong>
-                  <div style="font-size:11px; color:#CBD5E1;">Montant : <strong>10 000 FCFA</strong> · Validé avec Cachet</div>
-                </div>
-              </div>
-            </div>
-            <div class="motion-scene-narrative">
-              <div class="narrative-tag narrative-tag-green">Acte 3 · Reçu instantané infalsifiable</div>
-              <h3 class="narrative-heading">La directrice valide, le reçu arrive sur le WhatsApp du parent</h3>
-              <p class="narrative-text">
-                En un seul clic sur le bouton vert « Payé », le reçu officiel au format A5 avec le cachet vectoriel de l'école et son QR code de sécurité est envoyé directement sur le téléphone de la maman. Plus aucun carnet papier déchiré ni contestation !
-              </p>
-              <div class="narrative-points">
-                <div class="narrative-point-item">
-                  <span class="point-check">✓</span>
-                  <span>Cachet officiel vert/bleu & QR code d'authenticité</span>
-                </div>
-                <div class="narrative-point-item">
-                  <span class="point-check">✓</span>
-                  <span>Archivage perpétuel et vérifiable à tout instant</span>
-                </div>
-              </div>
-              <div class="narrative-nav-controls">
-                <button type="button" class="btn btn-secondary btn-sm motion-prev-btn">← Précédent</button>
-                <button type="button" class="btn btn-primary btn-sm btn-cta-glow" data-action="open-onboarding">Référencer mon école gratuitement ➔</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Contrôles du Motion Design (Lecture/Pause) -->
-        <div class="motion-playback-bar">
-          <button type="button" class="motion-play-pause-btn" id="motionPlayPauseBtn" aria-label="Mettre en pause l'animation">
-            <span id="motionPlayIcon">⏸️</span> <span id="motionPlayLabel">Animation automatique en cours</span>
-          </button>
-          <div style="font-size:0.8rem; color:#94A3B8;">
-            <span>💡 Touchez une étape pour naviguer manuellement</span>
           </div>
         </div>
       </div>
@@ -1727,7 +1406,7 @@
   <script src="js/demo-data.js"></script>
   <script src="js/store.js"></script>
   <script src="js/onboarding.js"></script>
-  <script src="js/landing.js?v=11"></script>
+  <script src="js/landing.js?v=12"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

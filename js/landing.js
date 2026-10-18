@@ -407,6 +407,7 @@ function initModals() {
  */
 function initInteractiveHeroDemo() {
   const mockRows = document.querySelectorAll('.hero-demo-row');
+  if (!mockRows.length) return;
   const totalPaidBadge = document.getElementById('heroDemoPaidCount');
   const totalAmountBadge = document.getElementById('heroDemoAmountCount');
   const demoToast = document.getElementById('heroDemoToast');
