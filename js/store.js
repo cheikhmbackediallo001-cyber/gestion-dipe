@@ -372,6 +372,64 @@ const Store = {
     return { payment, receipt };
   },
 
+  getPaymentById(paymentId) {
+    if (!this.data || !Array.isArray(this.data.payments)) return null;
+    return this.data.payments.find(p => p.id === paymentId) || null;
+  },
+
+  /**
+   * Modifier un paiement existant (somme, mode, date, référence) avec recalcul automatique des reçus et bilans
+   */
+  updatePayment(paymentId, updates = {}) {
+    if (!this.data || !Array.isArray(this.data.payments)) return null;
+    const payment = this.data.payments.find(p => p.id === paymentId);
+    if (!payment) throw new Error("Paiement introuvable");
+
+    const previousAmount = payment.amount;
+
+    if (updates.amount !== undefined) {
+      const cleanStr = String(updates.amount).replace(/\s/g, '').replace(/,/g, '.');
+      const parsedAmount = Math.round(parseFloat(cleanStr));
+      if (isNaN(parsedAmount) || parsedAmount < 0) {
+        throw new Error("Veuillez saisir un montant valide en FCFA supérieur ou égal à 0.");
+      }
+      payment.amount = parsedAmount;
+    }
+
+    if (updates.method) {
+      payment.method = updates.method;
+    }
+
+    if (updates.reference !== undefined) {
+      payment.reference = updates.reference ? updates.reference.trim() : null;
+    }
+
+    if (updates.date) {
+      payment.paid_at = new Date(updates.date).toISOString();
+    }
+
+    payment.updated_at = new Date().toISOString();
+
+    const student = this.getStudentById(payment.student_id);
+
+    try {
+      this.logAudit('PAYMENT_UPDATED', {
+        payment_id: paymentId,
+        previous_amount: previousAmount,
+        new_amount: payment.amount,
+        kind: payment.kind,
+        month_id: payment.month_id,
+        method: payment.method,
+        student_name: student ? `${student.last_name} ${student.first_names}` : 'Élève inconnu'
+      });
+    } catch (e) {
+      console.warn("Audit log notice:", e);
+    }
+
+    this.persist();
+    return payment;
+  },
+
   // ----------------------------------------------------------------------------
   // CALCULS STRICTS : TOTAL INSCRIPTIONS (§ 3.5 & § 4)
   // ----------------------------------------------------------------------------

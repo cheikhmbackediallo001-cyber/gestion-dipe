@@ -500,7 +500,7 @@ const App = {
               <th>Section</th>
               <th>Montant dû</th>
               <th style="text-align:center;">Statut d'inscription</th>
-              <th style="text-align:right;">Reçu</th>
+              <th style="text-align:right;">Actions / Reçu</th>
             </tr>
           </thead>
           <tbody>
@@ -540,9 +540,12 @@ const App = {
                       </button>
                     </div>
                   </td>
-                  <td data-label="Reçu" style="text-align:right;">
+                  <td data-label="Actions / Reçu" style="text-align:right;">
                     ${isPaid ? `
                       <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end;">
+                        <button class="btn btn-secondary btn-sm" onclick="App.openEditPaymentModal('${payment.id}')" title="Modifier ce paiement (somme, date, mode)" style="padding:0.35rem 0.55rem;">
+                          ✎
+                        </button>
                         <button class="btn btn-outline-primary btn-sm" onclick="App.viewReceipt('${payment.id}')" title="Afficher et imprimer le reçu officiel">
                           📄 Reçu
                         </button>
@@ -751,7 +754,7 @@ const App = {
                 <th>Section</th>
                 <th>Mensualité</th>
                 <th style="text-align:center;">Statut ${Utils.escapeHtml(currentMonth.label)}</th>
-                <th style="text-align:right;">Reçu</th>
+                <th style="text-align:right;">Actions / Reçu</th>
               </tr>
             </thead>
             <tbody>
@@ -791,9 +794,12 @@ const App = {
                         </button>
                       </div>
                     </td>
-                    <td data-label="Reçu" style="text-align:right;">
+                    <td data-label="Actions / Reçu" style="text-align:right;">
                       ${isPaid ? `
                         <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end;">
+                          <button class="btn btn-secondary btn-sm" onclick="App.openEditPaymentModal('${payment.id}')" title="Modifier cette cotisation (somme, date, mode)" style="padding:0.35rem 0.55rem;">
+                            ✎
+                          </button>
                           <button class="btn btn-outline-primary btn-sm" onclick="App.viewReceipt('${payment.id}')" title="Afficher et imprimer le reçu officiel">
                             📄 Reçu
                           </button>
@@ -948,7 +954,7 @@ const App = {
                 <th>Motif de la dépense</th>
                 <th>Rubrique budgétaire</th>
                 <th>Somme Décaissée</th>
-                <th style="text-align:right;">Action</th>
+                <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -974,13 +980,9 @@ const App = {
                   <td data-label="Somme" style="color:var(--danger); font-weight:800;">
                     - ${Utils.formatFCFA(e.amount)}
                   </td>
-                  <td data-label="Action" style="text-align:right; white-space:nowrap;">
-                    <button class="btn btn-outline-primary btn-sm" onclick="App.openEditExpenseModal('${e.id}')" title="Modifier la dépense" style="margin-right:0.35rem;">
-                      ✏️ Modifier
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="App.deleteExpense('${e.id}')" title="Supprimer immédiatement cette dépense">
-                      🗑️ Supprimer
-                    </button>
+                  <td data-label="Actions" style="text-align:right; white-space:nowrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="App.openEditExpenseModal('${e.id}')" title="Modifier la dépense">✎</button>
+                    <button class="btn btn-outline-primary btn-sm" style="color:var(--danger); border-color:#FECACA;" onclick="App.promptDeleteExpense('${e.id}')" title="Supprimer la dépense">✕</button>
                   </td>
                 </tr>
               `).join('')}
@@ -1821,6 +1823,121 @@ const App = {
   },
 
   // ----------------------------------------------------------------------------
+  // GESTION DE LA MODIFICATION DE COTISATION OU PAIEMENT D'INSCRIPTION
+  // Somme, date, mode, référence avec mise à jour temps réel des reçus & bilans
+  // ----------------------------------------------------------------------------
+  openEditPaymentModal(paymentId) {
+    const payment = Store.getPaymentById(paymentId) || (Store.data.payments && Store.data.payments.find(p => p.id === paymentId));
+    if (!payment) {
+      this.showToast("Paiement introuvable.", "warning");
+      return;
+    }
+
+    const modal = document.getElementById('editPaymentModal');
+    if (!modal) return;
+
+    const receipt = Store.data.receipts && Store.data.receipts.find(r => r.payment_id === paymentId);
+    const student = Store.getStudentById(payment.student_id);
+    const cls = student ? Store.getClassById(student.class_id) : null;
+
+    this.activeEditingPayment = payment;
+
+    const idInput = document.getElementById('editPaymentId');
+    const amountInput = document.getElementById('editPayAmount');
+    const dateInput = document.getElementById('editPayDate');
+    const methodSelect = document.getElementById('editPayMethod');
+    const refInput = document.getElementById('editPayReference');
+    const nameEl = document.getElementById('editPayStudentName');
+    const contextEl = document.getElementById('editPayContextLabel');
+    const receiptNumEl = document.getElementById('editPayReceiptNumber');
+
+    if (idInput) idInput.value = payment.id;
+    if (amountInput) amountInput.value = payment.amount || '';
+    if (dateInput) {
+      dateInput.value = payment.paid_at ? payment.paid_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
+    }
+    if (methodSelect) methodSelect.value = payment.method || 'cash';
+    if (refInput) refInput.value = payment.reference || '';
+
+    if (nameEl) {
+      nameEl.textContent = student ? `${student.first_names} ${(student.last_name || '').toUpperCase()}` : 'Élève inconnu';
+    }
+
+    if (contextEl) {
+      let ctx = payment.kind === 'monthly'
+        ? `Cotisation : Mois de ${Store.getMonthById(payment.month_id)?.label || payment.month_id}`
+        : "Frais d'inscription scolaire";
+      if (cls) ctx += ` — Section : ${cls.name}`;
+      contextEl.textContent = ctx;
+    }
+
+    if (receiptNumEl) {
+      receiptNumEl.textContent = receipt ? receipt.receipt_number : '-';
+    }
+
+    modal.classList.add('is-open');
+    setTimeout(() => {
+      if (amountInput) {
+        amountInput.focus();
+        amountInput.select();
+      }
+    }, 100);
+  },
+
+  handleEditPaymentSubmit(event) {
+    if (event) event.preventDefault();
+    try {
+      const paymentId = (document.getElementById('editPaymentId')?.value || '').trim();
+      const rawAmount = document.getElementById('editPayAmount')?.value || '';
+      const date = document.getElementById('editPayDate')?.value;
+      const method = document.getElementById('editPayMethod')?.value || 'cash';
+      const ref = document.getElementById('editPayReference')?.value || '';
+
+      if (!paymentId) throw new Error("Identifiant de paiement invalide.");
+      if (!rawAmount) throw new Error("Veuillez renseigner un montant.");
+      if (!date) throw new Error("La date du règlement est obligatoire.");
+
+      Store.updatePayment(paymentId, {
+        amount: rawAmount,
+        date: date,
+        method: method,
+        reference: ref
+      });
+
+      this.closeAllModals();
+      this.showToast("Paiement modifié avec succès ! Reçu et bilans actualisés.", "success");
+
+      // Rafraîchir la vue active
+      if (this.currentTab === 'registrations') {
+        this.renderRegistrations(document.getElementById('appViewContent'));
+      } else if (this.currentTab === 'monthly') {
+        this.renderMonthly(document.getElementById('appViewContent'));
+      } else if (this.currentTab === 'bilan') {
+        this.renderBilan(document.getElementById('appViewContent'));
+      } else {
+        this.navigate(this.currentTab, { preserveFilters: true });
+      }
+    } catch (err) {
+      console.error("Erreur modification paiement:", err);
+      this.showToast(err.message || "Erreur lors de la modification du paiement.", "danger");
+    }
+  },
+
+  openEditStudentFromPayment() {
+    if (!this.activeEditingPayment) return;
+    const studentId = this.activeEditingPayment.student_id;
+    this.closeAllModals();
+    this.openEditStudentModal(studentId);
+  },
+
+  cancelPaymentFromEditModal() {
+    if (!this.activeEditingPayment) return;
+    const paymentId = this.activeEditingPayment.id;
+    this.closeAllModals();
+    this.openCancelPaymentModal(paymentId);
+  },
+
+  // ----------------------------------------------------------------------------
   // GESTION DU FLUX D'ANNULATION AVEC MOTIF OBLIGATOIRE (§ 3.9)
   // ----------------------------------------------------------------------------
   openCancelPaymentModal(paymentId) {
@@ -2134,11 +2251,22 @@ const App = {
   deactivateStudent(id) {
     const s = Store.getStudentById(id);
     if (!s) return;
-    if (confirm(`Confirmez-vous le départ de l'élève ${s.first_names} ${s.last_name} ? Il disparaîtra des listes futures mais tout l'historique sera conservé.`)) {
-      Store.deactivateStudent(id);
-      this.showToast("Élève désactivé avec succès.", "warning");
-      this.renderStudents(document.getElementById('appViewContent'));
-    }
+    this.openConfirmModal({
+      title: "Confirmer le départ de l'élève",
+      message: `Confirmez-vous le départ de l'élève ${s.first_names} ${s.last_name} ?`,
+      detailsHtml: `
+        <div style="font-size:var(--text-sm); color:var(--text-muted); line-height:1.5;">
+          L'élève sera retiré des listes actives, mais tous ses paiements et reçus antérieurs resteront archivés et consultables dans les bilans.
+        </div>
+      `,
+      confirmText: "Oui, confirmer le départ",
+      cancelText: "Non, annuler",
+      onConfirm: () => {
+        Store.deactivateStudent(id);
+        this.showToast("Élève désactivé avec succès.", "warning");
+        this.renderStudents(document.getElementById('appViewContent'));
+      }
+    });
   },
 
   // ----------------------------------------------------------------------------
@@ -2406,9 +2534,94 @@ const App = {
     }
   },
 
+  // ----------------------------------------------------------------------------
+  // MODALE DE CONFIRMATION SÉCURISÉE OUI / NON AVANT SUPPRESSION
+  // ----------------------------------------------------------------------------
+  openConfirmModal(options = {}) {
+    const modal = document.getElementById('confirmDeleteModal');
+    if (!modal) {
+      if (typeof options.onConfirm === 'function') options.onConfirm();
+      return;
+    }
+
+    const titleEl = document.getElementById('confirmDeleteTitle');
+    const msgEl = document.getElementById('confirmDeleteMessage');
+    const detailsEl = document.getElementById('confirmDeleteDetails');
+    const btnNo = document.getElementById('confirmDeleteBtnNo');
+    const btnYes = document.getElementById('confirmDeleteBtnYes');
+
+    if (titleEl && options.title) {
+      titleEl.innerHTML = `<span>⚠️</span> <span>${Utils.escapeHtml(options.title)}</span>`;
+    }
+    if (msgEl && options.message) {
+      msgEl.textContent = options.message;
+    }
+    if (detailsEl) {
+      if (options.detailsHtml) {
+        detailsEl.innerHTML = options.detailsHtml;
+        detailsEl.style.display = 'block';
+      } else {
+        detailsEl.innerHTML = '';
+        detailsEl.style.display = 'none';
+      }
+    }
+    if (btnNo && options.cancelText) {
+      btnNo.textContent = options.cancelText;
+    }
+    if (btnYes && options.confirmText) {
+      btnYes.textContent = options.confirmText;
+    }
+
+    this.pendingConfirmAction = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+    modal.classList.add('is-open');
+  },
+
+  executeConfirmedDelete() {
+    const modal = document.getElementById('confirmDeleteModal');
+    if (modal) modal.classList.remove('is-open');
+
+    if (typeof this.pendingConfirmAction === 'function') {
+      const action = this.pendingConfirmAction;
+      this.pendingConfirmAction = null;
+      action();
+    }
+  },
+
+  promptDeleteExpense(id) {
+    const expense = Store.getExpenseById(id);
+    if (!expense) return;
+
+    this.openConfirmModal({
+      title: "Confirmer la suppression de la dépense",
+      message: "Êtes-vous sûr de vouloir supprimer cette dépense ?",
+      detailsHtml: `
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+          <span style="color:var(--text-muted); font-size:var(--text-xs); text-transform:uppercase; font-weight:700;">Motif :</span>
+          <strong style="color:var(--text-main);">${Utils.escapeHtml(expense.motif)}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+          <span style="color:var(--text-muted); font-size:var(--text-xs); text-transform:uppercase; font-weight:700;">Somme décaissée :</span>
+          <strong style="color:var(--danger); font-size:var(--text-base);">- ${Utils.formatFCFA(expense.amount)}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+          <span style="color:var(--text-muted); font-size:var(--text-xs); text-transform:uppercase; font-weight:700;">Rubrique :</span>
+          <span>📂 ${Utils.escapeHtml(expense.category || 'Général')}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:var(--text-muted); font-size:var(--text-xs); text-transform:uppercase; font-weight:700;">Date :</span>
+          <span>${Utils.formatDate(expense.date)}</span>
+        </div>
+      `,
+      confirmText: "Oui, supprimer",
+      cancelText: "Non, annuler",
+      onConfirm: () => {
+        this.deleteExpense(id);
+      }
+    });
+  },
+
   /**
-   * Suppression automatique et instantanée de dépense (§ Directives claires de la direction :
-   * aucune confirmation bloquante, suppression automatique et réintégration instantanée en trésorerie)
+   * Exécution de la suppression de dépense avec réintégration de la trésorerie et possibilité d'annulation
    */
   deleteExpense(id) {
     if (!id) return;
@@ -2447,8 +2660,7 @@ const App = {
   },
 
   confirmDeleteExpense(id) {
-    // Alias vers la suppression automatique instantanée
-    this.deleteExpense(id);
+    this.promptDeleteExpense(id);
   },
 
   undoDeleteExpense() {
@@ -2470,7 +2682,7 @@ const App = {
     const idInput = document.getElementById('expenseIdInput');
     const id = idInput ? idInput.value : null;
     if (id) {
-      this.deleteExpense(id);
+      this.promptDeleteExpense(id);
     }
   },
 
@@ -2688,11 +2900,22 @@ const App = {
   },
 
   resetDemoData() {
-    if (confirm("Réinitialiser l'application avec les données de démonstration ?")) {
-      Store.resetToDemo();
-      this.showToast("Données réinitialisées.", "info");
-      this.navigate('dashboard');
-    }
+    this.openConfirmModal({
+      title: "Réinitialiser avec les données de démonstration",
+      message: "Voulez-vous vraiment réinitialiser toutes les données de l'application ?",
+      detailsHtml: `
+        <div style="font-size:var(--text-sm); color:var(--text-muted); line-height:1.5;">
+          Toutes les inscriptions, paiements, dépenses et classes actuels seront remplacés par les données initiales de démonstration.
+        </div>
+      `,
+      confirmText: "Oui, réinitialiser",
+      cancelText: "Non, annuler",
+      onConfirm: () => {
+        Store.resetToDemo();
+        this.showToast("Données réinitialisées avec succès.", "info");
+        this.navigate('dashboard');
+      }
+    });
   },
 
   closeAllModals() {
