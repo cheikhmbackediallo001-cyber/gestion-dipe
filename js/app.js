@@ -240,10 +240,14 @@ const App = {
     const school = Store.getSchool();
     const user = (window.Auth && Auth.getUser()) || Store.currentUser;
 
-    // Nom de l'école dans la topbar
+    // Nom de l'école et logo officiel dans la topbar
     const titleEl = document.getElementById('topbarSchoolName');
     if (titleEl && school) {
       titleEl.textContent = school.name;
+    }
+    const logoEl = document.getElementById('topbarSchoolLogo');
+    if (logoEl) {
+      logoEl.src = (school && school.logo_url) || 'images/logo.png';
     }
 
     // Indicateur de mode Démo vs École réelle dans la topbar
@@ -370,26 +374,42 @@ const App = {
         </div>
       ` : ''}
 
-      <!-- Cartes KPI de synthèse -->
+      <!-- Cartes KPI de synthèse harmonisées (Inscriptions & Cotisations) -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <span class="kpi-title">Inscriptions Encaissées</span>
           <div class="kpi-figure" style="color:var(--primary);">${Utils.formatFCFA(metrics.registration.total_collected)}</div>
           <div class="kpi-meta">
-            ${metrics.registration.paid_students} sur ${metrics.registration.total_students} inscrits (${metrics.registration.percentage}%)
+            ${metrics.registration.paid_students} sur ${metrics.registration.total_students} inscrits réglés
+          </div>
+          <div class="progress-bar-container" style="margin-top:0.6rem;">
+            <div class="progress-bar-fill ${metrics.registration.percentage >= 80 ? 'fill-high' : metrics.registration.percentage >= 50 ? 'fill-medium' : 'fill-low'}" style="width: ${metrics.registration.percentage}%;"></div>
           </div>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-title">Mois en cours (${Utils.escapeHtml(metrics.current_month.label)})</span>
+          <span class="kpi-title">Pourcentage des Inscriptions</span>
+          <div class="kpi-figure" style="color:${metrics.registration.percentage >= 80 ? 'var(--success)' : metrics.registration.percentage >= 50 ? 'var(--warning)' : 'var(--danger)'};">
+            ${metrics.registration.percentage}%
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill ${metrics.registration.percentage >= 80 ? 'fill-high' : metrics.registration.percentage >= 50 ? 'fill-medium' : 'fill-low'}" style="width: ${metrics.registration.percentage}%;"></div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Cotisations (${Utils.escapeHtml(metrics.current_month.label)})</span>
           <div class="kpi-figure" style="color:var(--success);">${Utils.formatFCFA(metrics.current_month.total_collected)}</div>
           <div class="kpi-meta">
             Attendu : ${Utils.formatFCFA(metrics.current_month.total_expected)}
           </div>
+          <div class="progress-bar-container" style="margin-top:0.6rem;">
+            <div class="progress-bar-fill ${metrics.current_month.percentage >= 80 ? 'fill-high' : metrics.current_month.percentage >= 50 ? 'fill-medium' : 'fill-low'}" style="width: ${metrics.current_month.percentage}%;"></div>
+          </div>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-title">Pourcentage du mois</span>
+          <span class="kpi-title">Pourcentage du mois (${Utils.escapeHtml(metrics.current_month.label)})</span>
           <div class="kpi-figure" style="color:${metrics.current_month.percentage >= 80 ? 'var(--success)' : metrics.current_month.percentage >= 50 ? 'var(--warning)' : 'var(--danger)'};">
             ${metrics.current_month.percentage}%
           </div>
@@ -674,6 +694,9 @@ const App = {
             </div>
             <div style="font-size:var(--text-sm); color:#166534; font-weight:600; margin-top:0.4rem;">
               ${summary.paid_students} élèves inscrits payés sur un effectif de ${summary.total_students} (${summary.percentage}%)
+            </div>
+            <div class="progress-bar-container" style="margin-top:0.65rem; max-width:320px; background:rgba(22, 163, 74, 0.2);">
+              <div class="progress-bar-fill fill-high" style="width: ${summary.percentage}%;"></div>
             </div>
           </div>
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
@@ -1230,14 +1253,10 @@ const App = {
             <tbody>
               ${filtered.length === 0 ? `
                 <tr>
-                  <td colspan="5" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+                  <td colspan="5" class="empty-state-cell" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted);">
                     <div style="font-size:2.5rem; margin-bottom:0.5rem;">💸</div>
-                    <p style="font-weight:700; font-size:var(--text-base); margin-bottom:0.25rem;">Aucune dépense trouvée</p>
-                    <p style="font-size:var(--text-sm); margin-bottom:1.25rem;">Enregistrez vos frais et sorties de caisse (fournitures, factures, salaires, cantine...)</p>
-                    <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()" style="padding:0.5rem 1.25rem;">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                      <span>Ajouter une nouvelle dépense</span>
-                    </button>
+                    <p style="font-weight:700; font-size:var(--text-base); margin-bottom:0.35rem; color:var(--text-main);">Aucune dépense trouvée</p>
+                    <p style="font-size:var(--text-sm); margin:0 auto; max-width:400px; color:var(--text-muted);">Enregistrez vos frais et sorties de caisse (fournitures, factures, salaires, cantine...)</p>
                   </td>
                 </tr>
               ` : filtered.map(e => `

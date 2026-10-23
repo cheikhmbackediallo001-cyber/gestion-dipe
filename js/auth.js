@@ -145,36 +145,49 @@ const Auth = {
       console.warn('[Auth] Erreur lecture session locale:', e);
     }
 
-    // Si Supabase est connecté et qu'on a le réseau, vérifier le token
+    // Si Supabase est connecté et qu'on a le réseau, vérifier le token en arrière-plan sans bloquer le rendu
     if (this.client && navigator.onLine) {
-      try {
-        const { data: { session }, error } = await this.client.auth.getSession();
-        if (session && session.user) {
-          this.session = this.session || {};
-          this.session.supabaseSession = session;
-          
-          if (!this.userProfile) {
-            const userMeta = session.user.user_metadata || {};
-            this.userProfile = {
-              id: session.user.id,
-              name: userMeta.full_name || userMeta.name || session.user.email.split('@')[0],
-              email: session.user.email,
-              role: 'director',
-              isGoogle: session.user.app_metadata && session.user.app_metadata.provider === 'google',
-              avatarUrl: userMeta.avatar_url || null
-            };
-          }
+      const checkRemoteSession = async () => {
+        try {
+          const { data: { session }, error } = await this.client.auth.getSession();
+          if (session && session.user) {
+            this.session = this.session || {};
+            this.session.supabaseSession = session;
+            
+            if (!this.userProfile) {
+              const userMeta = session.user.user_metadata || {};
+              this.userProfile = {
+                id: session.user.id,
+                name: userMeta.full_name || userMeta.name || session.user.email.split('@')[0],
+                email: session.user.email,
+                role: 'director',
+                isGoogle: session.user.app_metadata && session.user.app_metadata.provider === 'google',
+                avatarUrl: userMeta.avatar_url || null
+              };
+            }
 
-          // Synchronise l'école si besoin
-          if (!this.school) {
-            await this.loadRemoteUserProfile(session.user.id);
+            // Synchronise l'école si besoin
+            if (!this.school) {
+              await this.loadRemoteUserProfile(session.user.id);
+            }
+            this.saveActiveSession();
+          } else if (error) {
+            console.warn('[Auth] Token Supabase non valide:', error.message);
           }
-          this.saveActiveSession();
-        } else if (error) {
-          console.warn('[Auth] Token Supabase non valide:', error.message);
+        } catch (e) {
+          console.warn('[Auth] Vérification distante impossible (hors-ligne ou réseau):', e);
         }
-      } catch (e) {
-        console.warn('[Auth] Vérification distante impossible (hors-ligne ou réseau):', e);
+      };
+
+      // Si nous avons déjà une session locale valide, exécuter la vérification distante en tâche de fond (0 délai d'affichage)
+      if (this.session && this.userProfile) {
+        checkRemoteSession();
+      } else {
+        // Sinon, attendre avec un timeout strict de 1.5 seconde maximum pour ne jamais figer l'écran
+        await Promise.race([
+          checkRemoteSession(),
+          new Promise((resolve) => setTimeout(resolve, 1500))
+        ]);
       }
     }
   },

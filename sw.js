@@ -53,23 +53,51 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Pour les pages HTML, scripts JS et styles CSS : Toujours Network First avec cache fallback
-  if (e.request.mode === 'navigate' || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.html')) {
+  // Pour les pages HTML (navigation) : Cache First ou Fast Network avec timeout de 800ms
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html')) {
     e.respondWith(
-      fetch(e.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
+      caches.match(e.request).then((cachedResponse) => {
+        // Lancer la mise à jour réseau en arrière-plan
+        const networkFetch = fetch(e.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
           }
-          return response;
-        })
-        .catch(() => caches.match(e.request).then((res) => res || (e.request.mode === 'navigate' ? caches.match('./index.html') : null)))
+          return networkResponse;
+        }).catch(() => null);
+
+        // Si disponible en cache, servir instantanément (< 20ms)
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // Sinon attendre le réseau avec fallback sur index.html
+        return networkFetch.then((res) => res || caches.match('./index.html'));
+      })
     );
     return;
   }
 
-  // Pour les images et fonts : Cache first avec fallback réseau
+  // Pour les scripts JS et styles CSS : Stale-While-Revalidate (ouverture ultra-rapide)
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    e.respondWith(
+      caches.match(e.request).then((cachedResponse) => {
+        const fetchPromise = fetch(e.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          }
+          return networkResponse;
+        }).catch(() => null);
+
+        // Renvoie immédiatement le cache si existant, sinon attend le réseau
+        return cachedResponse || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Pour les images, fonts et autres assets statiques : Cache First avec mise en cache
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       if (cachedResponse) {

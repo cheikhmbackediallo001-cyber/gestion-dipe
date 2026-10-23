@@ -430,7 +430,44 @@ const Landing = {
       };
       localStorage.setItem('gp_active_session_v1', JSON.stringify(demoSession));
     } catch (e) {}
-    window.location.href = 'app.html';
+  },
+
+  launchDemoFeature(featureName) {
+    try {
+      document.querySelectorAll('.pillar-chip').forEach(c => c.classList.remove('is-selected'));
+      if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.classList.add('is-selected');
+      }
+    } catch (e) {}
+
+    try {
+      const demoSession = {
+        user: {
+          id: 'usr_demo_director',
+          name: 'Direction Démo',
+          email: 'demo@gestionprescolaire.sn',
+          role: 'director',
+          isDemo: true
+        },
+        school: {
+          id: '11111111-1111-1111-1111-111111111111',
+          name: 'École Maternelle Les Papillons',
+          director_name: 'Mme Aïssatou Ba',
+          director_phone: '+221 77 543 21 00',
+          region: 'Dakar',
+          department: 'Dakar',
+          commune: 'Plateau',
+          school_year: '2026-2027',
+          isDemo: true
+        }
+      };
+      localStorage.setItem('gp_active_session_v1', JSON.stringify(demoSession));
+    } catch (e) {}
+
+    const targetUrl = featureName ? `app.html#${featureName}` : 'app.html';
+    setTimeout(() => {
+      window.location.href = targetUrl;
+    }, 160);
   },
 
   async triggerPwaInstall() {

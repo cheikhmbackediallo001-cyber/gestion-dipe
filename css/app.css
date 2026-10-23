@@ -554,6 +554,22 @@
     align-items: center;
   }
 
+  .data-table td[colspan],
+  .data-table td.empty-state-cell {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    padding: 2.25rem 1rem !important;
+  }
+
+  .data-table td[colspan]::before,
+  .data-table td.empty-state-cell::before {
+    display: none !important;
+  }
+
   .data-table td::before {
     content: attr(data-label);
     font-size: var(--text-xs);
@@ -692,25 +708,53 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  color: var(--text-muted);
-  font-size: 10.5px;
+  color: #64748B;
+  font-size: 11px;
   font-weight: 600;
   text-decoration: none !important;
   flex: 1 0 auto;
   height: 100%;
   min-width: 48px;
-  padding: 0 3px;
-  transition: color var(--transition-fast), transform var(--transition-fast);
+  padding: 4px 5px;
+  position: relative;
+  transition: all var(--transition-fast);
 }
 
 .mobile-nav-item svg {
-  width: 20px;
-  height: 20px;
+  width: 21px;
+  height: 21px;
+  transition: all var(--transition-fast);
 }
 
 .mobile-nav-item.active {
-  color: var(--primary);
-  font-weight: 700;
+  color: #1E3A8A !important;
+  font-weight: 800 !important;
+  background: rgba(30, 58, 138, 0.08);
+  border-radius: 10px;
+}
+
+.mobile-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  background: #1E3A8A;
+  border-radius: 0 0 4px 4px;
+}
+
+.mobile-nav-item.active svg {
+  stroke: #1E3A8A !important;
+  stroke-width: 2.5px;
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(30, 58, 138, 0.2));
+}
+
+.mobile-nav-item.active span {
+  color: #1E3A8A !important;
+  font-weight: 800 !important;
 }
 
 /* Badge de rubrique budgétaire */
@@ -911,7 +955,20 @@
 }
 
 [data-theme="dark"] .mobile-nav-item.active {
-  color: var(--primary);
+  color: #60A5FA !important;
+  background: rgba(59, 130, 246, 0.16);
+}
+
+[data-theme="dark"] .mobile-nav-item.active::before {
+  background: #60A5FA;
+}
+
+[data-theme="dark"] .mobile-nav-item.active svg {
+  stroke: #60A5FA !important;
+}
+
+[data-theme="dark"] .mobile-nav-item.active span {
+  color: #60A5FA !important;
 }
 
 /* ------------------------------------------------------------------------------
