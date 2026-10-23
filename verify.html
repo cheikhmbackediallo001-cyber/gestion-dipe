@@ -18,8 +18,10 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="css/design-system.css?v=10">
-  <link rel="stylesheet" href="css/receipt.css?v=10">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="apple-touch-icon" href="images/logo.png">
+  <link rel="stylesheet" href="css/design-system.css?v=11">
+  <link rel="stylesheet" href="css/receipt.css?v=11">
 
   <style>
     body {
@@ -95,8 +97,8 @@
 <body>
   <header style="background:var(--bg-card); border-bottom:1px solid var(--border-light); padding:1rem 0;">
     <div style="max-width:1200px; margin:0 auto; padding:0 1.25rem; display:flex; justify-content:space-between; align-items:center;">
-      <a href="index.html" style="display:flex; align-items:center; gap:0.5rem; text-decoration:none;">
-        <div style="width:34px; height:34px; border-radius:6px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;">GP</div>
+      <a href="index.html" style="display:flex; align-items:center; gap:0.65rem; text-decoration:none;">
+        <img src="images/logo.png" alt="Logo Gestion Préscolaire" style="width:36px; height:36px; border-radius:50%; object-fit:contain; box-shadow:0 2px 8px rgba(0,0,0,0.12);">
         <span style="font-family:var(--font-heading); font-weight:700; color:var(--primary); font-size:1.1rem;">Gestion Préscolaire</span>
       </a>
       <span class="badge badge-info" style="font-size:11px;">Authentification Sécurisée</span>
@@ -160,12 +162,17 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="js/config.js?v=10"></script>
-  <script src="js/utils.js?v=10"></script>
-  <script src="js/demo-data.js?v=10"></script>
-  <script src="js/store.js?v=10"></script>
+  <script src="js/config.js?v=20261023_v1"></script>
+  <script src="js/utils.js?v=20261023_v1"></script>
+  <script src="js/supabase.js?v=20261023_v1"></script>
+  <script src="js/auth.js?v=20261023_v1"></script>
+  <script src="js/demo-data.js?v=20261023_v1"></script>
+  <script src="js/store.js?v=20261023_v1"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
+      if (window.Auth) {
+        await Auth.init();
+      }
       await Store.init();
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -176,13 +183,7 @@
       const notFoundEl = document.getElementById('notFoundState');
 
       if (!token) {
-        // Si aucun token n'est passé en paramètre, on prend le premier reçu pour démo visuelle
-        const sampleReceipt = Store.getReceipts()[0];
-        if (sampleReceipt) {
-          renderVerification(Store.getReceiptByPublicToken(sampleReceipt.public_token));
-        } else {
-          showNotFound();
-        }
+        showNotFound();
         return;
       }
 

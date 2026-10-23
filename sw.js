@@ -3,7 +3,7 @@
  * Mise en cache intelligente pour fonctionnement PWA hors-ligne et chargement ultra-rapide
  */
 
-const CACHE_NAME = 'gestion-dipe-v2';
+const CACHE_NAME = 'gestion-prescolaire-v20261023_v1';
 
 const STATIC_ASSETS = [
   './',
@@ -18,6 +18,8 @@ const STATIC_ASSETS = [
   './js/config.js',
   './js/utils.js',
   './js/stamp.js',
+  './js/supabase.js',
+  './js/auth.js',
   './js/demo-data.js',
   './js/store.js',
   './js/landing.js',
@@ -25,24 +27,10 @@ const STATIC_ASSETS = [
   './js/app.js',
   './images/icon-192.png',
   './images/icon-512.png',
-  './images/scene_arrival.jpg',
-  './images/scene_payment.jpg',
-  './images/scene_receipt.jpg',
-  './images/preschool_hero.jpg',
-  './images/director_portrait.jpg'
+  './images/logo.png'
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // addAll avec tolérance aux erreurs individuelles
-      return Promise.allSettled(
-        STATIC_ASSETS.map((url) => cache.add(url).catch((err) => {
-          console.warn('[SW] Échec de mise en cache de:', url, err);
-        }))
-      );
-    })
-  );
   self.skipWaiting();
 });
 
@@ -65,33 +53,28 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Pour les pages de navigation HTML : Network first avec fallback cache
-  if (e.request.mode === 'navigate') {
+  // Pour les pages HTML, scripts JS et styles CSS : Toujours Network First avec cache fallback
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.html')) {
     e.respondWith(
       fetch(e.request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          }
           return response;
         })
-        .catch(() => caches.match(e.request).then((res) => res || caches.match('./index.html')))
+        .catch(() => caches.match(e.request).then((res) => res || (e.request.mode === 'navigate' ? caches.match('./index.html') : null)))
     );
     return;
   }
 
-  // Pour les assets statiques (CSS, JS, images) : Cache first avec fallback réseau
+  // Pour les images et fonts : Cache first avec fallback réseau
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // En arrière-plan, rafraîchir le cache (Stale-While-Revalidate)
-        fetch(e.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkResponse));
-          }
-        }).catch(() => {});
         return cachedResponse;
       }
-
       return fetch(e.request).then((response) => {
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;

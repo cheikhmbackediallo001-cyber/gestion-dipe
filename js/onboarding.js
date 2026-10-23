@@ -23,6 +23,7 @@ const Onboarding = {
     address: '',
     schoolYear: '2026-2027',
     classes: [
+      { name: 'Crèche', registration_fee: 25000, monthly_fee: 15000 },
       { name: 'Petite section', registration_fee: 25000, monthly_fee: 15000 },
       { name: 'Moyenne section', registration_fee: 25000, monthly_fee: 15000 },
       { name: 'Grande section', registration_fee: 30000, monthly_fee: 18000 }
@@ -156,6 +157,8 @@ const Onboarding = {
       // Lecture des classes configurées
       this.formData.schoolYear = document.getElementById('onboardSchoolYear').value.trim() || '2026-2027';
       // Validation des montants positifs
+      const crecheReg = parseInt(document.getElementById('feeCrecheReg') ? document.getElementById('feeCrecheReg').value : 25000, 10) || 25000;
+      const crecheMonth = parseInt(document.getElementById('feeCrecheMonth') ? document.getElementById('feeCrecheMonth').value : 15000, 10) || 15000;
       const psReg = parseInt(document.getElementById('feePsReg').value, 10) || 0;
       const psMonth = parseInt(document.getElementById('feePsMonth').value, 10) || 0;
       const msReg = parseInt(document.getElementById('feeMsReg').value, 10) || 0;
@@ -164,6 +167,7 @@ const Onboarding = {
       const gsMonth = parseInt(document.getElementById('feeGsMonth').value, 10) || 0;
 
       this.formData.classes = [
+        { name: 'Crèche', registration_fee: crecheReg, monthly_fee: crecheMonth },
         { name: 'Petite section', registration_fee: psReg, monthly_fee: psMonth },
         { name: 'Moyenne section', registration_fee: msReg, monthly_fee: msMonth },
         { name: 'Grande section', registration_fee: gsReg, monthly_fee: gsMonth }
@@ -255,63 +259,74 @@ const Onboarding = {
     }
   },
 
-  submit() {
-    // Création de l'école dans le Store
-    const newSchoolId = 'school_' + Math.random().toString(36).substring(2, 9);
-    const newSchool = {
-      id: newSchoolId,
-      name: this.formData.schoolName,
-      director_name: this.formData.directorName,
-      director_phone: this.formData.directorPhone,
-      address: this.formData.address,
-      region: this.formData.region,
-      department: this.formData.department,
-      commune: this.formData.commune,
-      school_year: this.formData.schoolYear,
-      status: 'active',
-      created_at: new Date().toISOString()
-    };
+  async submit() {
+    const submitBtn = document.getElementById('onboardingSubmitBtn');
+    const originalText = submitBtn ? submitBtn.innerHTML : 'Valider et accéder à mon école';
 
-    const newClasses = this.formData.classes.map((cls, idx) => ({
-      id: 'class_' + Math.random().toString(36).substring(2, 9),
-      school_id: newSchoolId,
-      name: cls.name,
-      registration_fee: cls.registration_fee,
-      monthly_fee: cls.monthly_fee,
-      position: idx + 1
-    }));
+    // Nettoyage des erreurs existantes
+    let errorContainer = document.getElementById('onboardGlobalError');
+    if (errorContainer) {
+      errorContainer.remove();
+    }
 
-    const newMonths = CONFIG.DEFAULT_MONTHS.map(m => ({
-      id: 'month_' + Math.random().toString(36).substring(2, 9),
-      school_id: newSchoolId,
-      school_year: this.formData.schoolYear,
-      month_number: m.number,
-      label: m.label,
-      position: m.position
-    }));
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+          <span style="display:inline-flex; align-items:center; gap:0.5rem;">
+            <svg class="spin-animation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+            Création de votre école...
+          </span>
+        `;
+      }
 
-    Store.data = {
-      school: newSchool,
-      classes: newClasses,
-      months: newMonths,
-      students: [],
-      payments: [],
-      receipts: [],
-      audit_log: [],
-      receiptCounter: 1
-    };
+      // Exécution de la séquence atomique complète via Auth
+      await Auth.registerSchoolAtomic(this.formData);
 
-    Store.currentUser = {
-      id: 'usr_' + Math.random().toString(36).substring(2, 9),
-      name: this.formData.directorName,
-      role: 'director',
-      school_id: newSchoolId
-    };
+      if (submitBtn) {
+        submitBtn.innerHTML = '<span>Établissement créé ! Redirection...</span>';
+      }
 
-    Store.persist();
+      // Redirection immédiate vers l'espace école sans retour arrière possible vers le formulaire
+      window.history.replaceState(null, '', 'app.html?onboarding=success');
+      window.location.replace('app.html?onboarding=success');
 
-    // Redirection vers l'application de gestion
-    window.location.href = 'app.html?onboarding=success';
+    } catch (err) {
+      console.error('[Onboarding] Erreur séquence atomique:', err);
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+
+      // Affichage d'un message d'erreur clair
+      const modalBody = document.querySelector('#onboardingModal .modal-body');
+      if (modalBody) {
+        errorContainer = document.createElement('div');
+        errorContainer.id = 'onboardGlobalError';
+        errorContainer.style.cssText = `
+          background: #FEE2E2;
+          color: #991B1B;
+          border-left: 4px solid var(--danger, #DC2626);
+          padding: 0.875rem 1rem;
+          border-radius: var(--radius-md, 8px);
+          font-size: var(--text-sm, 13px);
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 600;
+        `;
+        errorContainer.innerHTML = `
+          <span style="font-size:1.2rem;">⚠️</span>
+          <span>${Utils.escapeHtml(err.message || "Une erreur est survenue lors de l'enregistrement.")}</span>
+        `;
+        modalBody.prepend(errorContainer);
+        errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert(err.message || "Erreur lors de la création de l'établissement.");
+      }
+    }
   }
 };
 

@@ -14,17 +14,84 @@ const App = {
   searchTerm: '',
 
   async init() {
-    await Store.init();
-    
-    // Définition du mois courant par défaut (Octobre)
-    const months = Store.getMonths();
-    if (months.length > 0) {
-      this.currentMonthId = months[0].id;
+    try {
+      if (window.Auth) {
+        await Auth.init();
+        if (!Auth.requireAuth()) {
+          return; // Non authentifié, redirection vers index.html
+        }
+      }
+
+      await Store.init();
+      
+      // Définition du mois courant par défaut (Octobre)
+      const months = Store.getMonths();
+      if (months.length > 0) {
+        this.currentMonthId = months[0].id;
+      }
+    } catch (e) {
+      console.warn("[App] Initialisation résiliente:", e);
     }
 
-    this.initTheme();
-    this.bindGlobalEvents();
-    this.renderHeader();
+    try {
+      this.initTheme();
+      this.bindGlobalEvents();
+      this.renderHeader();
+    } catch (e) {
+      console.warn("[App] Initialisation UI résiliente:", e);
+    }
+
+    // Support de l'installation PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPwaPrompt = e;
+      const btn = document.getElementById('btnPwaInstallApp');
+      if (btn) btn.style.display = 'inline-flex';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      window.deferredPwaPrompt = null;
+      const btn = document.getElementById('btnPwaInstallApp');
+      if (btn) btn.style.display = 'none';
+      this.showToast("Application installée avec succès sur votre écran !", "success");
+    });
+
+    // Support du routing hash (ex. app.html#other-revenues ou #autres-rentrees)
+    const resolveHashTab = (h) => {
+      const clean = (h || '').replace('#', '').toLowerCase();
+      const tabMap = {
+        'autres-rentrees': 'other-revenues',
+        'autre-rentree': 'other-revenues',
+        'other-revenues': 'other-revenues',
+        'depenses': 'expenses',
+        'expenses': 'expenses',
+        'bilan': 'bilan',
+        'eleves': 'students',
+        'students': 'students',
+        'inscriptions': 'registrations',
+        'registrations': 'registrations',
+        'cotisations': 'monthly',
+        'monthly': 'monthly',
+        'settings': 'settings',
+        'parametres': 'settings',
+        'accueil': 'dashboard',
+        'dashboard': 'dashboard'
+      };
+      return tabMap[clean] || null;
+    };
+
+    const initialTab = resolveHashTab(window.location.hash);
+    if (initialTab) {
+      this.currentTab = initialTab;
+    }
+
+    window.addEventListener('hashchange', () => {
+      const newTab = resolveHashTab(window.location.hash);
+      if (newTab && newTab !== this.currentTab) {
+        this.navigate(newTab, { silentHash: true });
+      }
+    });
+
     this.navigate(this.currentTab);
   },
 
@@ -66,30 +133,55 @@ const App = {
     const contentArea = document.getElementById('appViewContent');
     if (!contentArea) return;
 
-    switch (resolvedTab) {
-      case 'dashboard':
-        this.renderDashboard(contentArea);
-        break;
-      case 'students':
-        this.renderStudents(contentArea);
-        break;
-      case 'registrations':
-        this.renderRegistrations(contentArea);
-        break;
-      case 'monthly':
-        this.renderMonthly(contentArea, options);
-        break;
-      case 'expenses':
-        this.renderExpenses(contentArea, options);
-        break;
-      case 'bilan':
-        this.renderBilan(contentArea, options);
-        break;
-      case 'settings':
-        this.renderSettings(contentArea);
-        break;
-      default:
-        this.renderDashboard(contentArea);
+    try {
+      switch (resolvedTab) {
+        case 'dashboard':
+          this.renderDashboard(contentArea);
+          break;
+        case 'students':
+          this.renderStudents(contentArea);
+          break;
+        case 'registrations':
+          this.renderRegistrations(contentArea);
+          break;
+        case 'monthly':
+          this.renderMonthly(contentArea, options);
+          break;
+        case 'other-revenues':
+          this.renderOtherRevenues(contentArea, options);
+          break;
+        case 'expenses':
+          this.renderExpenses(contentArea, options);
+          break;
+        case 'bilan':
+          this.renderBilan(contentArea, options);
+          break;
+        case 'settings':
+          this.renderSettings(contentArea);
+          break;
+        default:
+          this.renderDashboard(contentArea);
+      }
+    } catch (renderErr) {
+      console.error("[App] Erreur de rendu vue:", resolvedTab, renderErr);
+      contentArea.innerHTML = `
+        <div style="padding: 2.5rem 1.5rem; text-align: center; background: var(--bg-card); border-radius: var(--radius-lg); margin-top: 1rem; border: 1px solid var(--border-medium); box-shadow: var(--shadow-sm);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏫</div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem;">Votre espace école est prêt</h2>
+          <p style="color: var(--text-muted); font-weight: 500; max-width: 500px; margin: 0 auto 1.5rem auto; font-size: var(--text-sm);">
+            Cliquez ci-dessous pour charger votre tableau de bord.
+          </p>
+          <button class="btn btn-primary" onclick="window.location.reload()">Accéder au tableau de bord</button>
+        </div>
+      `;
+    }
+
+    if (!options.silentHash) {
+      try {
+        if (window.location.hash !== '#' + resolvedTab) {
+          history.replaceState(null, '', '#' + resolvedTab);
+        }
+      } catch (e) {}
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -121,22 +213,24 @@ const App = {
   },
 
   bindGlobalEvents() {
-    // Navigation sidebar et barre mobile
-    document.querySelectorAll('[data-tab]').forEach(el => {
-      el.addEventListener('click', (e) => {
+    // Navigation globale par délégation d'événements (sidebar, mobile nav, cartes dashboard)
+    document.addEventListener('click', (e) => {
+      const tabTarget = e.target.closest('[data-tab]');
+      if (tabTarget) {
         e.preventDefault();
-        const tab = el.getAttribute('data-tab');
-        this.navigate(tab);
-      });
-    });
+        const tab = tabTarget.getAttribute('data-tab');
+        if (tab) {
+          this.navigate(tab);
+        }
+        return;
+      }
 
-    // Écouteur pour modales
-    document.querySelectorAll('.modal-close-btn').forEach(btn => {
-      btn.addEventListener('click', () => this.closeAllModals());
-    });
+      if (e.target.closest('.modal-close-btn')) {
+        this.closeAllModals();
+        return;
+      }
 
-    window.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal-backdrop')) {
+      if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
         this.closeAllModals();
       }
     });
@@ -144,9 +238,69 @@ const App = {
 
   renderHeader() {
     const school = Store.getSchool();
+    const user = (window.Auth && Auth.getUser()) || Store.currentUser;
+
+    // Nom de l'école dans la topbar
     const titleEl = document.getElementById('topbarSchoolName');
     if (titleEl && school) {
       titleEl.textContent = school.name;
+    }
+
+    // Indicateur de mode Démo vs École réelle dans la topbar
+    const isDemo = Store.isDemo();
+    const demoBadge = document.getElementById('topbarDemoBadge');
+    if (demoBadge) {
+      demoBadge.style.display = isDemo ? 'inline-block' : 'none';
+    }
+    const btnAddSchool = document.getElementById('btnTopbarAddSchool');
+    if (btnAddSchool) {
+      if (isDemo) {
+        btnAddSchool.innerHTML = '<span>+ Référencer mon école</span>';
+        btnAddSchool.onclick = () => App.openReferenceSchoolModal();
+        btnAddSchool.style.display = 'inline-flex';
+      } else {
+        btnAddSchool.innerHTML = '<span>⚙️ Mon établissement</span>';
+        btnAddSchool.onclick = () => App.navigate('settings');
+      }
+    }
+
+    // Nom du directeur dans la sidebar
+    const userNameEl = document.getElementById('sidebarUserName');
+    if (userNameEl && user) {
+      userNameEl.textContent = user.name || (school ? school.director_name : 'Direction');
+    }
+
+    // Rôle
+    const userRoleEl = document.getElementById('sidebarUserRole');
+    if (userRoleEl) {
+      userRoleEl.textContent = 'Directeur / Directrice';
+    }
+
+    // Initiales dynamiques de l'avatar
+    const userAvatarEl = document.getElementById('sidebarUserAvatar');
+    if (userAvatarEl) {
+      const nameStr = (user && user.name) || (school && school.director_name) || 'GP';
+      const parts = nameStr.trim().split(/\s+/).filter(Boolean);
+      let initials = 'GP';
+      if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      } else if (parts.length === 1 && parts[0].length >= 2) {
+        initials = parts[0].substring(0, 2).toUpperCase();
+      }
+      userAvatarEl.textContent = initials;
+    }
+  },
+
+  /**
+   * Déconnexion réelle et synchronisée
+   */
+  async handleLogout() {
+    if (window.Auth) {
+      await Auth.signOut();
+    } else {
+      localStorage.removeItem('gp_active_session_v1');
+      window.history.replaceState(null, '', 'index.html');
+      window.location.replace('index.html');
     }
   },
 
@@ -172,6 +326,49 @@ const App = {
           </div>
         </div>
       </div>
+
+      ${(metrics.registration.total_students === 0 || Store.isDemo()) ? `
+        <div class="welcome-motion-card">
+          <div class="welcome-illus-wrapper">
+            <div class="welcome-illus-halo"></div>
+            <div class="welcome-illus-frame">
+              <img src="images/welcome-directrice-enfant.jpg" alt="Directrice et enfant préscolaire" class="welcome-illus-img">
+            </div>
+            <div class="welcome-cap-badge" title="Gestion Préscolaire">🎓</div>
+            <span class="welcome-sparkle welcome-sparkle-1">✨</span>
+            <span class="welcome-sparkle welcome-sparkle-2">✨</span>
+            <span class="welcome-sparkle welcome-sparkle-3">⭐</span>
+          </div>
+          <h2 class="welcome-motion-title">Bienvenue dans votre espace école !</h2>
+          <p class="welcome-motion-text">
+            Votre établissement <span class="welcome-school-highlight">${Utils.escapeHtml(school.name)}</span> est prêt. Vos sections et votre cachet officiel ont été générés. Pour commencer à piloter vos règlements et délivrer vos premiers reçus officiels, enregistrez vos élèves ou configurez votre établissement.
+          </p>
+          <div class="welcome-status-pills">
+            <div class="welcome-pill">
+              <span class="welcome-pill-check">✓</span>
+              <span>Sections configurées</span>
+            </div>
+            <div class="welcome-pill">
+              <span class="welcome-pill-check">✓</span>
+              <span>Cachet officiel généré</span>
+            </div>
+            <div class="welcome-pill">
+              <span class="welcome-pill-check">✓</span>
+              <span>Reçus officiels prêts</span>
+            </div>
+          </div>
+          <div class="welcome-action-group">
+            <button type="button" class="btn-welcome-add" onclick="App.openReferenceSchoolModal()" title="Ajouter ou modifier les coordonnées de mon école">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Ajouter mon école</span>
+            </button>
+            <button type="button" class="btn-welcome-csv" onclick="App.openImportCsvModal()" title="Importer les élèves depuis un fichier CSV">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              <span>Importer un CSV</span>
+            </button>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Cartes KPI de synthèse -->
       <div class="kpi-grid">
@@ -207,6 +404,33 @@ const App = {
           <div class="kpi-meta">
             Élèves à recouvrer pour ${Utils.escapeHtml(metrics.current_month.label)}
           </div>
+        </div>
+      </div>
+
+      <!-- Synthèse Trésorerie Générale & Autres Entrées -->
+      <div class="kpi-grid" style="margin-top:1rem;">
+        <div class="kpi-card" style="border-top:4px solid var(--success); background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="kpi-title">Autres Entrées Encaissées</span>
+            <button class="btn btn-outline-primary btn-sm" onclick="App.openAddOtherRevenueModal()" style="font-size:11px; padding:2px 8px;">+ Autre entrée</button>
+          </div>
+          <div class="kpi-figure" style="color:var(--success); font-weight:800;">${Utils.formatFCFA(grand.other_revenues ? grand.other_revenues.total_amount : 0)}</div>
+          <div class="kpi-meta">Dons, cantine, blouses, garderie & extras (${grand.other_revenues ? grand.other_revenues.count : 0} op.)</div>
+        </div>
+
+        <div class="kpi-card" style="border-top:4px solid var(--danger);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="kpi-title">Total Dépenses Décaissées</span>
+            <button class="btn btn-outline-danger btn-sm" onclick="App.openAddExpenseModal()" style="font-size:11px; padding:2px 8px;">+ Dépense</button>
+          </div>
+          <div class="kpi-figure" style="color:var(--danger);">${Utils.formatFCFA(grand.total_expenses)}</div>
+          <div class="kpi-meta">${expensesSummary.count} sorties de caisse comptabilisées</div>
+        </div>
+
+        <div class="kpi-card" style="border-top:4px solid var(--primary); background:linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%);">
+          <span class="kpi-title">Trésorerie Disponible en Caisse</span>
+          <div class="kpi-figure" style="color:var(--primary); font-weight:800;">${Utils.formatFCFA(grand.net_available)}</div>
+          <div class="kpi-meta">Recettes totales (${Utils.formatFCFA(grand.grand_collected)}) − Dépenses (${Utils.formatFCFA(grand.total_expenses)})</div>
         </div>
       </div>
 
@@ -341,11 +565,28 @@ const App = {
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
-          <tbody>
             ${filtered.length === 0 ? `
               <tr>
-                <td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">
-                  Aucun élève ne correspond à votre recherche.
+                <td colspan="7" style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
+                  ${students.length === 0 ? `
+                    <div style="max-width:440px; margin:0 auto;">
+                      <div style="font-size:2.5rem; margin-bottom:0.75rem;">👶</div>
+                      <h3 style="font-size:var(--text-lg); color:var(--text-main); margin-bottom:0.5rem; font-weight:700;">Aucun élève inscrit pour le moment</h3>
+                      <p style="font-size:var(--text-sm); margin-bottom:1.5rem; line-height:1.5;">Votre registre est vierge. Ajoutez votre premier élève ou importez l'effectif complet par fichier CSV.</p>
+                      <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="App.openAddStudentModal()" style="min-height:44px;">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                          <span>Ajouter mon premier élève</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="App.openImportCsvModal()" style="min-height:44px;">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                          <span>Importer un CSV</span>
+                        </button>
+                      </div>
+                    </div>
+                  ` : `
+                    <div>Aucun élève ne correspond aux critères de filtre ou de recherche sélectionnés.</div>
+                  `}
                 </td>
               </tr>
             ` : filtered.map((s, idx) => {
@@ -506,8 +747,20 @@ const App = {
           <tbody>
             ${filtered.length === 0 ? `
               <tr>
-                <td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">
-                  Aucun élève trouvé avec les filtres sélectionnés.
+                <td colspan="6" style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
+                  ${summary.total_students === 0 ? `
+                    <div style="max-width:440px; margin:0 auto;">
+                      <div style="font-size:2.5rem; margin-bottom:0.75rem;">📝</div>
+                      <h3 style="font-size:var(--text-lg); color:var(--text-main); margin-bottom:0.5rem; font-weight:700;">Aucun élève inscrit pour le moment</h3>
+                      <p style="font-size:var(--text-sm); margin-bottom:1.5rem; line-height:1.5;">Inscrivez votre premier élève pour valider son inscription et éditer instantanément son reçu certifié n°0001.</p>
+                      <button class="btn btn-primary" onclick="App.openAddStudentModal()" style="min-height:44px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        <span>Ajouter mon premier élève</span>
+                      </button>
+                    </div>
+                  ` : `
+                    <div>Aucun élève trouvé avec les filtres sélectionnés.</div>
+                  `}
                 </td>
               </tr>
             ` : filtered.map((s, idx) => {
@@ -760,8 +1013,20 @@ const App = {
             <tbody>
               ${filtered.length === 0 ? `
                 <tr>
-                  <td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">
-                    Aucun élève trouvé avec les filtres sélectionnés.
+                  <td colspan="6" style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
+                    ${monthSummary.total_students === 0 ? `
+                      <div style="max-width:440px; margin:0 auto;">
+                        <div style="font-size:2.5rem; margin-bottom:0.75rem;">📅</div>
+                        <h3 style="font-size:var(--text-lg); color:var(--text-main); margin-bottom:0.5rem; font-weight:700;">Aucun élève à pointer pour ce mois</h3>
+                        <p style="font-size:var(--text-sm); margin-bottom:1.5rem; line-height:1.5;">Inscrivez vos premiers élèves pour gérer les cotisations mensuelles de ${Utils.escapeHtml(currentMonth.label)} à Juin.</p>
+                        <button class="btn btn-primary" onclick="App.openAddStudentModal()" style="min-height:44px;">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                          <span>Ajouter mon premier élève</span>
+                        </button>
+                      </div>
+                    ` : `
+                      <div>Aucun élève trouvé avec les filtres sélectionnés pour ce mois.</div>
+                    `}
                   </td>
                 </tr>
               ` : filtered.map((s, idx) => {
@@ -829,7 +1094,6 @@ const App = {
   renderExpenses(container, options = {}) {
     const expenses = Store.getExpenses();
     const expensesSummary = Store.getExpensesSummary();
-    const grand = Store.getGrandTotalSummary();
     const rubriques = Store.getExpenseRubriques();
 
     // Calcul des totaux par rubrique
@@ -854,7 +1118,7 @@ const App = {
         <div class="view-title-group">
           <div>
             <h1 class="view-title">Rubrique Gestion des Dépenses</h1>
-            <p class="view-subtitle">Enregistrement et suivi des sorties de caisse de l'école par rubrique budgétaire</p>
+            <p class="view-subtitle">Enregistrement et suivi exclusif des sorties de caisse de l'école par rubrique budgétaire</p>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="App.exportExpensesCsv()">
@@ -868,27 +1132,33 @@ const App = {
         </div>
       </div>
 
-      <!-- KPI Synthèse Dépenses & Trésorerie Nette -->
+      <!-- KPI Synthèse Dépenses Strictes (Zéro mélange avec les sommes encaissées) -->
       <div class="kpi-grid">
         <div class="kpi-card" style="border-top:4px solid var(--danger);">
           <span class="kpi-title">Total Dépenses Décaissées</span>
           <div class="kpi-figure" style="color:var(--danger);">${Utils.formatFCFA(expensesSummary.total_amount)}</div>
-          <div class="kpi-meta">${expensesSummary.count} dépenses dans ${Object.keys(rubriqueTotals).length} rubriques</div>
+          <div class="kpi-meta">${expensesSummary.count === 0 ? 'Registre vierge (0 sortie)' : `${expensesSummary.count} dépense${expensesSummary.count > 1 ? 's' : ''} décaissée${expensesSummary.count > 1 ? 's' : ''}`}</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid var(--primary);">
-          <span class="kpi-title">Total Recettes Encaissées</span>
-          <div class="kpi-figure" style="color:var(--primary);">${Utils.formatFCFA(grand.grand_collected)}</div>
-          <div class="kpi-meta">Inscriptions (${Utils.formatFCFA(grand.registration.total_collected)}) + Cotisations (${Utils.formatFCFA(grand.monthly.cumulated_collected)})</div>
+        <div class="kpi-card" style="border-top:4px solid #F59E0B;">
+          <span class="kpi-title">Nombre d'opérations</span>
+          <div class="kpi-figure" style="color:#B45309;">${expensesSummary.count}</div>
+          <div class="kpi-meta">Sortie(s) de caisse enregistrée(s)</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid var(--success); background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);">
-          <span class="kpi-title">
-            Solde Net Disponible (Moment T)
-            <button class="info-tooltip-btn" title="Total Recettes Encaissées - Total Dépenses Décaissées">i</button>
-          </span>
-          <div class="kpi-figure" style="color:var(--success); font-weight:800;">${Utils.formatFCFA(grand.net_available)}</div>
-          <div class="kpi-meta">Trésorerie nette restant en caisse</div>
+        <div class="kpi-card" style="border-top:4px solid #6366F1;">
+          <span class="kpi-title">Dépense Moyenne</span>
+          <div class="kpi-figure" style="color:#4F46E5;">${Utils.formatFCFA(expensesSummary.count > 0 ? Math.round(expensesSummary.total_amount / expensesSummary.count) : 0)}</div>
+          <div class="kpi-meta">${Object.keys(rubriqueTotals).length} rubrique${Object.keys(rubriqueTotals).length > 1 ? 's' : ''} active${Object.keys(rubriqueTotals).length > 1 ? 's' : ''}</div>
+        </div>
+      </div>
+
+      <!-- Information d'isolation stricte des dépenses -->
+      <div class="alert-box alert-info" style="display:flex; align-items:flex-start; gap:0.75rem; margin-top:1rem; border-left:4px solid #3B82F6;">
+        <span style="font-size:1.3rem;">ℹ️</span>
+        <div style="font-size:var(--text-xs); line-height:1.5;">
+          <strong>Registre des dépenses 100% vierge et autonome :</strong>
+          Cet écran retrace exclusivement les sorties d'argent décaissées pour le fonctionnement de l'établissement. Les sommes encaissées (inscriptions, cotisations mensuelles) sont consultables en synthèse dans le <strong>Bilan annuel</strong>.
         </div>
       </div>
 
@@ -1184,6 +1454,25 @@ const App = {
                   </button>
                 </td>
               </tr>
+              <tr>
+                <td data-label="Rubrique">
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#F59E0B;"></span>
+                    <strong>3. Autres rentrées (Dons, cantine, blouses, etc.)</strong>
+                  </div>
+                </td>
+                <td data-label="Attendu">-</td>
+                <td data-label="Encaissé" style="color:var(--success); font-weight:700;">+ ${Utils.formatFCFA(grand.other_revenues ? grand.other_revenues.total_amount : 0)}</td>
+                <td data-label="Reste">${grand.other_revenues ? grand.other_revenues.count : 0} encaissements</td>
+                <td data-label="Taux">
+                  <span class="badge badge-success">Recettes diverses</span>
+                </td>
+                <td data-label="Actions" style="text-align:right;">
+                  <button class="btn btn-outline-primary btn-sm" onclick="App.navigate('other-revenues')">
+                    Détail Rentrées →
+                  </button>
+                </td>
+              </tr>
               <tr style="background:#F8FAFC; font-weight:600;">
                 <td data-label="Rubrique">
                   <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -1203,7 +1492,7 @@ const App = {
                 <td data-label="Rubrique">
                   <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#DC2626;"></span>
-                    <strong>3. Total Dépenses de fonctionnement décaissées</strong>
+                    <strong>4. Total Dépenses de fonctionnement décaissées</strong>
                   </div>
                 </td>
                 <td data-label="Attendu">-</td>
@@ -1651,7 +1940,9 @@ const App = {
   // ----------------------------------------------------------------------------
   renderSettings(container) {
     const school = Store.getSchool();
-    const stampSvg = SchoolStamp.generateSVG(school, 200);
+    const stampSvg = SchoolStamp.generateSVG({ ...school, stamp_color: '#1E3A8A' }, 200);
+    const classes = Store.getClasses();
+    const isDemo = Store.isDemo();
 
     container.innerHTML = `
       <div class="view-header">
@@ -1660,41 +1951,110 @@ const App = {
       </div>
 
       <div style="display:grid; grid-template-columns:1fr; gap:1.5rem;">
+        ${isDemo ? `
+          <div style="background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border:1.5px solid #3B82F6; border-radius:var(--radius-lg); padding:1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
+            <div>
+              <div style="font-weight:800; font-size:1.1rem; color:#1E3A8A; display:flex; align-items:center; gap:0.5rem;">
+                <span>🌟</span> <span>Espace Démonstration Actif</span>
+              </div>
+              <p style="font-size:var(--text-sm); color:#1E40AF; margin-top:0.25rem; max-width:620px;">
+                Vous utilisez actuellement les données modèles d'exemple (34 élèves, cotisations et dépenses). Vous pouvez tester toutes les fonctionnalités, ou bien enregistrer votre véritable école avec ses propres sections et son cachet certifié.
+              </p>
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="App.openReferenceSchoolModal()" style="background:#1E3A8A;">
+                <span>+ Référencer mon école</span>
+              </button>
+              <button class="btn btn-secondary" onclick="App.restoreDemoFixtures()">
+                <span>🔄 Recharger la démo</span>
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
         <!-- Édition du Cachet officiel (§ 6) -->
         <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.5rem;">
-          <h2 style="font-size:var(--text-lg); margin-bottom:1rem;">Cachet officiel de l'école</h2>
+          <h2 style="font-size:var(--text-lg); margin-bottom:1rem; color:var(--primary); font-weight:700;">Cachet officiel & Coordonnées de l'école</h2>
           <div style="display:flex; flex-wrap:wrap; gap:2rem; align-items:center;">
             <div id="settingsStampDisplay">
               ${stampSvg}
             </div>
-            <div style="flex:1; min-width:260px;">
+            <div style="flex:1; min-width:280px;">
               <p style="font-size:var(--text-sm); color:var(--text-muted); margin-bottom:1rem;">
-                Le cachet officiel rouge vif (#DC2626) haute visibilité est généré en temps réel d'après les informations ci-dessous. Il s'applique automatiquement sur tous les reçus imprimables et partagés.
+                Le cachet officiel bleu encre (#1E3A8A) à double contour circulaire est généré en temps réel d'après les informations ci-dessous. Il s'applique automatiquement sur tous les reçus imprimables et partagés.
               </p>
               <div class="form-group">
-                <label class="form-label">Nom de l'école</label>
+                <label class="form-label" for="settingSchoolName">Nom officiel de l'école <span style="color:var(--danger)">*</span></label>
                 <input type="text" id="settingSchoolName" class="form-input" value="${Utils.escapeHtml(school.name)}">
               </div>
-              <div class="form-group">
-                <label class="form-label">Nom du Directeur / de la Directrice</label>
-                <input type="text" id="settingDirectorName" class="form-input" value="${Utils.escapeHtml(school.director_name)}">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div class="form-group">
+                  <label class="form-label" for="settingDirectorName">Nom du Directeur / de la Directrice <span style="color:var(--danger)">*</span></label>
+                  <input type="text" id="settingDirectorName" class="form-input" value="${Utils.escapeHtml(school.director_name)}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="settingDirectorPhone">Téléphone de l'école <span style="color:var(--danger)">*</span></label>
+                  <input type="text" id="settingDirectorPhone" class="form-input" value="${Utils.escapeHtml(school.director_phone)}">
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Téléphone du Directeur (cachet)</label>
-                <input type="text" id="settingDirectorPhone" class="form-input" value="${Utils.escapeHtml(school.director_phone)}">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div class="form-group">
+                  <label class="form-label" for="settingSchoolYear">Année scolaire</label>
+                  <input type="text" id="settingSchoolYear" class="form-input" value="${Utils.escapeHtml(school.school_year || '2026-2027')}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="settingAddress">Adresse précise</label>
+                  <input type="text" id="settingAddress" class="form-input" value="${Utils.escapeHtml(school.address || '')}" placeholder="Ex: Quartier Plateau, Rue Félix Faure">
+                </div>
               </div>
-              <button class="btn btn-primary" onclick="App.saveSettings()">Enregistrer les modifications</button>
             </div>
+          </div>
+
+          <!-- Tarification des sections -->
+          <div style="margin-top:1.5rem; border-top:1px solid var(--border-light); padding-top:1.25rem;">
+            <h3 style="font-size:var(--text-md); margin-bottom:0.75rem; color:var(--text-main); font-weight:700;">
+              Tarifs des sections préscolaires (en FCFA)
+            </h3>
+            <p style="font-size:var(--text-xs); color:var(--text-muted); margin-bottom:1rem;">
+              Ces montants servent de valeurs par défaut lors de l'enregistrement des paiements d'inscription et des cotisations mensuelles.
+            </p>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+              ${classes.map(c => `
+                <div style="background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-md); border:1px solid var(--border-light);">
+                  <strong style="color:var(--primary); font-size:var(--text-sm);">${Utils.escapeHtml(c.name)}</strong>
+                  <div style="margin-top:0.5rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                    <div>
+                      <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:2px;">Inscription</label>
+                      <input type="number" id="settingFeeReg_${c.id}" class="form-input" value="${c.registration_fee || 0}" min="0" step="500">
+                    </div>
+                    <div>
+                      <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:2px;">Mensualité</label>
+                      <input type="number" id="settingFeeMonth_${c.id}" class="form-input" value="${c.monthly_fee || 0}" min="0" step="500">
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div style="margin-top:1.25rem; display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="App.saveSettings()" style="background:#1E3A8A;">
+              <span>Enregistrer les modifications</span>
+            </button>
           </div>
         </div>
 
-        <!-- Réinitialisation ou rechargement démo -->
-        <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.5rem;">
-          <h2 style="font-size:var(--text-lg); margin-bottom:0.5rem; color:var(--text-main);">Données de démonstration</h2>
-          <p style="font-size:var(--text-sm); color:var(--text-muted); margin-bottom:1rem;">
-            Réinitialisez l'ensemble des données avec les 30 élèves fictifs et paiements modèles pour vos présentations ou tests.
+        <!-- Réinitialisation complète et remise à zéro -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.5rem; border-left:4px solid var(--danger);">
+          <h2 style="font-size:var(--text-lg); margin-bottom:0.5rem; color:var(--danger); display:flex; align-items:center; gap:0.5rem;">
+            <span>⚠️</span> <span>Réinitialisation et remise à zéro</span>
+          </h2>
+          <p style="font-size:var(--text-sm); color:var(--text-muted); margin-bottom:1rem; line-height:1.5;">
+            Effacez l'intégralité des saisies actuelles (tous les élèves, inscriptions, cotisations, autres entrées et dépenses) pour repartir sur une base 100% vierge et propre prête pour de nouvelles saisies.
           </p>
-          <button class="btn btn-secondary" onclick="App.resetDemoData()">Réinitialiser les données de test</button>
+          <button class="btn btn-danger" onclick="App.resetAllDataToZero()">
+            <span>🗑️</span> <span>Réinitialiser les données (Tout effacer)</span>
+          </button>
         </div>
       </div>
     `;
@@ -1981,21 +2341,50 @@ const App = {
   // AFFICHAGE & ÉMISSION DU REÇU OFFICIEL FORMAT A5 (§ 7)
   // ----------------------------------------------------------------------------
   viewReceipt(paymentId) {
-    const receipt = Store.data.receipts.find(r => r.payment_id === paymentId);
-    const payment = Store.data.payments.find(p => p.id === paymentId);
-    if (!receipt || !payment) return;
+    const receipt = Store.data.receipts ? Store.data.receipts.find(r => r.payment_id === paymentId || r.id === paymentId) : null;
+    const payment = Store.data.payments ? Store.data.payments.find(p => p.id === paymentId) : null;
+    const otherRev = !payment && Store.data.other_revenues ? Store.data.other_revenues.find(o => o.id === paymentId || (receipt && o.receipt_number === receipt.receipt_number)) : null;
+
+    if (!receipt || (!payment && !otherRev)) return;
 
     const school = Store.getSchool();
-    const student = Store.getStudentById(payment.student_id);
-    const cls = student ? Store.getClassById(student.class_id) : null;
-
+    let student = null;
+    let cls = null;
     let objectLabel = "Frais d'inscription";
-    if (payment.kind === 'monthly') {
-      const m = Store.getMonthById(payment.month_id);
-      objectLabel = `Cotisation du mois de ${m ? m.label : ''} ${school.school_year}`;
+    let amount = 0;
+    let method = 'cash';
+    let reference = null;
+    let studentNameHtml = '';
+    let classNameStr = '-';
+    let parentNameStr = 'Non renseigné';
+    let cancelReasonStr = null;
+
+    if (payment) {
+      student = Store.getStudentById(payment.student_id);
+      cls = student ? Store.getClassById(student.class_id) : null;
+      if (payment.kind === 'monthly') {
+        const m = Store.getMonthById(payment.month_id);
+        objectLabel = `Cotisation du mois de ${m ? m.label : ''} ${school.school_year}`;
+      }
+      amount = payment.amount;
+      method = payment.method;
+      reference = payment.reference;
+      studentNameHtml = `<span class="receipt-value-highlight">${Utils.escapeHtml(student ? student.first_names : '')} <strong>${Utils.escapeHtml(student ? (student.last_name || '').toUpperCase() : '')}</strong></span>`;
+      classNameStr = cls ? cls.name : '-';
+      parentNameStr = student && student.parent_name ? student.parent_name : 'Non renseigné';
+      cancelReasonStr = payment.cancel_reason;
+    } else if (otherRev) {
+      amount = otherRev.amount;
+      method = otherRev.payment_method || 'cash';
+      reference = otherRev.motif;
+      objectLabel = `Autre rentrée : ${otherRev.category || 'Général'} — ${otherRev.motif}`;
+      studentNameHtml = `<span class="receipt-value-highlight"><strong>${Utils.escapeHtml(otherRev.payer_name ? otherRev.payer_name : otherRev.motif)}</strong></span>`;
+      classNameStr = otherRev.category || 'Recette diverse';
+      parentNameStr = otherRev.payer_name || 'Établissement';
+      cancelReasonStr = otherRev.cancel_reason;
     }
 
-    const amountInWords = Utils.amountToFrenchWords(payment.amount);
+    const amountInWords = Utils.amountToFrenchWords(amount);
     const verifyUrl = `${window.location.origin}${window.location.pathname.replace('app.html', '')}verify.html?token=${receipt.public_token}`;
     const qrSvg = Utils.generateQRCodeSVG(verifyUrl, 84);
     const stampSvg = SchoolStamp.generateSVG(school, 155, false);
@@ -2030,16 +2419,16 @@ const App = {
         <div class="receipt-body">
           <div class="receipt-info-grid">
             <div class="receipt-row">
-              <span class="receipt-label">Élève</span>
-              <span class="receipt-value-highlight">${Utils.escapeHtml(student ? student.first_names : '')} <strong>${Utils.escapeHtml(student ? (student.last_name || '').toUpperCase() : '')}</strong></span>
+              <span class="receipt-label">${payment ? 'Élève' : 'Bénéficiaire / Payeur'}</span>
+              ${studentNameHtml}
             </div>
             <div class="receipt-row">
-              <span class="receipt-label">Classe / Section</span>
-              <span class="receipt-value">${Utils.escapeHtml(cls ? cls.name : '-')}</span>
+              <span class="receipt-label">Classe / Rubrique</span>
+              <span class="receipt-value">${Utils.escapeHtml(classNameStr)}</span>
             </div>
             <div class="receipt-row">
-              <span class="receipt-label">Parent / Tuteur</span>
-              <span class="receipt-value">${Utils.escapeHtml(student && student.parent_name ? student.parent_name : 'Non renseigné')}</span>
+              <span class="receipt-label">Parent / Contact</span>
+              <span class="receipt-value">${Utils.escapeHtml(parentNameStr)}</span>
             </div>
             <div class="receipt-row">
               <span class="receipt-label">Objet du versement</span>
@@ -2051,20 +2440,20 @@ const App = {
           <div class="receipt-amount-card">
             <div class="receipt-amount-header">
               <span style="font-weight:700; font-size:0.95rem; text-transform:uppercase;">Montant réglé :</span>
-              <span class="receipt-amount-figures">${Utils.formatFCFA(payment.amount)}</span>
+              <span class="receipt-amount-figures">${Utils.formatFCFA(amount)}</span>
             </div>
             <div class="receipt-amount-words">
               Soit : <strong>${Utils.escapeHtml(amountInWords)}</strong>
             </div>
             <div class="receipt-payment-details">
-              <span>Mode : <strong>${Utils.escapeHtml(payment.method.toUpperCase())}</strong> ${payment.reference ? `(Réf : ${Utils.escapeHtml(payment.reference)})` : ''}</span>
-              <span style="color:#16A34A; font-weight:700;">Situation : Reste à payer pour le mois : 0 FCFA</span>
+              <span>Mode : <strong>${Utils.escapeHtml(method.toUpperCase())}</strong> ${reference ? `(Réf : ${Utils.escapeHtml(reference)})` : ''}</span>
+              <span style="color:#16A34A; font-weight:700;">Situation : Réglé en totalité</span>
             </div>
           </div>
 
           ${receipt.status === 'cancelled' ? `
             <div style="background:#FEE2E2; border:1px solid #FECACA; padding:0.6rem 0.8rem; border-radius:4px; font-size:0.8rem; color:#991B1B; margin-bottom:1rem;">
-              ⚠️ <strong>Paiement annulé :</strong> ${Utils.escapeHtml(payment.cancel_reason || 'Annulation')}
+              ⚠️ <strong>Paiement annulé :</strong> ${Utils.escapeHtml(cancelReasonStr || 'Annulation')}
             </div>
           ` : ''}
 
@@ -2882,40 +3271,111 @@ const App = {
     const name = document.getElementById('settingSchoolName').value.trim();
     const dirName = document.getElementById('settingDirectorName').value.trim();
     const dirPhone = document.getElementById('settingDirectorPhone').value.trim();
+    const schoolYear = (document.getElementById('settingSchoolYear') ? document.getElementById('settingSchoolYear').value.trim() : '') || '2026-2027';
+    const address = document.getElementById('settingAddress') ? document.getElementById('settingAddress').value.trim() : '';
 
     if (!name || !dirName || !dirPhone) {
-      alert("Tous les champs sont obligatoires.");
+      alert("Le nom de l'école, le directeur et le téléphone sont obligatoires.");
       return;
     }
 
     Store.updateSchool({
       name: name,
       director_name: dirName,
-      director_phone: Utils.normalizeSenegalPhone(dirPhone)
+      director_phone: Utils.normalizeSenegalPhone(dirPhone),
+      school_year: schoolYear,
+      address: address,
+      stamp_color: '#1E3A8A'
     });
 
-    this.showToast("Paramètres et cachet officiel mis à jour.", "success");
+    // Mise à jour des tarifs des classes
+    const classes = Store.getClasses();
+    classes.forEach(c => {
+      const regInput = document.getElementById(`settingFeeReg_${c.id}`);
+      const monthInput = document.getElementById(`settingFeeMonth_${c.id}`);
+      if (regInput && monthInput) {
+        Store.updateClassFees(c.id, regInput.value, monthInput.value);
+      }
+    });
+
+    this.showToast("Paramètres, tarifs et cachet officiel mis à jour.", "success");
     this.renderHeader();
     this.renderSettings(document.getElementById('appViewContent'));
   },
 
-  resetDemoData() {
+  restoreDemoFixtures() {
+    Store.resetToDemo();
+    this.renderHeader();
+    this.renderSettings(document.getElementById('appViewContent'));
+    this.showToast("Jeu de données de démonstration réinitialisé avec succès !", "success");
+  },
+
+  resetAllDataToZero() {
     this.openConfirmModal({
-      title: "Réinitialiser avec les données de démonstration",
-      message: "Voulez-vous vraiment réinitialiser toutes les données de l'application ?",
+      title: "Réinitialiser et tout effacer",
+      message: "Voulez-vous vraiment effacer toutes les données de l'établissement ?",
       detailsHtml: `
-        <div style="font-size:var(--text-sm); color:var(--text-muted); line-height:1.5;">
-          Toutes les inscriptions, paiements, dépenses et classes actuels seront remplacés par les données initiales de démonstration.
+        <div style="font-size:var(--text-sm); color:var(--danger); font-weight:600; line-height:1.5;">
+          ⚠️ Cette action est irréversible : tous les élèves inscrits, paiements enregistrés, reçus délivrés, dépenses et autres entrées seront définitivement supprimés.
+        </div>
+        <div style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.5rem;">
+          Votre établissement conservera son nom et ses sections configurées, mais tous les registres comptables seront remis à 0 FCFA.
         </div>
       `,
-      confirmText: "Oui, réinitialiser",
-      cancelText: "Non, annuler",
+      confirmText: "Oui, tout effacer à zéro",
+      cancelText: "Non, conserver mes données",
       onConfirm: () => {
-        Store.resetToDemo();
-        this.showToast("Données réinitialisées avec succès.", "info");
+        Store.resetToZero();
+        this.showToast("Toutes les données ont été effacées avec succès. Base 100% vierge prête pour vos saisies.", "success");
+        this.renderHeader();
         this.navigate('dashboard');
       }
     });
+  },
+
+  openConfirmModal({ title, message, detailsHtml, confirmText = "Oui, confirmer", cancelText = "Non, annuler", onConfirm } = {}) {
+    const modal = document.getElementById('confirmDeleteModal');
+    if (!modal) {
+      if (window.confirm((message || "Voulez-vous vraiment effacer ces données ?") + "\n\nCette action est irréversible.")) {
+        if (typeof onConfirm === 'function') onConfirm();
+      }
+      return;
+    }
+
+    const titleEl = modal.querySelector('.modal-title');
+    const msgEl = document.getElementById('confirmDeleteMessage');
+    const detailsEl = document.getElementById('confirmDeleteDetails');
+    const btnYes = document.getElementById('confirmDeleteBtnYes');
+    const btnNo = document.getElementById('confirmDeleteBtnNo');
+
+    if (titleEl && title) titleEl.textContent = title;
+    if (msgEl && message) msgEl.textContent = message;
+    if (detailsEl) {
+      if (detailsHtml) {
+        detailsEl.innerHTML = detailsHtml;
+        detailsEl.style.display = 'block';
+      } else {
+        detailsEl.style.display = 'none';
+      }
+    }
+    if (btnYes && confirmText) btnYes.textContent = confirmText;
+    if (btnNo && cancelText) btnNo.textContent = cancelText;
+
+    this._pendingConfirmCallback = onConfirm;
+    modal.classList.add('is-open');
+  },
+
+  executeConfirmedDelete() {
+    this.closeAllModals();
+    if (typeof this._pendingConfirmCallback === 'function') {
+      const cb = this._pendingConfirmCallback;
+      this._pendingConfirmCallback = null;
+      cb();
+    }
+  },
+
+  resetDemoData() {
+    this.resetAllDataToZero();
   },
 
   closeAllModals() {
@@ -2970,8 +3430,589 @@ const App = {
     }, timeout);
 
     toast.addEventListener('mouseenter', () => clearTimeout(timer));
+  },
+
+  // ----------------------------------------------------------------------------
+  // MODULE : AUTRES RENTRÉES (DONS, CANTINE, BLOUSES, KERMESSE, ACTIVITÉS...)
+  // ----------------------------------------------------------------------------
+  renderOtherRevenues(container, options = {}) {
+    const summary = Store.getOtherRevenuesSummary();
+    const grand = Store.getGrandTotalSummary();
+    const rubriques = Store.getOtherRevenueRubriques();
+
+    const rubriqueTotals = {};
+    summary.revenues.forEach(r => {
+      if (r.status !== 'cancelled') {
+        const cat = r.category || 'Autre encaissement exceptionnel';
+        rubriqueTotals[cat] = (rubriqueTotals[cat] || 0) + (parseInt(r.amount, 10) || 0);
+      }
+    });
+
+    const activeFilter = this.activeOtherRevenueRubriqueFilter || 'all';
+    const activeStatus = this.activeOtherRevenueStatusFilter || 'all';
+
+    const filtered = summary.revenues.filter(r => {
+      const matchSearch = !this.searchTerm 
+        || (r.motif && r.motif.toLowerCase().includes(this.searchTerm.toLowerCase()))
+        || (r.category && r.category.toLowerCase().includes(this.searchTerm.toLowerCase()))
+        || (r.payer_name && r.payer_name.toLowerCase().includes(this.searchTerm.toLowerCase()))
+        || (r.receipt_number && r.receipt_number.toLowerCase().includes(this.searchTerm.toLowerCase()));
+      const matchRubrique = activeFilter === 'all' || r.category === activeFilter;
+      const matchStatus = activeStatus === 'all' || (activeStatus === 'valid' && r.status !== 'cancelled') || (activeStatus === 'cancelled' && r.status === 'cancelled');
+      return matchSearch && matchRubrique && matchStatus;
+    });
+
+    container.innerHTML = `
+      <div class="view-header">
+        <div class="view-title-group">
+          <div>
+            <h1 class="view-title">Rubrique Autres Entrées</h1>
+            <p class="view-subtitle">Enregistrement et suivi des encaissements hors inscriptions et cotisations (Dons, cantine, blouses, sorties...)</p>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="App.exportOtherRevenuesCsv()">
+              📄 Exporter CSV
+            </button>
+            <button id="btnViewAddOtherRevenue" class="btn btn-success btn-sm" onclick="App.openAddOtherRevenueModal()" style="background:#16A34A; color:#FFFFFF; border-color:#16A34A;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>+ Autre entrée</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bandeau explicatif officiel -->
+      <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-left:4px solid #3B82F6; padding:0.875rem 1.25rem; border-radius:var(--radius-md); font-size:var(--text-sm); color:#1E40AF; margin-bottom:1.25rem; line-height:1.5;">
+        ℹ️ <strong>Rubrique Autres Entrées :</strong> Cette section est exclusivement dédiée aux entrées d'argent hors inscriptions et cotisations mensuelles des élèves (dons, cantine scolaire, vente de tenues/blouses, activités périscolaires, kermesse, etc.). Elle reste vierge tant qu'aucune rentrée spécifique n'a été saisie.
+      </div>
+
+      <!-- KPI Synthèse Autres Entrées UNIQUEMENT (isolé des inscriptions et cotisations) -->
+      <div class="kpi-grid">
+        <div class="kpi-card" style="border-top:4px solid var(--success); background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);">
+          <span class="kpi-title">Total Autres Entrées</span>
+          <div class="kpi-figure" style="color:var(--success); font-weight:800;">${Utils.formatFCFA(summary.total_amount)}</div>
+          <div class="kpi-meta">${summary.count} entrée(s) active(s) comptabilisée(s)</div>
+        </div>
+
+        <div class="kpi-card" style="border-top:4px solid var(--primary);">
+          <span class="kpi-title">Nombre d'opérations</span>
+          <div class="kpi-figure" style="color:var(--primary);">${summary.count}</div>
+          <div class="kpi-meta">${summary.cancelled_count > 0 ? `${summary.cancelled_count} annulée(s)` : 'Toutes les opérations sont valides'}</div>
+        </div>
+
+        <div class="kpi-card" style="border-top:4px solid #F59E0B; background:linear-gradient(180deg, #FFFFFF 0%, #FEF3C7 100%);">
+          <span class="kpi-title">Moyenne par opération</span>
+          <div class="kpi-figure" style="color:#B45309; font-weight:800;">
+            ${summary.count > 0 ? Utils.formatFCFA(Math.round(summary.total_amount / summary.count)) : '0 FCFA'}
+          </div>
+          <div class="kpi-meta">${summary.count > 0 ? 'Sur les rentrées actives' : 'Aucune entrée enregistrée'}</div>
+        </div>
+      </div>
+
+      <!-- Filtres et recherche -->
+      <div class="table-toolbar" style="margin-top:1.25rem;">
+        <div class="search-input-wrapper">
+          <input 
+            type="search" 
+            class="form-input" 
+            placeholder="Rechercher par motif, payeur, N° reçu..." 
+            value="${Utils.escapeHtml(this.searchTerm || '')}"
+            oninput="App.onOtherRevenueSearch(this.value)">
+        </div>
+
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <select class="form-select form-select-sm" onchange="App.onOtherRevenueCategoryFilter(this.value)" style="min-width:180px;">
+            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>Toutes les rubriques (${summary.count})</option>
+            ${rubriques.map(r => `
+              <option value="${Utils.escapeHtml(r)}" ${activeFilter === r ? 'selected' : ''}>
+                ${Utils.escapeHtml(r)} ${rubriqueTotals[r] ? `(${Utils.formatFCFA(rubriqueTotals[r])})` : ''}
+              </option>
+            `).join('')}
+          </select>
+
+          <select class="form-select form-select-sm" onchange="App.onOtherRevenueStatusFilter(this.value)">
+            <option value="all" ${activeStatus === 'all' ? 'selected' : ''}>Tous les statuts</option>
+            <option value="valid" ${activeStatus === 'valid' ? 'selected' : ''}>Valides (${summary.count})</option>
+            <option value="cancelled" ${activeStatus === 'cancelled' ? 'selected' : ''}>Annulées (${summary.cancelled_count})</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tableau des Autres Rentrées -->
+      <div class="data-table-container" style="margin-top:1rem;">
+        ${filtered.length === 0 ? `
+          <div style="text-align:center; padding:3.5rem 1.5rem; color:var(--text-muted); background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg);">
+            <div style="font-size:2.8rem; margin-bottom:0.75rem;">💰</div>
+            <h3 style="font-size:1.2rem; color:#1E3A8A; margin-bottom:0.5rem; font-weight:700;">Cette rubrique est actuellement vierge</h3>
+            <p style="font-size:var(--text-sm); max-width:480px; margin:0 auto 1.5rem auto; line-height:1.6;">
+              ${this.searchTerm || activeFilter !== 'all' ? 'Aucune entrée ne correspond à vos filtres de recherche.' : 'Vous n\'avez pas encore enregistré d\'autres entrées d\'argent. Utilisez cette rubrique pour enregistrer les dons, cantine, blouses, kermesse ou autres rentrées hors mensualités.'}
+            </p>
+            <button id="btnEmptyAddOtherRevenue" class="btn btn-success btn-sm" onclick="App.openAddOtherRevenueModal()" style="background:#16A34A; color:#FFFFFF; border-color:#16A34A; padding:0.6rem 1.25rem;">
+              + Enregistrer une autre entrée
+            </button>
+          </div>
+        ` : `
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>N° Reçu</th>
+                <th>Date</th>
+                <th>Motif & Payeur</th>
+                <th>Rubrique</th>
+                <th>Mode</th>
+                <th>Montant</th>
+                <th>Statut</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(r => `
+                <tr class="${r.status === 'cancelled' ? 'row-cancelled' : ''}">
+                  <td data-label="N° Reçu">
+                    <strong>${Utils.escapeHtml(r.receipt_number || '-')}</strong>
+                  </td>
+                  <td data-label="Date">${Utils.formatDate(r.date)}</td>
+                  <td data-label="Motif">
+                    <div style="font-weight:700; color:var(--text-dark);">${Utils.escapeHtml(r.motif)}</div>
+                    ${r.payer_name ? `<div style="font-size:11px; color:var(--text-muted);">Payeur : ${Utils.escapeHtml(r.payer_name)}</div>` : ''}
+                    ${r.status === 'cancelled' && r.cancel_reason ? `<div style="font-size:11px; color:var(--danger); font-weight:600;">Motif annulation : ${Utils.escapeHtml(r.cancel_reason)}</div>` : ''}
+                  </td>
+                  <td data-label="Rubrique">
+                    <span class="badge badge-info">${Utils.escapeHtml(r.category || 'Général')}</span>
+                  </td>
+                  <td data-label="Mode">
+                    <span style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-muted);">${Utils.escapeHtml(r.payment_method || 'CASH')}</span>
+                  </td>
+                  <td data-label="Montant" style="font-weight:800; color:${r.status === 'cancelled' ? 'var(--text-muted)' : 'var(--success)'}; font-size:var(--text-base);">
+                    ${r.status === 'cancelled' ? `<del>${Utils.formatFCFA(r.amount)}</del>` : `+ ${Utils.formatFCFA(r.amount)}`}
+                  </td>
+                  <td data-label="Statut">
+                    ${r.status === 'cancelled' 
+                      ? `<span class="badge badge-danger">✕ Annulée</span>` 
+                      : `<span class="badge badge-success">✓ Encaissée</span>`}
+                  </td>
+                  <td data-label="Actions" style="text-align:right;">
+                    <div style="display:inline-flex; gap:0.25rem;">
+                      <button class="btn btn-secondary btn-sm" onclick="App.viewReceipt('${r.id}')" title="Voir / Imprimer le reçu officiel certifié">
+                        🖨️ Reçu
+                      </button>
+                      ${r.status !== 'cancelled' ? `
+                        <button class="btn btn-secondary btn-sm" onclick="App.openEditOtherRevenueModal('${r.id}')" title="Modifier cette rentrée">
+                          ✎
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="App.openCancelOtherRevenueModal('${r.id}')" title="Annuler cette rentrée">
+                          ✕
+                        </button>
+                      ` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
+      </div>
+    `;
+  },
+
+  openAddOtherRevenueModal(defaultCategory = '') {
+    const modal = document.getElementById('otherRevenueModal');
+    if (!modal) return;
+    const titleEl = document.getElementById('otherRevModalTitle');
+    const submitBtn = document.getElementById('otherRevSubmitBtn');
+    const deleteBtn = document.getElementById('otherRevDeleteBtn');
+    const idInput = document.getElementById('otherRevId');
+    const motifInput = document.getElementById('otherRevMotif');
+    const amountInput = document.getElementById('otherRevAmount');
+    const dateInput = document.getElementById('otherRevDate');
+    const payerInput = document.getElementById('otherRevPayer');
+    const methodSelect = document.getElementById('otherRevMethod');
+    const customContainer = document.getElementById('customOtherRevCategoryContainer');
+    const customInput = document.getElementById('customOtherRevCategory');
+
+    if (titleEl) titleEl.textContent = "Enregistrer une autre rentrée d'argent";
+    if (submitBtn) submitBtn.textContent = "Enregistrer et émettre le reçu";
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    if (idInput) idInput.value = '';
+    if (motifInput) motifInput.value = '';
+    if (amountInput) amountInput.value = '';
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    if (payerInput) payerInput.value = '';
+    if (methodSelect) methodSelect.value = 'cash';
+    if (customContainer) customContainer.style.display = 'none';
+    if (customInput) { customInput.value = ''; customInput.required = false; }
+
+    this.populateOtherRevenueRubriques(defaultCategory || "Dons & Subventions");
+
+    modal.classList.add('is-open');
+    setTimeout(() => { if (motifInput) motifInput.focus(); }, 100);
+  },
+
+  openEditOtherRevenueModal(id) {
+    const revenue = Store.getOtherRevenueById(id);
+    if (!revenue) return;
+    const modal = document.getElementById('otherRevenueModal');
+    if (!modal) return;
+    const titleEl = document.getElementById('otherRevModalTitle');
+    const submitBtn = document.getElementById('otherRevSubmitBtn');
+    const deleteBtn = document.getElementById('otherRevDeleteBtn');
+    const idInput = document.getElementById('otherRevId');
+    const motifInput = document.getElementById('otherRevMotif');
+    const amountInput = document.getElementById('otherRevAmount');
+    const dateInput = document.getElementById('otherRevDate');
+    const payerInput = document.getElementById('otherRevPayer');
+    const methodSelect = document.getElementById('otherRevMethod');
+    const customContainer = document.getElementById('customOtherRevCategoryContainer');
+    const customInput = document.getElementById('customOtherRevCategory');
+
+    if (titleEl) titleEl.textContent = "Modifier la rentrée d'argent";
+    if (submitBtn) submitBtn.textContent = "Enregistrer les modifications";
+    if (deleteBtn) {
+      deleteBtn.style.display = 'inline-flex';
+      deleteBtn.setAttribute('data-revenue-id', revenue.id);
+    }
+    if (idInput) idInput.value = revenue.id;
+    if (motifInput) motifInput.value = revenue.motif || '';
+    if (amountInput) amountInput.value = revenue.amount || '';
+    if (dateInput) dateInput.value = revenue.date || new Date().toISOString().split('T')[0];
+    if (payerInput) payerInput.value = revenue.payer_name || '';
+    if (methodSelect) methodSelect.value = revenue.payment_method || 'cash';
+    if (customContainer) customContainer.style.display = 'none';
+    if (customInput) { customInput.value = ''; customInput.required = false; }
+
+    this.populateOtherRevenueRubriques(revenue.category || "Dons & Subventions");
+
+    modal.classList.add('is-open');
+  },
+
+  populateOtherRevenueRubriques(selectedCategory = '') {
+    const select = document.getElementById('otherRevCategory');
+    if (!select) return;
+    const rubriques = Store.getOtherRevenueRubriques();
+
+    select.innerHTML = `
+      ${rubriques.map(r => `
+        <option value="${Utils.escapeHtml(r)}" ${r === selectedCategory ? 'selected' : ''}>
+          ${Utils.escapeHtml(r)}
+        </option>
+      `).join('')}
+      <option value="__NEW_CUSTOM_OTHER_REV__">➕ Ajouter une nouvelle rubrique personnalisée...</option>
+    `;
+    this.onOtherRevenueCategoryChange(select.value);
+  },
+
+  onOtherRevenueCategoryChange(val) {
+    const customContainer = document.getElementById('customOtherRevCategoryContainer');
+    const customInput = document.getElementById('customOtherRevCategory');
+    if (!customContainer) return;
+    if (val === '__NEW_CUSTOM_OTHER_REV__') {
+      customContainer.style.display = 'block';
+      if (customInput) {
+        customInput.required = true;
+        customInput.focus();
+      }
+    } else {
+      customContainer.style.display = 'none';
+      if (customInput) customInput.required = false;
+    }
+  },
+
+  handleOtherRevenueSubmit(event) {
+    if (event) event.preventDefault();
+    try {
+      const id = (document.getElementById('otherRevId')?.value || '').trim();
+      const motif = (document.getElementById('otherRevMotif')?.value || '').trim();
+      const rawAmount = document.getElementById('otherRevAmount')?.value || '';
+      const cleanAmountStr = String(rawAmount).replace(/\s/g, '').replace(/,/g, '.');
+      const amount = Math.round(parseFloat(cleanAmountStr)) || 0;
+      const date = document.getElementById('otherRevDate')?.value || new Date().toISOString().split('T')[0];
+      const payerName = (document.getElementById('otherRevPayer')?.value || '').trim();
+      const paymentMethod = document.getElementById('otherRevMethod')?.value || 'cash';
+
+      const categorySelect = document.getElementById('otherRevCategory');
+      let category = categorySelect ? categorySelect.value : 'Dons & Subventions';
+
+      if (category === '__NEW_CUSTOM_OTHER_REV__') {
+        const customVal = (document.getElementById('customOtherRevCategory')?.value || '').trim();
+        if (!customVal) {
+          this.showToast("Veuillez renseigner le nom de la nouvelle rubrique.", "warning");
+          document.getElementById('customOtherRevCategory')?.focus();
+          return;
+        }
+        category = customVal;
+        Store.addCustomOtherRevenueRubrique(customVal);
+      }
+
+      if (!motif) {
+        this.showToast("Veuillez renseigner le motif de la rentrée.", "warning");
+        return;
+      }
+      if (amount <= 0) {
+        this.showToast("Le montant doit être supérieur à zéro FCFA.", "warning");
+        return;
+      }
+
+      if (id) {
+        Store.updateOtherRevenue(id, { motif, amount, date, category, payment_method: paymentMethod, payer_name: payerName });
+        this.showToast("Rentrée financière modifiée avec succès !", "success");
+      } else {
+        const newRev = Store.addOtherRevenue({ motif, amount, date, category, payment_method: paymentMethod, payer_name: payerName });
+        this.showToast("Rentrée enregistrée et reçu officiel généré !", "success");
+        setTimeout(() => this.viewReceipt(newRev.id), 300);
+      }
+
+      this.closeAllModals();
+      if (this.currentTab === 'other-revenues') {
+        this.renderOtherRevenues(document.getElementById('appViewContent'));
+      } else if (this.currentTab === 'bilan') {
+        this.renderBilan(document.getElementById('appViewContent'));
+      } else if (this.currentTab === 'dashboard') {
+        this.renderDashboard(document.getElementById('appViewContent'));
+      }
+    } catch (err) {
+      alert("Erreur lors de l'enregistrement : " + err.message);
+    }
+  },
+
+  deleteOtherRevenueFromModal() {
+    const id = document.getElementById('otherRevId')?.value;
+    if (!id) return;
+    const revenue = Store.getOtherRevenueById(id);
+    if (!revenue) return;
+
+    this.openConfirmModal({
+      title: "Supprimer la rentrée",
+      message: `Confirmez-vous la suppression de la rentrée « ${revenue.motif} » d'un montant de ${Utils.formatFCFA(revenue.amount)} ?`,
+      details: `Cette suppression effacera définitivement cette écriture et son reçu n° ${revenue.receipt_number || '-'} du registre.`,
+      onConfirm: () => {
+        Store.deleteOtherRevenue(id);
+        this.closeAllModals();
+        this.showToast("Rentrée supprimée du registre.", "info");
+        if (this.currentTab === 'other-revenues') {
+          this.renderOtherRevenues(document.getElementById('appViewContent'));
+        } else {
+          this.navigate(this.currentTab);
+        }
+      }
+    });
+  },
+
+  openCancelOtherRevenueModal(id) {
+    const revenue = Store.getOtherRevenueById(id);
+    if (!revenue) return;
+    this.pendingCancelOtherRevId = id;
+
+    const modal = document.getElementById('cancelOtherRevenueModal');
+    if (!modal) return;
+    const motifEl = document.getElementById('cancelOtherRevMotif');
+    const amountEl = document.getElementById('cancelOtherRevAmount');
+    if (motifEl) motifEl.textContent = revenue.motif;
+    if (amountEl) amountEl.textContent = Utils.formatFCFA(revenue.amount);
+
+    modal.classList.add('is-open');
+  },
+
+  confirmCancelOtherRevenue() {
+    if (!this.pendingCancelOtherRevId) return;
+    const reasonSelect = document.getElementById('cancelOtherRevReason');
+    const reason = reasonSelect ? reasonSelect.value : 'Annulation administrative';
+
+    try {
+      Store.cancelOtherRevenue(this.pendingCancelOtherRevId, reason);
+      this.closeAllModals();
+      this.showToast("Rentrée annulée. Le reçu a été marqué ANNULÉ.", "info");
+      this.pendingCancelOtherRevId = null;
+      if (this.currentTab === 'other-revenues') {
+        this.renderOtherRevenues(document.getElementById('appViewContent'));
+      } else {
+        this.navigate(this.currentTab);
+      }
+    } catch (err) {
+      alert("Erreur lors de l'annulation : " + err.message);
+    }
+  },
+
+  onOtherRevenueSearch(term) {
+    this.searchTerm = term;
+    this.renderOtherRevenues(document.getElementById('appViewContent'));
+  },
+
+  onOtherRevenueCategoryFilter(cat) {
+    this.activeOtherRevenueRubriqueFilter = cat;
+    this.renderOtherRevenues(document.getElementById('appViewContent'));
+  },
+
+  onOtherRevenueStatusFilter(status) {
+    this.activeOtherRevenueStatusFilter = status;
+    this.renderOtherRevenues(document.getElementById('appViewContent'));
+  },
+
+  exportOtherRevenuesCsv() {
+    const list = Store.getOtherRevenues();
+    const school = Store.getSchool();
+    let csv = `\uFEFFÉtablissement: ${school.name}\nAnnée scolaire: ${school.school_year}\nExport: Autres Rentrées Financières\nDate d'export: ${new Date().toLocaleDateString('fr-SN')}\n\n`;
+    csv += "N° Reçu,Date,Motif,Payeur,Rubrique,Mode,Montant (FCFA),Statut,Motif Annulation\n";
+
+    list.forEach(r => {
+      csv += `"${r.receipt_number || ''}","${r.date}","${(r.motif || '').replace(/"/g, '""')}","${(r.payer_name || '').replace(/"/g, '""')}","${r.category || ''}","${r.payment_method || ''}",${r.amount},"${r.status === 'cancelled' ? 'Annulé' : 'Valide'}","${(r.cancel_reason || '').replace(/"/g, '""')}"\n`;
+    });
+
+    Utils.downloadCSV(csv, `autres_rentrees_${school.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    this.showToast("Export CSV des autres rentrées téléchargé.", "success");
+  },
+
+  triggerPwaInstall() {
+    if (window.Landing && window.Landing.triggerPwaInstall) {
+      window.Landing.triggerPwaInstall();
+      return;
+    }
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (window.deferredPwaPrompt) {
+      window.deferredPwaPrompt.prompt();
+    } else if (isIos) {
+      alert("Pour installer l'application sur votre iPhone ou iPad :\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Sélectionnez « Sur l'écran d'accueil ➕ ».\n3. Appuyez sur « Ajouter ».");
+    } else {
+      alert("Pour installer Gestion Préscolaire sur votre écran :\nCliquez sur l'icône d'installation dans la barre d'adresse de votre navigateur ou sur « Ajouter à l'écran d'accueil » dans les options de votre navigateur.");
+    }
+  },
+
+  // ----------------------------------------------------------------------------
+  // WIZARD : RÉFÉRENCER MON ÉCOLE
+  // ----------------------------------------------------------------------------
+  openReferenceSchoolModal() {
+    const modal = document.getElementById('referenceSchoolModal');
+    if (!modal) return;
+    this.populateRefRegions();
+    const user = window.Auth ? Auth.getUser() : null;
+    if (user && user.phone) {
+      const phoneInput = document.getElementById('refDirectorPhone');
+      if (phoneInput && !phoneInput.value) phoneInput.value = user.phone;
+    }
+    this.closeAllModals();
+    modal.classList.add('is-open');
+    const nameInput = document.getElementById('refSchoolName');
+    if (nameInput) setTimeout(() => nameInput.focus(), 150);
+  },
+
+  populateRefRegions() {
+    const regSelect = document.getElementById('refRegion');
+    if (!regSelect) return;
+    regSelect.innerHTML = '';
+    const regions = Object.keys(CONFIG.SENEGAL_REGIONS);
+    regions.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = r;
+      regSelect.appendChild(opt);
+    });
+    this.onRefRegionChange(regions[0] || 'Dakar');
+  },
+
+  onRefRegionChange(region) {
+    const deptSelect = document.getElementById('refDepartment');
+    if (!deptSelect) return;
+    deptSelect.innerHTML = '';
+    const depts = Object.keys(CONFIG.SENEGAL_REGIONS[region] || {});
+    depts.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      deptSelect.appendChild(opt);
+    });
+    this.onRefDeptChange(depts[0] || '');
+  },
+
+  onRefDeptChange(dept) {
+    const comSelect = document.getElementById('refCommune');
+    const regSelect = document.getElementById('refRegion');
+    if (!comSelect || !regSelect) return;
+    const region = regSelect.value;
+    comSelect.innerHTML = '';
+    const communes = (CONFIG.SENEGAL_REGIONS[region] && CONFIG.SENEGAL_REGIONS[region][dept]) || [];
+    communes.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      comSelect.appendChild(opt);
+    });
+  },
+
+  async handleReferenceSchoolSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('refSchoolName').value.trim();
+    const phone = document.getElementById('refDirectorPhone').value.trim();
+    const schoolYear = document.getElementById('refSchoolYear').value.trim() || '2026-2027';
+    const region = document.getElementById('refRegion').value;
+    const department = document.getElementById('refDepartment').value;
+    const commune = document.getElementById('refCommune').value;
+    const address = (document.getElementById('refAddress').value || '').trim();
+
+    const crecheReg = parseInt(document.getElementById('refFeeCrecheReg') ? document.getElementById('refFeeCrecheReg').value : 25000, 10) || 25000;
+    const crecheMonth = parseInt(document.getElementById('refFeeCrecheMonth') ? document.getElementById('refFeeCrecheMonth').value : 15000, 10) || 15000;
+    const psReg = parseInt(document.getElementById('refFeePsReg').value, 10) || 25000;
+    const psMonth = parseInt(document.getElementById('refFeePsMonth').value, 10) || 15000;
+    const msReg = parseInt(document.getElementById('refFeeMsReg').value, 10) || 25000;
+    const msMonth = parseInt(document.getElementById('refFeeMsMonth').value, 10) || 15000;
+    const gsReg = parseInt(document.getElementById('refFeeGsReg').value, 10) || 30000;
+    const gsMonth = parseInt(document.getElementById('refFeeGsMonth').value, 10) || 18000;
+
+    const errBox = document.getElementById('refSchoolErrorBox');
+    if (!name) {
+      if (errBox) {
+        errBox.textContent = "Veuillez renseigner le nom de votre établissement.";
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
+    try {
+      const submitBtn = document.getElementById('btnSubmitRefSchool');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Création de votre école...';
+      }
+
+      await Auth.referenceSchool({
+        schoolName: name,
+        directorPhone: phone,
+        schoolYear,
+        region,
+        department,
+        commune,
+        address,
+        classes: [
+          { name: 'Crèche', registration_fee: crecheReg, monthly_fee: crecheMonth },
+          { name: 'Petite section', registration_fee: psReg, monthly_fee: psMonth },
+          { name: 'Moyenne section', registration_fee: msReg, monthly_fee: msMonth },
+          { name: 'Grande section', registration_fee: gsReg, monthly_fee: gsMonth }
+        ]
+      });
+
+      await Store.init();
+      this.closeAllModals();
+      this.renderHeader();
+      this.showToast(`Établissement ${name} référencé avec succès !`, "success");
+      this.navigate('dashboard');
+    } catch (err) {
+      if (errBox) {
+        errBox.textContent = err.message || "Erreur lors du référencement.";
+        errBox.style.display = 'block';
+      } else {
+        alert(err.message || "Erreur lors du référencement.");
+      }
+      const submitBtn = document.getElementById('btnSubmitRefSchool');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Valider et ouvrir mon école</span>`;
+      }
+    }
   }
 };
 
 window.App = App;
-document.addEventListener('DOMContentLoaded', () => App.init());
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => App.init());
+} else {
+  App.init();
+}

@@ -1,147 +1,62 @@
 /**
- * INTERACTIONS LANDING PAGE ULTRA-PREMIUM - GESTION DIPE
- * - Gestion du menu hamburger accessible
- * - Accordéon FAQ accessible (ARIA)
- * - Modales de connexion et de référencement (Onboarding)
- * - Démonstration interactive intégrée dans la maquette du Hero
- * - Simulateur multi-support (Téléphone / Tablette / Ordinateur)
+ * LOGIQUE DE LA PAGE D'ACCUEIL MINIMALE - GESTION PRÉSCOLAIRE
+ * - Redirection immédiate si session active
+ * - Contrôle des modales d'inscription (Onboarding) et de connexion épurée
+ * - Authentification sécurisée E-mail + Mot de passe avec gestion d'erreurs
+ * - Limitation des tentatives de connexion (anti-bruteforce)
+ * - Réinitialisation de mot de passe oublié
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  initThemeSwitcher();
-  initNavbarScroll();
-  initMobileMenu();
-  initFaqAccordion();
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Initialise l'authentification et redirige immédiatement si l'utilisateur est déjà connecté
+  if (window.Auth) {
+    await Auth.init();
+    if (Auth.redirectIfAuthenticated()) {
+      return; // L'utilisateur est connecté, redirection en cours vers app.html
+    }
+  }
+
+  // 2. Initialisation des composants
   initModals();
-  initInteractiveHeroDemo();
-  initDeviceSimulator();
-  initTimeSavingsCalculator();
-  initStickyBottomBar();
-  initMotionNarrative();
-  initPwaInstall();
+  initRegisterForm();
+  initLoginForm();
 });
 
 /**
- * Gestion du Mode Clair / Mode Sombre
+ * Gestion des ouvertures et fermetures de modales
  */
-function initThemeSwitcher() {
-  const applyTheme = (theme) => {
-    document.documentElement.setAttribute('data-theme', theme);
-    const landingIcon = document.getElementById('landingThemeIcon');
-    const mobileHeaderIcon = document.getElementById('mobileHeaderThemeIcon');
-    const mobileIcon = document.getElementById('mobileThemeIcon');
-    const mobileLabel = document.getElementById('mobileThemeLabel');
+function initModals() {
+  const registerModal = document.getElementById('registerModal');
+  const onboardModal = document.getElementById('onboardingModal');
+  const loginModal = document.getElementById('loginModal');
+  const forgotModal = document.getElementById('forgotPasswordModal');
+  const googlePickerModal = document.getElementById('googleAccountPickerModal');
 
-    if (landingIcon) landingIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if (mobileHeaderIcon) mobileHeaderIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if (mobileIcon) mobileIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if (mobileLabel) mobileLabel.textContent = theme === 'dark' ? 'Mode Clair' : 'Mode Sombre';
-  };
+  const closeRegisterBtn = document.getElementById('closeRegisterModal');
+  const closeOnboardBtn = document.getElementById('closeOnboardingModal');
+  const closeLoginBtn = document.getElementById('closeLoginModal');
+  const closeForgotBtn = document.getElementById('closeForgotModal');
 
-  const toggleTheme = () => {
-    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-    const next = current === 'dark' ? 'light' : 'dark';
-    try {
-      localStorage.setItem('gestion_dipe_theme', next);
-    } catch (e) {}
-    applyTheme(next);
-  };
-
-  const saved = localStorage.getItem('gestion_dipe_theme');
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const initialTheme = saved || (prefersDark ? 'dark' : 'light');
-  applyTheme(initialTheme);
-
-  const desktopBtn = document.getElementById('landingThemeToggleBtn');
-  if (desktopBtn) desktopBtn.addEventListener('click', toggleTheme);
-
-  const mobileHeaderBtn = document.getElementById('mobileHeaderThemeBtn');
-  if (mobileHeaderBtn) mobileHeaderBtn.addEventListener('click', toggleTheme);
-
-  const mobileBtn = document.getElementById('mobileThemeToggleBtn');
-  if (mobileBtn) mobileBtn.addEventListener('click', toggleTheme);
-}
-
-/**
- * Effet glassmorphism dynamique sur la barre de navigation
- */
-function initNavbarScroll() {
-  const nav = document.querySelector('.landing-nav');
-  if (!nav) return;
-
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 20) {
-      nav.classList.add('scrolled');
-    } else {
-      nav.classList.remove('scrolled');
-    }
-  });
-}
-
-/**
- * Menu mobile hamburger accessible
- */
-function initMobileMenu() {
-  const toggleBtn = document.getElementById('mobileMenuToggle');
-  const drawer = document.getElementById('mobileMenuDrawer');
-
-  if (toggleBtn && drawer) {
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = drawer.classList.toggle('is-open');
-      toggleBtn.setAttribute('aria-expanded', isOpen);
-      toggleBtn.innerHTML = isOpen 
-        ? `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>`
-        : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`;
-    });
-
-    drawer.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        drawer.classList.remove('is-open');
-        toggleBtn.setAttribute('aria-expanded', false);
-        toggleBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`;
-      });
-    });
-  }
-}
-
-/**
- * Accordéon FAQ accessible avec ARIA
- */
-function initFaqAccordion() {
-  const faqButtons = document.querySelectorAll('.faq-question-btn');
-  faqButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const parentItem = btn.closest('.faq-item');
-      const isCurrentlyOpen = parentItem.classList.contains('is-open');
-
-      document.querySelectorAll('.faq-item').forEach(item => {
-        item.classList.remove('is-open');
-        const itemBtn = item.querySelector('.faq-question-btn');
-        if (itemBtn) itemBtn.setAttribute('aria-expanded', 'false');
-      });
-
-      if (!isCurrentlyOpen) {
-        parentItem.classList.add('is-open');
-        btn.setAttribute('aria-expanded', 'true');
+  // Boutons d'ouverture d'inscription directe (Google ou Formulaire)
+  document.querySelectorAll('[data-action="open-register"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeAllModals();
+      if (registerModal) {
+        registerModal.classList.add('is-open');
+        const nameInput = document.getElementById('regFullName');
+        if (nameInput) setTimeout(() => nameInput.focus(), 100);
       }
     });
   });
-}
 
-/**
- * Modales de connexion et référencement
- */
-function initModals() {
-  const openOnboardBtns = document.querySelectorAll('[data-action="open-onboarding"]');
-  const onboardBackdrop = document.getElementById('onboardingModal');
-  const closeOnboardBtn = document.getElementById('closeOnboardingModal');
-
-  openOnboardBtns.forEach(btn => {
+  // Boutons d'ouverture du wizard complet de référencement d'école
+  document.querySelectorAll('[data-action="open-onboarding"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (loginBackdrop) loginBackdrop.classList.remove('is-open');
-      if (onboardBackdrop) {
-        onboardBackdrop.classList.add('is-open');
+      closeAllModals();
+      if (onboardModal) {
+        onboardModal.classList.add('is-open');
         if (window.Onboarding) {
           Onboarding.init();
           Onboarding.goToStep(1);
@@ -150,663 +65,429 @@ function initModals() {
     });
   });
 
-  if (closeOnboardBtn && onboardBackdrop) {
-    closeOnboardBtn.addEventListener('click', () => {
-      onboardBackdrop.classList.remove('is-open');
-    });
-  }
-
-  // Modale de connexion Directeur & Établissement
-  const openLoginBtns = document.querySelectorAll('[data-action="open-login"]');
-  const loginBackdrop = document.getElementById('loginModal');
-  const closeLoginBtn = document.getElementById('closeLoginModal');
-
-  // Onglets et canaux
-  const tabPhone = document.getElementById('tabChannelPhone');
-  const tabEmail = document.getElementById('tabChannelEmail');
-  const panelPhone = document.getElementById('panelPhoneChannel');
-  const panelEmail = document.getElementById('panelEmailChannel');
-
-  // Étapes
-  const step1 = document.getElementById('loginStep1');
-  const step2 = document.getElementById('loginStep2');
-  const btnSendOtp = document.getElementById('btnSendOtp');
-  const btnQuickDemo = document.getElementById('btnQuickDemoLogin');
-  const btnVerifyAndLogin = document.getElementById('btnVerifyAndLogin');
-  const btnBackToStep1 = document.getElementById('btnBackToStep1');
-  const btnResendOtp = document.getElementById('btnResendOtp');
-  const simulatedOtpCode = document.getElementById('simulatedOtpCode');
-  const otpTargetDisplay = document.getElementById('otpTargetDisplay');
-  const togglePasswordBtn = document.getElementById('togglePasswordBtn');
-  const loginPassword = document.getElementById('loginPassword');
-
-  let currentChannel = 'phone';
-  let currentOtp = '4821';
-
-  // Ouverture
-  openLoginBtns.forEach(btn => {
+  // Boutons d'ouverture de connexion
+  document.querySelectorAll('[data-action="open-login"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (onboardBackdrop) onboardBackdrop.classList.remove('is-open');
-      if (loginBackdrop) {
-        loginBackdrop.classList.add('is-open');
-        // Réinitialise à l'étape 1
-        if (step1) step1.style.display = 'block';
-        if (step2) step2.style.display = 'none';
+      closeAllModals();
+      if (loginModal) {
+        loginModal.classList.add('is-open');
+        const emailInput = document.getElementById('loginEmail');
+        if (emailInput) setTimeout(() => emailInput.focus(), 100);
       }
     });
   });
 
-  // Fermeture
-  if (closeLoginBtn && loginBackdrop) {
-    closeLoginBtn.addEventListener('click', () => {
-      loginBackdrop.classList.remove('is-open');
+  // Bouton Mot de passe oublié
+  const forgotLink = document.getElementById('linkForgotPassword');
+  if (forgotLink) {
+    forgotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeAllModals();
+      if (forgotModal) {
+        forgotModal.classList.add('is-open');
+        const fEmail = document.getElementById('forgotEmail');
+        if (fEmail) {
+          const lEmail = document.getElementById('loginEmail');
+          if (lEmail && lEmail.value) fEmail.value = lEmail.value;
+          setTimeout(() => fEmail.focus(), 100);
+        }
+      }
     });
   }
 
-  // Fermeture au clic sur le fond
+  // Fermetures individuelles
+  if (closeRegisterBtn) closeRegisterBtn.addEventListener('click', () => registerModal.classList.remove('is-open'));
+  if (closeOnboardBtn) closeOnboardBtn.addEventListener('click', () => onboardModal.classList.remove('is-open'));
+  if (closeLoginBtn) closeLoginBtn.addEventListener('click', () => loginModal.classList.remove('is-open'));
+  if (closeForgotBtn) closeForgotBtn.addEventListener('click', () => forgotModal.classList.remove('is-open'));
+
+  // Fermeture au clic sur l'arrière-plan
   window.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal-backdrop')) {
       e.target.classList.remove('is-open');
     }
   });
 
-  // Changement d'onglets Canal
-  if (tabPhone && tabEmail) {
-    tabPhone.addEventListener('click', () => {
-      currentChannel = 'phone';
-      tabPhone.classList.add('is-active');
-      tabPhone.setAttribute('aria-selected', 'true');
-      tabEmail.classList.remove('is-active');
-      tabEmail.setAttribute('aria-selected', 'false');
-      if (panelPhone) panelPhone.style.display = 'block';
-      if (panelEmail) panelEmail.style.display = 'none';
-    });
-
-    tabEmail.addEventListener('click', () => {
-      currentChannel = 'email';
-      tabEmail.classList.add('is-active');
-      tabEmail.setAttribute('aria-selected', 'true');
-      tabPhone.classList.remove('is-active');
-      tabPhone.setAttribute('aria-selected', 'false');
-      if (panelEmail) panelEmail.style.display = 'block';
-      if (panelPhone) panelPhone.style.display = 'none';
-    });
-  }
-
-  // Accès rapide démo en 1 clic
-  if (btnQuickDemo) {
-    btnQuickDemo.addEventListener('click', () => {
-      btnQuickDemo.textContent = 'Accès en cours...';
-      setTimeout(() => {
-        window.location.href = 'app.html';
-      }, 200);
-    });
-  }
-
-  // Étape 1 : Envoi du code OTP
-  if (btnSendOtp) {
-    btnSendOtp.addEventListener('click', () => {
-      let targetText = '';
-      if (currentChannel === 'phone') {
-        const phoneInput = document.getElementById('loginPhone');
-        const phoneVal = phoneInput ? phoneInput.value.trim() : '';
-        if (!phoneVal) {
-          alert('Veuillez renseigner votre numéro de téléphone.');
-          if (phoneInput) phoneInput.focus();
-          return;
-        }
-        const deliveryMethod = document.querySelector('input[name="otpDelivery"]:checked')?.value || 'whatsapp';
-        const channelName = deliveryMethod === 'whatsapp' ? 'WhatsApp' : 'SMS';
-        targetText = `+221 ${phoneVal} via ${channelName}`;
-      } else {
-        const emailInput = document.getElementById('loginEmail');
-        const emailVal = emailInput ? emailInput.value.trim() : '';
-        if (!emailVal || !emailVal.includes('@')) {
-          alert('Veuillez saisir une adresse e-mail valide.');
-          if (emailInput) emailInput.focus();
-          return;
-        }
-        targetText = `${emailVal} via E-mail`;
-      }
-
-      // Génère un code à 4 chiffres (ou garde 4821 pour consistance)
-      currentOtp = '4821';
-      if (simulatedOtpCode) simulatedOtpCode.textContent = currentOtp;
-      if (otpTargetDisplay) otpTargetDisplay.textContent = targetText;
-
-      // Bascule vers l'étape 2
-      if (step1) step1.style.display = 'none';
-      if (step2) step2.style.display = 'block';
-
-      // Vide et focus le premier chiffre
-      for (let i = 1; i <= 4; i++) {
-        const digitEl = document.getElementById(`otpDigit${i}`);
-        if (digitEl) digitEl.value = '';
-      }
-      const firstDigit = document.getElementById('otpDigit1');
-      if (firstDigit) firstDigit.focus();
-    });
-  }
-
-  // Gestion des 4 cases OTP
-  const otpInputs = [
-    document.getElementById('otpDigit1'),
-    document.getElementById('otpDigit2'),
-    document.getElementById('otpDigit3'),
-    document.getElementById('otpDigit4')
-  ].filter(Boolean);
-
-  otpInputs.forEach((input, index) => {
-    input.addEventListener('input', (e) => {
-      // Nettoie pour ne garder que des chiffres
-      input.value = input.value.replace(/[^0-9]/g, '');
-      if (input.value.length >= 1) {
-        input.value = input.value.slice(-1);
-        // Passe au chiffre suivant
-        if (index < otpInputs.length - 1) {
-          otpInputs[index + 1].focus();
-        } else {
-          // Dernier chiffre : focus mot de passe
-          if (loginPassword) loginPassword.focus();
-        }
-      }
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !input.value && index > 0) {
-        otpInputs[index - 1].focus();
-      }
-    });
-
-    input.addEventListener('paste', (e) => {
-      e.preventDefault();
-      const pasteData = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
-      if (pasteData) {
-        for (let i = 0; i < otpInputs.length; i++) {
-          if (pasteData[i]) otpInputs[i].value = pasteData[i];
-        }
-        if (loginPassword) loginPassword.focus();
-      }
-    });
+  // Fermeture avec la touche Échap (Accessibilité)
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeAllModals();
+    }
   });
+}
 
-  // Clic sur le badge de code simulé pour auto-remplir
-  if (simulatedOtpCode) {
-    simulatedOtpCode.addEventListener('click', () => {
-      const codeStr = simulatedOtpCode.textContent.trim();
-      for (let i = 0; i < otpInputs.length; i++) {
-        if (codeStr[i]) otpInputs[i].value = codeStr[i];
+/**
+ * Gestion du formulaire d'inscription direct
+ */
+function initRegisterForm() {
+  const regForm = document.getElementById('mainRegisterForm');
+  const regName = document.getElementById('regFullName');
+  const regEmail = document.getElementById('regEmail');
+  const regPassword = document.getElementById('regPassword');
+  const regSubmitBtn = document.getElementById('btnRegisterSubmit');
+  const regErrorBox = document.getElementById('registerErrorBox');
+  const togglePassBtn = document.getElementById('toggleRegPassword');
+
+  const regPasswordConfirm = document.getElementById('regPasswordConfirm');
+  const togglePassConfirmBtn = document.getElementById('toggleRegPasswordConfirm');
+
+  if (togglePassBtn && regPassword) {
+    togglePassBtn.addEventListener('click', () => {
+      if (regPassword.type === 'password') {
+        regPassword.type = 'text';
+        togglePassBtn.textContent = '🙈';
+      } else {
+        regPassword.type = 'password';
+        togglePassBtn.textContent = '👁️';
       }
-      if (loginPassword) loginPassword.focus();
     });
   }
 
-  // Bascule visibilité mot de passe
-  if (togglePasswordBtn && loginPassword) {
-    togglePasswordBtn.addEventListener('click', () => {
+  if (togglePassConfirmBtn && regPasswordConfirm) {
+    togglePassConfirmBtn.addEventListener('click', () => {
+      if (regPasswordConfirm.type === 'password') {
+        regPasswordConfirm.type = 'text';
+        togglePassConfirmBtn.textContent = '🙈';
+      } else {
+        regPasswordConfirm.type = 'password';
+        togglePassConfirmBtn.textContent = '👁️';
+      }
+    });
+  }
+
+  if (regForm) {
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const firstNameInput = document.getElementById('regFirstName');
+      const lastNameInput = document.getElementById('regLastName');
+      const fullNameInput = document.getElementById('regFullName');
+      
+      let fullName = '';
+      if (firstNameInput && lastNameInput) {
+        fullName = `${firstNameInput.value.trim()} ${lastNameInput.value.trim()}`.trim();
+      } else if (fullNameInput) {
+        fullName = fullNameInput.value.trim();
+      }
+
+      const email = regEmail ? regEmail.value.trim() : '';
+      const password = regPassword ? regPassword.value : '';
+      const passwordConfirm = regPasswordConfirm ? regPasswordConfirm.value : '';
+
+      if (!fullName || !email || !password) {
+        showRegisterError("Veuillez renseigner votre prénom, nom, e-mail/Gmail et mot de passe.");
+        return;
+      }
+
+      if (password.length < 6) {
+        showRegisterError("Le mot de passe est obligatoire et doit comporter au moins 6 caractères.");
+        return;
+      }
+
+      if (regPasswordConfirm && password !== passwordConfirm) {
+        showRegisterError("Les mots de passe ne correspondent pas. Veuillez ressaisir votre mot de passe à l'identique.");
+        return;
+      }
+
+      hideRegisterError();
+
+      try {
+        regSubmitBtn.disabled = true;
+        regSubmitBtn.innerHTML = `
+          <span style="display:inline-flex; align-items:center; gap:0.5rem;">
+            <svg class="spin-animation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+            Création de votre compte...
+          </span>
+        `;
+
+        await Auth.signUpUser({ fullName, email, password });
+
+        regSubmitBtn.innerHTML = '<span>Compte créé ! Accès à la démo...</span>';
+        window.history.replaceState(null, '', 'app.html');
+        window.location.replace('app.html');
+
+      } catch (err) {
+        regSubmitBtn.disabled = false;
+        regSubmitBtn.innerHTML = `
+          <span>S'inscrire</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        `;
+        showRegisterError(err.message || "Erreur lors de l'inscription.");
+      }
+    });
+  }
+
+  function showRegisterError(msg) {
+    if (regErrorBox) {
+      regErrorBox.textContent = msg;
+      regErrorBox.style.display = 'block';
+    } else {
+      alert(msg);
+    }
+  }
+
+  function hideRegisterError() {
+    if (regErrorBox) {
+      regErrorBox.style.display = 'none';
+      regErrorBox.textContent = '';
+    }
+  }
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('is-open'));
+}
+
+/**
+ * Gestion du formulaire de connexion épuré (E-mail + Mot de passe)
+ */
+function initLoginForm() {
+  const loginForm = document.getElementById('mainLoginForm');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginSubmitBtn = document.getElementById('btnLoginSubmit');
+  const loginErrorBox = document.getElementById('loginErrorBox');
+  const togglePassBtn = document.getElementById('toggleLoginPassword');
+
+  let failedAttempts = 0;
+  let lockUntilTime = 0;
+
+  // Afficher / masquer mot de passe
+  if (togglePassBtn && loginPassword) {
+    togglePassBtn.addEventListener('click', () => {
       if (loginPassword.type === 'password') {
         loginPassword.type = 'text';
-        togglePasswordBtn.textContent = '🙈';
+        togglePassBtn.textContent = '🙈';
+        togglePassBtn.setAttribute('aria-label', 'Masquer le mot de passe');
       } else {
         loginPassword.type = 'password';
-        togglePasswordBtn.textContent = '👁️';
+        togglePassBtn.textContent = '👁️';
+        togglePassBtn.setAttribute('aria-label', 'Afficher le mot de passe');
       }
     });
   }
 
-  // Retour à l'étape 1
-  if (btnBackToStep1) {
-    btnBackToStep1.addEventListener('click', () => {
-      if (step2) step2.style.display = 'none';
-      if (step1) step1.style.display = 'block';
-    });
-  }
-
-  // Renvoyer un code
-  if (btnResendOtp) {
-    btnResendOtp.addEventListener('click', () => {
-      const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
-      currentOtp = newOtp;
-      if (simulatedOtpCode) simulatedOtpCode.textContent = currentOtp;
-      alert(`Nouveau code de vérification envoyé : ${currentOtp}`);
-      const firstDigit = document.getElementById('otpDigit1');
-      if (firstDigit) firstDigit.focus();
-    });
-  }
-
-  // Étape 2 : Vérification du code et connexion
-  if (btnVerifyAndLogin) {
-    btnVerifyAndLogin.addEventListener('click', () => {
-      const enteredOtp = otpInputs.map(i => i.value).join('');
-      if (enteredOtp.length < 4) {
-        alert('Veuillez saisir les 4 chiffres du code de vérification reçu.');
-        const emptyInput = otpInputs.find(i => !i.value) || otpInputs[0];
-        if (emptyInput) emptyInput.focus();
-        return;
-      }
-
-      if (!loginPassword || !loginPassword.value.trim()) {
-        alert('Veuillez renseigner votre mot de passe pour accéder à votre espace.');
-        if (loginPassword) loginPassword.focus();
-        return;
-      }
-
-      // Connexion réussie
-      btnVerifyAndLogin.innerHTML = '<span>Connexion réussie...</span>';
-      btnVerifyAndLogin.disabled = true;
-
-      setTimeout(() => {
-        window.location.href = 'app.html';
-      }, 350);
-    });
-  }
-}
-
-/**
- * Démo interactive dans la maquette du Hero
- * Permet au visiteur de tester le clic Payé / Impayé et voir les calculs se faire en direct !
- */
-function initInteractiveHeroDemo() {
-  const mockRows = document.querySelectorAll('.hero-demo-row');
-  if (!mockRows.length) return;
-  const totalPaidBadge = document.getElementById('heroDemoPaidCount');
-  const totalAmountBadge = document.getElementById('heroDemoAmountCount');
-  const demoToast = document.getElementById('heroDemoToast');
-  let toastTimer = null;
-
-  mockRows.forEach(row => {
-    const btnPaid = row.querySelector('.demo-btn-paid');
-    const btnUnpaid = row.querySelector('.demo-btn-unpaid');
-
-    if (btnPaid && btnUnpaid) {
-      btnPaid.addEventListener('click', () => {
-        btnPaid.classList.add('is-active');
-        btnUnpaid.classList.remove('is-active');
-        updateDemoCalculations();
-        showDemoCelebration(row);
-      });
-
-      btnUnpaid.addEventListener('click', () => {
-        btnUnpaid.classList.add('is-active');
-        btnPaid.classList.remove('is-active');
-        updateDemoCalculations();
-      });
-    }
-  });
-
-  function showDemoCelebration(row) {
-    if (!demoToast) return;
-    const name = row.querySelector('strong')?.textContent || 'Élève';
-    const fee = parseInt(row.getAttribute('data-fee') || '15000', 10);
-    demoToast.innerHTML = `<span>✓ Reçu officiel généré pour <strong>${name}</strong> (+${Utils.formatFCFA(fee)}) !</span>`;
-    demoToast.classList.add('is-active');
-
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      demoToast.classList.remove('is-active');
-    }, 2800);
-  }
-
-  function updateDemoCalculations() {
-    let paidCount = 0;
-    let totalAmount = 0;
-
-    mockRows.forEach(row => {
-      const isPaid = row.querySelector('.demo-btn-paid').classList.contains('is-active');
-      const amount = parseInt(row.getAttribute('data-fee') || '15000', 10);
-      if (isPaid) {
-        paidCount++;
-        totalAmount += amount;
-      }
-    });
-
-    if (totalPaidBadge) {
-      totalPaidBadge.textContent = `${paidCount} payés`;
-    }
-    if (totalAmountBadge) {
-      totalAmountBadge.textContent = Utils.formatFCFA(totalAmount);
-    }
-  }
-}
-
-/**
- * Simulateur multi-support (Téléphone / Tablette / Ordinateur)
- */
-function initDeviceSimulator() {
-  const buttons = document.querySelectorAll('[data-simulator-target]');
-  const frame = document.getElementById('simulatorDeviceFrame');
-  const deviceLabel = document.getElementById('simulatorDeviceLabel');
-  const desktopView = document.getElementById('simViewDesktop');
-  const tabletView = document.getElementById('simViewTablet');
-  const phoneView = document.getElementById('simViewPhone');
-
-  if (!frame || buttons.length === 0) return;
-
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.getAttribute('data-simulator-target');
-
-      // Gestion des boutons actifs
-      buttons.forEach(b => b.classList.remove('is-active'));
-      btn.classList.add('is-active');
-
-      // Mise à jour de la classe de largeur du conteneur
-      frame.className = `simulator-device-frame view-${target}`;
-
-      // Affichage du bon layout de démo
-      if (desktopView) desktopView.style.display = target === 'desktop' ? 'block' : 'none';
-      if (tabletView) tabletView.style.display = target === 'tablet' ? 'block' : 'none';
-      if (phoneView) phoneView.style.display = target === 'phone' ? 'block' : 'none';
-
-      // Libellé
-      if (deviceLabel) {
-        if (target === 'desktop') deviceLabel.textContent = "Affichage Grand Écran / Ordinateur (Navigation latérale & Tableaux complets)";
-        if (target === 'tablet') deviceLabel.textContent = "Affichage Tablette / iPad (Grilles adaptatives & Vue par section)";
-        if (target === 'phone') deviceLabel.textContent = "Affichage Mobile / Android (Cartes tactiles empilées & Barre à 5 icônes)";
-      }
-    });
-  });
-}
-
-/**
- * Calculateur interactif de gain de temps et d'économies
- */
-function initTimeSavingsCalculator() {
-  const slider = document.getElementById('calcStudentSlider');
-  const badge = document.getElementById('calcStudentCountBadge');
-  const hoursEl = document.getElementById('calcHoursSaved');
-  const amountEl = document.getElementById('calcAmountSecured');
-  const btnEl = document.getElementById('calcCtaBtn');
-
-  if (!slider) return;
-
-  const updateCalc = () => {
-    const count = parseInt(slider.value, 10);
-    if (badge) badge.textContent = `${count} élèves`;
-    if (hoursEl) {
-      const hours = Math.round(count * 0.22);
-      hoursEl.textContent = `~${hours} h / mois`;
-    }
-    if (amountEl) {
-      const avgFee = 15000;
-      amountEl.textContent = Utils.formatFCFA(count * avgFee);
-    }
-    if (btnEl) {
-      btnEl.innerHTML = `<span>👉 S'inscrire et gérer mes ${count} élèves</span> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`;
-    }
-  };
-
-  slider.addEventListener('input', updateCalc);
-  updateCalc();
-}
-
-/**
- * Barre d'appel à l'action flottante au scroll
- */
-function initStickyBottomBar() {
-  const bar = document.getElementById('stickyBottomBar');
-  if (!bar) return;
-
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 450) {
-      bar.classList.add('is-visible');
-    } else {
-      bar.classList.remove('is-visible');
-    }
-  });
-}
-
-/**
- * Animation narrative Motion Design (3 Actes : Arrivée -> Règlement 10 000 FCFA -> Reçu certifié WhatsApp)
- * Style : Vert / Noir / Blanc avec progression fluide et commandes interactives
- */
-function initMotionNarrative() {
-  const slides = document.querySelectorAll('.motion-scene-slide');
-  const stepButtons = document.querySelectorAll('.motion-step-btn');
-  const playPauseBtn = document.getElementById('motionPlayPauseBtn');
-  const playIcon = document.getElementById('motionPlayIcon');
-  const playLabel = document.getElementById('motionPlayLabel');
-  const stageCard = document.getElementById('motionStageCard');
-
-  if (!slides.length || !stepButtons.length) return;
-
-  const SLIDE_DURATION = 6000; // 6 secondes par acte
-  let currentStep = 1;
-  let isPlaying = true;
-  let startTime = null;
-  let animationFrameId = null;
-  let elapsedBeforePause = 0;
-
-  function showSlide(stepNumber, resetProgress = true) {
-    currentStep = stepNumber;
-
-    slides.forEach((slide) => {
-      const slideStep = parseInt(slide.getAttribute('data-slide'), 10);
-      if (slideStep === currentStep) {
-        slide.style.display = 'grid';
-        slide.classList.add('is-active');
-      } else {
-        slide.style.display = 'none';
-        slide.classList.remove('is-active');
-      }
-    });
-
-    stepButtons.forEach((btn) => {
-      const btnStep = parseInt(btn.getAttribute('data-step'), 10);
-      const fill = btn.querySelector('.step-progress-fill');
-      
-      if (btnStep < currentStep) {
-        btn.classList.add('is-active');
-        btn.setAttribute('aria-selected', 'false');
-        if (fill) fill.style.width = '100%';
-      } else if (btnStep === currentStep) {
-        btn.classList.add('is-active');
-        btn.setAttribute('aria-selected', 'true');
-        if (fill) fill.style.width = '0%';
-      } else {
-        btn.classList.remove('is-active');
-        btn.setAttribute('aria-selected', 'false');
-        if (fill) fill.style.width = '0%';
-      }
-    });
-
-    if (resetProgress) {
-      elapsedBeforePause = 0;
-      startTime = performance.now();
-    }
-  }
-
-  function tick(now) {
-    if (!isPlaying) return;
-
-    if (!startTime) startTime = now - elapsedBeforePause;
-    const elapsed = now - startTime;
-    const progress = Math.min(100, (elapsed / SLIDE_DURATION) * 100);
-
-    const activeBtn = document.querySelector(`.motion-step-btn[data-step="${currentStep}"]`);
-    if (activeBtn) {
-      const fill = activeBtn.querySelector('.step-progress-fill');
-      if (fill) fill.style.width = `${progress}%`;
-    }
-
-    if (elapsed >= SLIDE_DURATION) {
-      const nextStep = currentStep === 3 ? 1 : currentStep + 1;
-      showSlide(nextStep, true);
-    }
-
-    animationFrameId = requestAnimationFrame(tick);
-  }
-
-  function pause() {
-    if (!isPlaying) return;
-    isPlaying = false;
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-    if (startTime) elapsedBeforePause = performance.now() - startTime;
-    if (playIcon) playIcon.textContent = '▶️';
-    if (playLabel) playLabel.textContent = 'Reprendre la lecture';
-    if (playPauseBtn) playPauseBtn.setAttribute('aria-label', "Reprendre l'animation");
-  }
-
-  function play() {
-    if (isPlaying) return;
-    isPlaying = true;
-    startTime = performance.now() - elapsedBeforePause;
-    if (playIcon) playIcon.textContent = '⏸️';
-    if (playLabel) playLabel.textContent = 'Animation automatique en cours';
-    if (playPauseBtn) playPauseBtn.setAttribute('aria-label', "Mettre en pause l'animation");
-    animationFrameId = requestAnimationFrame(tick);
-  }
-
-  // Clic sur les boutons d'étapes (01, 02, 03)
-  stepButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const step = parseInt(btn.getAttribute('data-step'), 10);
-      showSlide(step, true);
-    });
-  });
-
-  // Boutons Suivant / Précédent dans les diapositives
-  document.querySelectorAll('.motion-next-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const nextStep = currentStep === 3 ? 1 : currentStep + 1;
-      showSlide(nextStep, true);
-    });
-  });
-
-  document.querySelectorAll('.motion-prev-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const prevStep = currentStep === 1 ? 3 : currentStep - 1;
-      showSlide(prevStep, true);
-    });
-  });
-
-  // Bouton Lecture / Pause
-  if (playPauseBtn) {
-    playPauseBtn.addEventListener('click', () => {
-      if (isPlaying) pause();
-      else play();
-    });
-  }
-
-  // Pause sur survol pour confort de lecture
-  if (stageCard) {
-    stageCard.addEventListener('mouseenter', () => {
-      if (isPlaying) pause();
-    });
-    stageCard.addEventListener('mouseleave', () => {
-      if (!isPlaying && playIcon && playIcon.textContent === '⏸️') play();
-    });
-  }
-
-  // Démarrer la première scène et la boucle
-  showSlide(1, true);
-  animationFrameId = requestAnimationFrame(tick);
-}
-
-/**
- * Progressive Web App (PWA) - Détection et installation en 1 clic
- * Support Android / Chrome (beforeinstallprompt) & iOS Safari (Guide Ajout à l'écran d'accueil)
- */
-function initPwaInstall() {
-  let deferredPrompt = null;
-  const installBanner = document.getElementById('pwaInstallBanner');
-  const bannerCloseBtn = document.getElementById('pwaBannerCloseBtn');
-  const allInstallTriggers = document.querySelectorAll('.pwa-install-trigger');
-  const iosModal = document.getElementById('iosInstallModal');
-  const iosCloseBtn = document.getElementById('iosModalCloseBtn');
-  const iosDoneBtn = document.getElementById('iosModalDoneBtn');
-
-  // Détection iOS
-  const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) && !window.MSStream;
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-
-  // Si déjà installé en mode standalone, masquer les boutons et la bannière
-  if (isStandalone) {
-    console.log('[PWA] Application déjà lancée en mode autonome (PWA installée).');
-    allInstallTriggers.forEach((btn) => {
-      btn.style.display = 'none';
-    });
-    return;
-  }
-
-  // Rendre visibles tous les déclencheurs d'installation (nav, tiroir mobile)
-  allInstallTriggers.forEach((btn) => {
-    btn.style.display = 'inline-flex';
-  });
-
-  // Interception de l'événement natif Chrome/Android
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-
-    // Afficher la bannière si non fermée précédemment dans la session
-    const isDismissed = sessionStorage.getItem('pwa_banner_dismissed') === '1';
-    if (!isDismissed && installBanner) {
-      setTimeout(() => {
-        installBanner.style.display = 'flex';
-      }, 2500); // Apparition douce après 2.5s
-    }
-  });
-
-  // Action d'installation au clic sur n'importe quel bouton PWA
-  allInstallTriggers.forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      if (deferredPrompt) {
-        // Déclencheur Chrome / Edge / Samsung Internet
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log('[PWA] Résultat installation :', outcome);
-        if (outcome === 'accepted') {
-          if (installBanner) installBanner.style.display = 'none';
+      // Vérification limitation de tentatives (anti-bruteforce)
+      const now = Date.now();
+      if (now < lockUntilTime) {
+        const remainingSeconds = Math.ceil((lockUntilTime - now) / 1000);
+        showLoginError(`Trop de tentatives infructueuses. Veuillez patienter ${remainingSeconds} secondes.`);
+        return;
+      }
+
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value;
+
+      if (!email || !password) {
+        showLoginError("Veuillez renseigner votre e-mail et votre mot de passe.");
+        return;
+      }
+
+      hideLoginError();
+
+      try {
+        loginSubmitBtn.disabled = true;
+        loginSubmitBtn.innerHTML = `
+          <span style="display:inline-flex; align-items:center; gap:0.5rem;">
+            <svg class="spin-animation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+            Connexion en cours...
+          </span>
+        `;
+
+        await Auth.signIn(email, password);
+
+        loginSubmitBtn.innerHTML = '<span>Connexion réussie ! Redirection...</span>';
+
+        // Redirection vers l'espace école
+        window.history.replaceState(null, '', 'app.html');
+        window.location.replace('app.html');
+
+      } catch (err) {
+        failedAttempts++;
+        loginSubmitBtn.disabled = false;
+        loginSubmitBtn.innerHTML = `
+          <span>Se connecter à mon école</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        `;
+
+        if (failedAttempts >= 5) {
+          lockUntilTime = Date.now() + 30000; // Blocage 30s
+          failedAttempts = 0;
+          showLoginError("Nombre maximal d'essais atteint. Accès verrouillé pendant 30 secondes.");
+        } else {
+          showLoginError(err.message || "Identifiant ou mot de passe incorrect.");
         }
-        deferredPrompt = null;
-      } else if (isIos) {
-        // Safari iOS : afficher le guide pas à pas
-        if (iosModal) iosModal.style.display = 'flex';
-      } else {
-        // Navigateur desktop ou Android sans prompt actif : ouvrir bannière ou instructions
-        if (installBanner) {
-          installBanner.style.display = 'flex';
-        }
-        alert("📲 Pour installer Gestion DIPE sur votre écran d'accueil :\n\n• Sur Google Chrome / Edge : Cliquez sur l'icône « Installer » (⊕) située à droite de la barre d'adresse.\n• Sur Safari (iPhone/iPad) : Touchez l'icône Partager puis « Sur l'écran d'accueil ».");
       }
     });
-  });
+  }
 
-  // Fermeture de la bannière flottante
-  if (bannerCloseBtn && installBanner) {
-    bannerCloseBtn.addEventListener('click', () => {
-      installBanner.style.display = 'none';
+  function showLoginError(msg) {
+    if (loginErrorBox) {
+      loginErrorBox.textContent = msg;
+      loginErrorBox.style.display = 'block';
+    } else {
+      alert(msg);
+    }
+  }
+
+  function hideLoginError() {
+    if (loginErrorBox) {
+      loginErrorBox.style.display = 'none';
+      loginErrorBox.textContent = '';
+    }
+  }
+
+  // Formulaire mot de passe oublié
+  const forgotForm = document.getElementById('forgotPasswordForm');
+  const forgotEmail = document.getElementById('forgotEmail');
+  const forgotSubmitBtn = document.getElementById('btnForgotSubmit');
+  const forgotMsgBox = document.getElementById('forgotMsgBox');
+
+  if (forgotForm) {
+    forgotForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = forgotEmail.value.trim();
+      if (!email) return;
+
       try {
-        sessionStorage.setItem('pwa_banner_dismissed', '1');
-      } catch (e) {}
+        forgotSubmitBtn.disabled = true;
+        forgotSubmitBtn.textContent = 'Envoi en cours...';
+
+        await Auth.resetPassword(email);
+
+        forgotMsgBox.className = 'alert-box alert-success';
+        forgotMsgBox.textContent = `Un lien de réinitialisation sécurisé a été préparé pour ${email}. Vérifiez votre boîte de réception.`;
+        forgotMsgBox.style.display = 'block';
+        forgotSubmitBtn.textContent = 'E-mail envoyé';
+
+      } catch (err) {
+        forgotSubmitBtn.disabled = false;
+        forgotSubmitBtn.textContent = 'Envoyer les instructions';
+        forgotMsgBox.className = 'alert-box alert-danger';
+        forgotMsgBox.textContent = err.message || "Impossible d'envoyer l'e-mail pour le moment.";
+        forgotMsgBox.style.display = 'block';
+      }
     });
   }
-
-  // Gestion de la modale iOS
-  const closeIosModal = () => {
-    if (iosModal) iosModal.style.display = 'none';
-  };
-
-  if (iosCloseBtn) iosCloseBtn.addEventListener('click', closeIosModal);
-  if (iosDoneBtn) iosDoneBtn.addEventListener('click', closeIosModal);
-  if (iosModal) {
-    iosModal.addEventListener('click', (e) => {
-      if (e.target === iosModal) closeIosModal();
-    });
-  }
-
-  // Événement quand l'installation est terminée
-  window.addEventListener('appinstalled', () => {
-    console.log('[PWA] Application installée avec succès !');
-    if (installBanner) installBanner.style.display = 'none';
-    allInstallTriggers.forEach((btn) => {
-      btn.style.display = 'none';
-    });
-    deferredPrompt = null;
-  });
 }
+
+// ------------------------------------------------------------------------------
+// GESTION DU TÉLÉCHARGEMENT & INSTALLATION PWA
+// ------------------------------------------------------------------------------
+let deferredPwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPwaPrompt = e;
+  window.deferredPwaPrompt = e;
+  const btn = document.getElementById('btnPwaInstallLanding');
+  if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPwaPrompt = null;
+  window.deferredPwaPrompt = null;
+  const btn = document.getElementById('btnPwaInstallLanding');
+  if (btn) {
+    btn.innerHTML = `
+      <span class="pwa-icon">✓</span>
+      <span class="pwa-text-group">
+        <span class="pwa-btn-title">Application installée sur votre écran</span>
+        <span class="pwa-btn-sub">Accessible directement depuis vos applications</span>
+      </span>
+      <span class="pwa-badge" style="background:#DCFCE7; color:#166534;">Actif</span>
+    `;
+  }
+});
+
+const Landing = {
+  launchDemo(event) {
+    if (event) event.preventDefault();
+    try {
+      const demoSession = {
+        user: {
+          id: 'usr_demo_director',
+          name: 'Direction Démo',
+          email: 'demo@gestionprescolaire.sn',
+          role: 'director',
+          isDemo: true
+        },
+        school: {
+          id: '11111111-1111-1111-1111-111111111111',
+          name: 'École Maternelle Les Papillons',
+          director_name: 'Mme Aïssatou Ba',
+          director_phone: '+221 77 543 21 00',
+          region: 'Dakar',
+          department: 'Dakar',
+          commune: 'Plateau',
+          school_year: '2026-2027',
+          isDemo: true
+        }
+      };
+      localStorage.setItem('gp_active_session_v1', JSON.stringify(demoSession));
+    } catch (e) {}
+    window.location.href = 'app.html';
+  },
+
+  async triggerPwaInstall() {
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+    if (isStandalone) {
+      alert("L'application Gestion Préscolaire est déjà installée sur cet appareil.");
+      return;
+    }
+
+    if (window.deferredPwaPrompt || deferredPwaPrompt) {
+      const promptEvent = window.deferredPwaPrompt || deferredPwaPrompt;
+      promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        deferredPwaPrompt = null;
+        window.deferredPwaPrompt = null;
+      }
+    } else if (isIos) {
+      const iosModal = document.getElementById('iosPwaModal');
+      if (iosModal) {
+        iosModal.classList.add('is-open');
+      } else {
+        alert("Pour installer l'application sur votre iPhone ou iPad :\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Sélectionnez « Sur l'écran d'accueil » (➕).\n3. Appuyez sur « Ajouter ».");
+      }
+    } else {
+      alert("Pour installer l'application Gestion Préscolaire sur votre écran :\nCliquez sur le bouton Installer (icône d'écran ou « + ») dans la barre d'adresse de votre navigateur ou sur « Ajouter à l'écran d'accueil » dans le menu de votre navigateur.");
+    }
+  },
+
+  async chooseGoogleAccount(name, email) {
+    try {
+      await Auth.signInGoogleDirect({ name, email });
+      const picker = document.getElementById('googleAccountPickerModal');
+      if (picker) picker.classList.remove('is-open');
+      window.history.replaceState(null, '', 'app.html');
+      window.location.replace('app.html');
+    } catch (err) {
+      alert(err.message || "Erreur de connexion Google.");
+    }
+  },
+
+  async submitCustomGoogleAccount() {
+    const input = document.getElementById('customGoogleEmail');
+    const nameInput = document.getElementById('customGoogleName');
+    if (!input) return;
+    const email = input.value.trim();
+    if (!email || !email.includes('@')) {
+      alert("Veuillez saisir une adresse e-mail Google valide (ex: directrice@gmail.com).");
+      return;
+    }
+    const enteredName = nameInput ? nameInput.value.trim() : '';
+    const name = enteredName || email.split('@')[0];
+    await this.chooseGoogleAccount(name, email);
+  }
+};
+
+window.Landing = Landing;
 

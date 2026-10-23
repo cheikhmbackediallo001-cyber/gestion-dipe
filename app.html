@@ -7,9 +7,40 @@
   <meta name="description" content="Espace de gestion des inscriptions et cotisations préscolaires.">
   <meta name="robots" content="noindex, nofollow">
 
-  <!-- Préchargement immédiat du thème clair/sombre pour éviter tout flash -->
+  <!-- Initialisation résiliente de la session (Démo immédiate si visiteur, zéro blocage) -->
   <script>
     (function() {
+      try {
+        let raw = localStorage.getItem('gp_active_session_v1');
+        if (!raw) {
+          // Entrée immédiate en mode Démonstration universel
+          const demoSession = {
+            user: {
+              id: 'usr_demo_director',
+              name: 'Direction Démo',
+              email: 'demo@gestionprescolaire.sn',
+              role: 'director',
+              isDemo: true
+            },
+            school: {
+              id: '11111111-1111-1111-1111-111111111111',
+              name: 'École Maternelle Les Papillons',
+              director_name: 'Mme Aïssatou Ba',
+              director_phone: '+221 77 543 21 00',
+              region: 'Dakar',
+              department: 'Dakar',
+              commune: 'Plateau',
+              school_year: '2026-2027',
+              isDemo: true
+            }
+          };
+          localStorage.setItem('gp_active_session_v1', JSON.stringify(demoSession));
+        }
+      } catch (e) {
+        console.warn('Session init:', e);
+      }
+
+      // Préchargement du thème
       try {
         const saved = localStorage.getItem('gestion_dipe_theme');
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -20,27 +51,28 @@
   </script>
 
   <!-- Design System & Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=11">
-  <link rel="stylesheet" href="css/app.css?v=11">
-  <link rel="stylesheet" href="css/receipt.css?v=11">
+  <link rel="stylesheet" href="css/design-system.css?v=20261023_v1">
+  <link rel="stylesheet" href="css/app.css?v=20261023_v1">
+  <link rel="stylesheet" href="css/receipt.css?v=20261023_v1">
 
-  <!-- PWA Configuration & Icons -->
+  <!-- PWA Configuration & Official App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#16A34A">
+  <meta name="theme-color" content="#1E3A8A">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Gestion DIPE">
-  <link rel="apple-touch-icon" href="images/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+  <meta name="apple-mobile-web-app-title" content="Gestion Préscolaire">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="apple-touch-icon" href="images/logo.png">
 </head>
 <body>
   <div class="app-layout">
     <!-- SIDEBAR BUREAU (>= 1024px) -->
     <aside class="app-sidebar" aria-label="Navigation latérale">
       <div class="sidebar-header">
-        <img src="images/logo.png" alt="Logo Gestion Préscolaire" style="width:38px; height:38px; border-radius:50%; object-fit:contain; flex-shrink:0;">
+        <div class="sidebar-logo-container">
+          <img src="images/logo.png" alt="Logo Gestion Préscolaire" class="sidebar-app-logo">
+        </div>
         <div>
           <div class="sidebar-brand-name">Gestion Préscolaire</div>
           <div class="sidebar-brand-sub">Plateforme Établissement</div>
@@ -68,6 +100,11 @@
           <span>Cotisations</span>
         </a>
 
+        <a href="#" class="sidebar-nav-item" data-tab="other-revenues">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Autres entrées</span>
+        </a>
+
         <a href="#" class="sidebar-nav-item" data-tab="expenses">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
           <span>Dépenses</span>
@@ -86,12 +123,12 @@
 
       <div class="sidebar-footer">
         <div class="user-profile-badge">
-          <div class="user-avatar">AB</div>
+          <div class="user-avatar" id="sidebarUserAvatar">--</div>
           <div style="flex:1; overflow:hidden;">
-            <div style="font-size:var(--text-xs); font-weight:700; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">Mme Aïssatou Ba</div>
-            <div style="font-size:11px; color:var(--text-muted);">Directrice</div>
+            <div style="font-size:var(--text-xs); font-weight:700; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;" id="sidebarUserName">Direction</div>
+            <div style="font-size:11px; color:var(--text-muted);" id="sidebarUserRole">Direction</div>
           </div>
-          <a href="index.html" title="Déconnexion" style="color:var(--text-muted); font-size:1.1rem; text-decoration:none;">⏻</a>
+          <button type="button" id="btnSidebarLogout" onclick="App.handleLogout()" title="Déconnexion de mon école" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:4px;" aria-label="Se déconnecter">⏻</button>
         </div>
       </div>
     </aside>
@@ -99,22 +136,36 @@
     <!-- ZONE PRINCIPALE -->
     <main class="app-main" id="main-content">
       <!-- Topbar supérieure -->
+      <!-- Topbar supérieure refaite, épurée et ultra-professionnelle -->
       <header class="app-topbar">
         <div class="topbar-school-title">
-          <span id="topbarSchoolName">École Maternelle Les Papillons</span>
+          <span class="topbar-school-icon">🏛️</span>
+          <span id="topbarSchoolName">Gestion Préscolaire</span>
+          <span class="badge badge-warning" id="topbarDemoBadge" style="margin-left:0.5rem; font-size:11px; display:none;">Espace Démo</span>
         </div>
-        <div class="topbar-actions" style="display:flex; gap:0.5rem; align-items:center;">
-          <button class="btn btn-danger btn-sm" onclick="App.openAddExpenseModal()" title="Enregistrer une nouvelle dépense (Sortie de caisse)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>Dépense</span>
+        <div class="topbar-actions">
+          <!-- Bouton Référencer mon école visible et cliquable -->
+          <button type="button" id="btnTopbarAddSchool" class="btn btn-sm btn-primary" onclick="App.openReferenceSchoolModal()" style="display:inline-flex; align-items:center; gap:0.4rem; background:#1E3A8A; font-weight:700;" title="Configurer les coordonnées, sections et cachet de votre propre école">
+            <span>+ Référencer mon école</span>
           </button>
-          <button id="themeToggleBtn" class="btn btn-secondary btn-sm" onclick="App.toggleTheme()" aria-label="Basculer entre Mode Clair et Mode Sombre" title="Mode Clair / Sombre">
-            <span id="themeToggleIcon">🌙</span> <span id="themeToggleLabel">Mode Sombre</span>
+
+          <!-- 1. Bouton Installer l'app : texte en blanc et fond en rouge -->
+          <button type="button" id="btnPwaInstallApp" class="btn-pwa-topbar-red" onclick="App.triggerPwaInstall()" title="Télécharger et installer l'application sur votre écran d'accueil">
+            <span class="pwa-icon">📲</span>
+            <span class="btn-text">Installer l'app</span>
           </button>
-          <button class="btn btn-secondary btn-sm" onclick="App.navigate('settings')" title="Paramètres de l'établissement" aria-label="Paramètres">
-            ⚙️ <span class="hide-mobile">Paramètres</span>
+
+          <!-- 3. Bouton Mode Sombre / Mode Clair -->
+          <button type="button" id="themeToggleBtn" class="btn-topbar-theme" onclick="App.toggleTheme()" aria-label="Basculer entre Mode Clair et Mode Sombre" title="Mode Clair / Sombre">
+            <span id="themeToggleIcon">🌙</span>
+            <span id="themeToggleLabel" class="btn-text">Mode Sombre</span>
           </button>
-          <a href="index.html" class="btn btn-secondary btn-sm">Site public</a>
+
+          <!-- 4. Bouton Déconnexion -->
+          <button type="button" class="btn-topbar-logout" onclick="App.handleLogout()" title="Fermer la session de l'établissement">
+            <span>⏻</span>
+            <span class="btn-text hide-mobile">Déconnexion</span>
+          </button>
         </div>
       </header>
 
@@ -145,6 +196,11 @@
     <a href="#" class="mobile-nav-item" data-tab="monthly">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <span>Cotisations</span>
+    </a>
+
+    <a href="#" class="mobile-nav-item" data-tab="other-revenues">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Rentrées</span>
     </a>
 
     <a href="#" class="mobile-nav-item" data-tab="expenses">
@@ -439,6 +495,133 @@
   </div>
 
   <!-- ==============================================================================
+       MODALE : NOUVELLE AUTRE RENTRÉE / MODIFICATION (§ RENTRÉES HORS MENSUALITÉS)
+       ============================================================================== -->
+  <div class="modal-backdrop" id="otherRevenueModal" role="dialog" aria-modal="true" aria-labelledby="otherRevModalTitle">
+    <div class="modal-container" style="max-width: 540px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="otherRevModalTitle">Enregistrer une autre entrée d'argent</h2>
+        <button class="modal-close-btn" aria-label="Fermer" onclick="App.closeAllModals()">✕</button>
+      </div>
+      <form id="otherRevenueForm" onsubmit="App.handleOtherRevenueSubmit(event)">
+        <input type="hidden" id="otherRevId" value="">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="otherRevMotif">Motif de l'entrée <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="otherRevMotif" class="form-input" placeholder="Ex: Subvention Mairie, Vente uniformes, Dons..." required>
+            <div class="form-helper">Description précise de l'entrée d'argent (hors inscriptions et cotisations).</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="otherRevAmount">Montant encaissé (FCFA) <span style="color:var(--danger)">*</span></label>
+              <input type="number" id="otherRevAmount" class="form-input" min="0" placeholder="Ex: 50000" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="otherRevDate">Date de réception <span style="color:var(--danger)">*</span></label>
+              <input type="date" id="otherRevDate" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="otherRevCategory">Rubrique / Catégorie <span style="color:var(--danger)">*</span></label>
+            <select id="otherRevCategory" class="form-select" onchange="App.onOtherRevenueCategoryChange(this.value)">
+              <option value="Dons & Subventions">🎁 Dons & Subventions</option>
+              <option value="Cantine scolaire & Goûters">🍏 Cantine scolaire & Goûters</option>
+              <option value="Vente d'uniformes, blouses & fournitures">👕 Vente d'uniformes, blouses & fournitures</option>
+              <option value="Activités périscolaires & Sorties éducatives">🚌 Activités périscolaires & Sorties éducatives</option>
+              <option value="Garderie du soir & Mercredis">🧸 Garderie du soir & Mercredis</option>
+              <option value="Kermesse & Événements de l'école">🎪 Kermesse & Événements de l'école</option>
+              <option value="Autre encaissement exceptionnel">💼 Autre encaissement exceptionnel</option>
+              <option value="__NEW_CUSTOM_OTHER_REV__">➕ Ajouter une nouvelle rubrique personnalisée...</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="customOtherRevCategoryContainer" style="display:none; background:var(--bg-subtle); padding:0.875rem; border-radius:var(--radius-md); border:1px dashed var(--primary);">
+            <label class="form-label" for="customOtherRevCategory" style="color:var(--primary); font-weight:700;">Nom de la nouvelle rubrique <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="customOtherRevCategory" class="form-input" placeholder="Ex: Ateliers d'éveil, Vente de photos scolaires...">
+            <div class="form-helper">Cette rubrique sera mémorisée et disponible pour vos prochaines rentrées.</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="otherRevMethod">Mode de paiement <span style="color:var(--danger)">*</span></label>
+              <select id="otherRevMethod" class="form-select">
+                <option value="cash">Espèces</option>
+                <option value="wave">Wave</option>
+                <option value="orange_money">Orange Money</option>
+                <option value="cheque">Chèque</option>
+                <option value="bank_transfer">Virement bancaire</option>
+                <option value="other">Autre</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="otherRevPayer">Payeur / Donateur / Organisme</label>
+              <input type="text" id="otherRevPayer" class="form-input" placeholder="Ex: Mairie, Association, M. Sow...">
+            </div>
+          </div>
+
+          <div style="background:#F0FDF4; padding:0.75rem 1rem; border-radius:var(--radius-md); border-left:4px solid var(--success); font-size:var(--text-xs); color:#166534;">
+            ✓ Un reçu officiel certifié avec numéro de série et cachet sera automatiquement généré et téléchargeable pour le payeur.
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="otherRevDeleteBtn" style="display:none;" onclick="App.deleteOtherRevenueFromModal()">
+              🗑️ Supprimer cette rentrée
+            </button>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeAllModals()">Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="otherRevSubmitBtn">Enregistrer la rentrée</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
+       MODALE : ANNULER UNE AUTRE RENTRÉE (§ TRACE COMPTABLE INALTÉRABLE)
+       ============================================================================== -->
+  <div class="modal-backdrop" id="cancelOtherRevenueModal" role="dialog" aria-modal="true" aria-labelledby="cancelOtherRevTitle">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="cancelOtherRevTitle" style="color:var(--danger);">Annuler cette rentrée</h2>
+        <button class="modal-close-btn" aria-label="Fermer" onclick="App.closeAllModals()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#FEE2E2; padding:0.875rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); margin-bottom:1.25rem;">
+          <p style="font-size:var(--text-sm); color:#991B1B; margin-bottom:0;">
+            ⚠️ <strong>Attention :</strong> Le reçu existant passera au statut <strong>« ANNULÉ »</strong> avec filigrane rouge et sera archivé dans le registre. Le montant sera déduit du solde en caisse.
+          </p>
+        </div>
+
+        <p style="font-size:var(--text-sm); color:var(--text-main); margin-bottom:0.75rem;">
+          Rentrée : <strong id="cancelOtherRevMotif">-</strong> (<span id="cancelOtherRevAmount" style="color:var(--primary); font-weight:700;">-</span>)
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" for="cancelOtherRevReason">Motif obligatoire de l'annulation <span style="color:var(--danger)">*</span></label>
+          <select id="cancelOtherRevReason" class="form-select">
+            <option value="Erreur de saisie du montant">Erreur de saisie du montant</option>
+            <option value="Chèque sans provision ou virement rejeté">Chèque sans provision ou virement rejeté</option>
+            <option value="Double saisie accidentelle">Double saisie accidentelle</option>
+            <option value="Annulation ou remboursement de la prestation">Annulation ou remboursement de la prestation</option>
+            <option value="Autre motif">Autre motif administratif</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="App.closeAllModals()">Non, retour</button>
+        <button type="button" class="btn btn-danger" onclick="App.confirmCancelOtherRevenue()">Oui, annuler la rentrée</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
        MODALE : MODIFIER UNE COTISATION OU UN PAIEMENT D'INSCRIPTION
        ============================================================================== -->
   <div class="modal-backdrop" id="editPaymentModal" role="dialog" aria-modal="true" aria-labelledby="editPayTitle">
@@ -507,6 +690,101 @@
   </div>
 
   <!-- ==============================================================================
+       MODALE : RÉFÉRENCER MON ÉCOLE DANS L'APPLICATION
+       ============================================================================== -->
+  <div class="modal-backdrop" id="referenceSchoolModal" role="dialog" aria-modal="true" aria-labelledby="refSchoolModalTitle">
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="refSchoolModalTitle" style="color:var(--primary); font-weight:800;">Référencer mon école</h2>
+          <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.25rem;">Configurez votre établissement et générez votre cachet officiel</p>
+        </div>
+        <button class="modal-close-btn" aria-label="Fermer" onclick="App.closeAllModals()">✕</button>
+      </div>
+
+      <form id="referenceSchoolForm" onsubmit="App.handleReferenceSchoolSubmit(event)">
+        <div class="modal-body" style="max-height:75vh; overflow-y:auto; padding:1.25rem;">
+          <div id="refSchoolErrorBox" class="alert-box alert-danger" style="display:none;" role="alert"></div>
+
+          <div class="form-group">
+            <label class="form-label" for="refSchoolName">Nom officiel de l'école <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="refSchoolName" class="form-input" placeholder="Ex: Ecole Maternelle Teranga" required>
+            <div class="form-helper">Ce nom apparaîtra sur vos reçus, votre cachet officiel et tous les documents.</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div class="form-group">
+              <label class="form-label" for="refDirectorPhone">Téléphone de l'école <span style="color:var(--danger)">*</span></label>
+              <input type="tel" id="refDirectorPhone" class="form-input" placeholder="+221 77 123 45 67" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="refSchoolYear">Année scolaire <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="refSchoolYear" class="form-input" value="2026-2027" required>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.5rem; margin-top:0.5rem;">
+            <div class="form-group">
+              <label class="form-label" for="refRegion">Région <span style="color:var(--danger)">*</span></label>
+              <select id="refRegion" class="form-select" onchange="App.onRefRegionChange(this.value)"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="refDepartment">Département <span style="color:var(--danger)">*</span></label>
+              <select id="refDepartment" class="form-select" onchange="App.onRefDeptChange(this.value)"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="refCommune">Commune <span style="color:var(--danger)">*</span></label>
+              <select id="refCommune" class="form-select"></select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:0.5rem;">
+            <label class="form-label" for="refAddress">Adresse précise de l'école (facultatif)</label>
+            <input type="text" id="refAddress" class="form-input" placeholder="Ex: Quartier Cité Keur Gorgui, Villa 12">
+          </div>
+
+          <!-- Configuration des 4 sections fondamentales (Crèche restaurée) -->
+          <div style="margin-top:1.25rem; background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-md); border:1px solid var(--border-light);">
+            <div style="font-weight:700; font-size:var(--text-sm); color:var(--text-main); margin-bottom:0.75rem;">
+              Sections et mensualités (FCFA) :
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem;">
+              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+                <div style="font-weight:700; font-size:12px; color:var(--primary);">Crèche</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeeCrecheReg" class="form-input form-input-sm" value="25000" style="padding:2px 4px; height:28px;"></div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeeCrecheMonth" class="form-input form-input-sm" value="15000" style="padding:2px 4px; height:28px;"></div>
+              </div>
+              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+                <div style="font-weight:700; font-size:12px; color:var(--primary);">Petite section</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeePsReg" class="form-input form-input-sm" value="25000" style="padding:2px 4px; height:28px;"></div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeePsMonth" class="form-input form-input-sm" value="15000" style="padding:2px 4px; height:28px;"></div>
+              </div>
+              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+                <div style="font-weight:700; font-size:12px; color:var(--primary);">Moyenne section</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeeMsReg" class="form-input form-input-sm" value="25000" style="padding:2px 4px; height:28px;"></div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeeMsMonth" class="form-input form-input-sm" value="15000" style="padding:2px 4px; height:28px;"></div>
+              </div>
+              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+                <div style="font-weight:700; font-size:12px; color:var(--primary);">Grande section</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeeGsReg" class="form-input form-input-sm" value="30000" style="padding:2px 4px; height:28px;"></div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeeGsMonth" class="form-input form-input-sm" value="18000" style="padding:2px 4px; height:28px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="App.closeAllModals()">Annuler</button>
+          <button type="submit" id="btnSubmitRefSchool" class="btn btn-primary" style="background:#1E3A8A;">
+            <span>Valider et ouvrir mon école</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
        MODALE DE CONFIRMATION OUI / NON (§ SUPPRESSION SÉCURISÉE SANS POPUP BLOQUANT)
        ============================================================================== -->
   <div class="modal-backdrop" id="confirmDeleteModal" role="dialog" aria-modal="true" aria-labelledby="confirmDeleteTitle">
@@ -542,16 +820,23 @@
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=11"></script>
-  <script src="js/utils.js?v=11"></script>
-  <script src="js/stamp.js?v=11"></script>
-  <script src="js/demo-data.js?v=11"></script>
-  <script src="js/store.js?v=11"></script>
-  <script src="js/app.js?v=11"></script>
+  <script src="js/config.js?v=20261023_v1"></script>
+  <script src="js/utils.js?v=20261023_v1"></script>
+  <script src="js/stamp.js?v=20261023_v1"></script>
+  <script src="js/supabase.js?v=20261023_v1"></script>
+  <script src="js/auth.js?v=20261023_v1"></script>
+  <script src="js/demo-data.js?v=20261023_v1"></script>
+  <script src="js/store.js?v=20261023_v1"></script>
+  <script src="js/app.js?v=20261023_v1"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          for (let reg of regs) {
+            reg.update();
+          }
+        });
+        navigator.serviceWorker.register('./sw.js?v=20261023_v1').catch(err => {
           console.warn('[PWA] SW register error:', err);
         });
       });

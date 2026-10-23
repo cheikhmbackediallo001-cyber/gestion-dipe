@@ -21,111 +21,170 @@ const Store = {
   },
 
   /**
-   * Initialise le magasin de données
+   * Initialise le magasin de données pour l'école connectée
    */
   async init() {
-    let raw = localStorage.getItem(this.storageKey);
-    if (!raw) {
-      // Rétrocompatibilité transparente si données préexistantes
-      raw = localStorage.getItem('gestion_dipe_store_v1') || localStorage.getItem('dipegere_store_v1');
+    // Synchronisation avec la session active Auth
+    if (window.Auth && !Auth.isAuthenticated()) {
+      await Auth.init();
     }
-    if (raw) {
-      try {
-        this.data = JSON.parse(raw);
-      } catch (e) {
-        console.error("Erreur lecture local storage:", e);
-        this.data = DemoData.getInitialState();
+
+    const user = (window.Auth && Auth.getUser()) || this.currentUser;
+    let school = window.Auth ? Auth.getSchool() : null;
+
+    // Détermine si on doit utiliser le mode démo universel (si pas d'école configurée ou école démo)
+    const hasCustomSchool = school && school.id && !school.isDemo && school.id !== '11111111-1111-1111-1111-111111111111';
+
+    if (hasCustomSchool) {
+      // Établissement réel configuré
+      this.currentUser = user;
+      this.storageKey = `gp_store_${school.id}`;
+      let raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        try {
+          this.data = JSON.parse(raw);
+        } catch (e) {
+          console.error("Erreur lecture données école:", e);
+        }
+      }
+
+      if (!this.data || !this.data.school) {
+        this.data = {
+          school: school,
+          classes: [
+            { id: 'cls_' + school.id + '_0', school_id: school.id, name: 'Crèche', registration_fee: 25000, monthly_fee: 15000, position: 1 },
+            { id: 'cls_' + school.id + '_1', school_id: school.id, name: 'Petite section', registration_fee: 25000, monthly_fee: 15000, position: 2 },
+            { id: 'cls_' + school.id + '_2', school_id: school.id, name: 'Moyenne section', registration_fee: 25000, monthly_fee: 15000, position: 3 },
+            { id: 'cls_' + school.id + '_3', school_id: school.id, name: 'Grande section', registration_fee: 30000, monthly_fee: 18000, position: 4 }
+          ],
+          months: CONFIG.DEFAULT_MONTHS.map(m => ({
+            id: 'mth_' + school.id + '_' + m.number,
+            school_id: school.id,
+            school_year: school.school_year || '2026-2027',
+            month_number: m.number,
+            label: m.label,
+            position: m.position
+          })),
+          students: [],
+          payments: [],
+          receipts: [],
+          expenses: [],
+          other_revenues: [],
+          audit_log: [],
+          receiptCounter: 1
+        };
         this.persist();
       }
     } else {
-      this.data = DemoData.getInitialState();
-      this.persist();
-    }
+      // MODE DÉMO UNIVERSEL : Accessible à tout le monde
+      this.currentUser = user || {
+        id: 'usr_demo_director',
+        name: 'Mme Aïssatou Ba',
+        role: 'director'
+      };
+      this.storageKey = 'gp_store_demo';
+      let raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        try {
+          this.data = JSON.parse(raw);
+        } catch (e) {}
+      }
 
-    // Migration automatique : S'assurer de la présence de la Crèche (2 ans) en position 1
-    if (this.data && Array.isArray(this.data.classes)) {
-      const hasCreche = this.data.classes.some(c => 
-        (c.name || '').toLowerCase().includes('crèche') || (c.name || '').toLowerCase().includes('creche')
-      );
-      if (!hasCreche) {
-        const crecheClass = {
-          id: '22222222-0000-1111-1111-111111111111',
-          school_id: this.data.school.id,
-          name: 'Crèche (2 ans)',
-          registration_fee: 25000,
-          monthly_fee: 15000,
-          position: 1
-        };
-        // Décale les autres sections
-        this.data.classes.forEach(c => {
-          if (c.name.toLowerCase().includes('petite')) c.position = 2;
-          else if (c.name.toLowerCase().includes('moyenne')) c.position = 3;
-          else if (c.name.toLowerCase().includes('grande')) c.position = 4;
-          else c.position = (c.position || 1) + 1;
-        });
-        this.data.classes.unshift(crecheClass);
-        this.data.classes.sort((a, b) => a.position - b.position);
-
-        // Ajout des 4 enfants modèles de 2 ans en crèche
-        if (Array.isArray(this.data.students)) {
-          const crecheStudents = [
-            { id: '44444444-0031-1111-1111-111111111111', school_id: this.data.school.id, class_id: crecheClass.id, last_name: 'SARR', first_names: 'Ousmane', gender: 'M', birth_date: '2024-02-15', parent_name: 'Pape Sarr', parent_phone: '+221 77 112 33 44', active: true },
-            { id: '44444444-0032-1111-1111-111111111111', school_id: this.data.school.id, class_id: crecheClass.id, last_name: 'DIALLO', first_names: 'Khady', gender: 'F', birth_date: '2024-05-10', parent_name: 'Mariama Diallo', parent_phone: '+221 78 223 44 55', active: true },
-            { id: '44444444-0033-1111-1111-111111111111', school_id: this.data.school.id, class_id: crecheClass.id, last_name: 'FAYE', first_names: 'Abdou', gender: 'M', birth_date: '2024-03-22', parent_name: 'Ibrahima Faye', parent_phone: '+221 76 334 55 66', active: true },
-            { id: '44444444-0034-1111-1111-111111111111', school_id: this.data.school.id, class_id: crecheClass.id, last_name: 'NDIAYE', first_names: 'Awa', gender: 'F', birth_date: '2024-08-18', parent_name: 'Babacar Ndiaye', parent_phone: '+221 70 445 66 77', active: true }
-          ];
-          crecheStudents.forEach(cs => {
-            if (!this.data.students.some(s => s.id === cs.id)) {
-              this.data.students.push(cs);
-            }
-          });
+      if (!this.data || !this.data.school || !Array.isArray(this.data.students) || (this.data.students.length === 0 && !this.data.wasReset)) {
+        if (window.DemoData) {
+          this.data = DemoData.getInitialState();
+          this.persist();
         }
-        this.persist();
       }
     }
 
-    // Migration du genre des élèves si absent
-    if (this.data && Array.isArray(this.data.students)) {
-      const femaleNames = new Set([
-        'fatou', 'aminata', 'seynabou', 'aïda', 'aida', 'mariama', 'khadidiatou', 
-        'rokhaya', 'dieynaba', 'fama', 'anta', 'coumba', 'mame diarra', 'kadiatou', 
-        'binta', 'aïssatou', 'aissatou', 'khady', 'awa', 'adja', 'astou', 'ramatoulaye'
-      ]);
-      let changed = false;
-      this.data.students.forEach(s => {
-        if (!s.gender) {
-          const fn = (s.first_names || '').toLowerCase().trim();
-          s.gender = femaleNames.has(fn) || fn.includes('fatou') || fn.includes('mariama') || fn.includes('awa') ? 'F' : 'M';
-          changed = true;
-        }
+    const activeSchoolId = (this.data && this.data.school && this.data.school.id) ? this.data.school.id : 'sch_main';
+
+    // Rétablissement et garantie des 4 sections préscolaires fondamentales (dont la Crèche)
+    if (!Array.isArray(this.data.classes) || this.data.classes.length === 0) {
+      this.data.classes = [
+        { id: 'cls_' + activeSchoolId + '_0', school_id: activeSchoolId, name: 'Crèche', registration_fee: 25000, monthly_fee: 15000, position: 1 },
+        { id: 'cls_' + activeSchoolId + '_1', school_id: activeSchoolId, name: 'Petite section', registration_fee: 25000, monthly_fee: 15000, position: 2 },
+        { id: 'cls_' + activeSchoolId + '_2', school_id: activeSchoolId, name: 'Moyenne section', registration_fee: 25000, monthly_fee: 15000, position: 3 },
+        { id: 'cls_' + activeSchoolId + '_3', school_id: activeSchoolId, name: 'Grande section', registration_fee: 30000, monthly_fee: 18000, position: 4 }
+      ];
+    } else if (!this.data.classes.some(c => (c.name || '').toLowerCase().includes('crèche') || (c.name || '').toLowerCase().includes('creche'))) {
+      this.data.classes.unshift({
+        id: 'cls_' + activeSchoolId + '_0',
+        school_id: activeSchoolId,
+        name: 'Crèche',
+        registration_fee: 25000,
+        monthly_fee: 15000,
+        position: 1
       });
-      if (changed) this.persist();
+    }
+
+    // Garantie des 9 mois scolaires standard (Octobre à Juin)
+    if (!Array.isArray(this.data.months) || this.data.months.length === 0) {
+      this.data.months = CONFIG.DEFAULT_MONTHS.map(m => ({
+        id: 'mth_' + activeSchoolId + '_' + m.number,
+        school_id: activeSchoolId,
+        school_year: (this.data.school && this.data.school.school_year) || '2026-2027',
+        month_number: m.number,
+        label: m.label,
+        position: m.position
+      }));
     }
 
     if (this.data && this.data.school && !this.data.school.stamp_color) {
-      this.data.school.stamp_color = '#DC2626';
-      this.persist();
+      this.data.school.stamp_color = '#1E3A8A';
     }
-
     if (this.data && !this.data.expenses) {
-      this.data.expenses = (window.DemoData ? DemoData.getInitialState().expenses : []) || [];
-      this.persist();
+      this.data.expenses = [];
+    }
+    if (this.data && !this.data.other_revenues) {
+      this.data.other_revenues = [];
+    }
+    if (this.data && !this.data.custom_other_revenue_rubriques) {
+      this.data.custom_other_revenue_rubriques = [];
     }
 
     return this.data;
   },
 
   /**
-   * Réinitialise les données avec le jeu de démonstration
+   * Réinitialise intégralement toutes les données comptables et élèves à zéro
+   * Garantit une base 100% vierge et propre immédiatement persistée
    */
-  resetToDemo() {
-    this.data = DemoData.getInitialState();
+  resetToZero() {
+    if (!this.data) return null;
+    this.data.students = [];
+    this.data.payments = [];
+    this.data.receipts = [];
+    this.data.expenses = [];
+    this.data.other_revenues = [];
+    this.data.audit_log = [];
+    this.data.receiptCounter = 1;
+    this.data.wasReset = true;
     this.persist();
     return this.data;
   },
 
+  /**
+   * Vérifie si le compte actif est en mode démo
+   */
+  isDemo() {
+    const school = this.data ? this.data.school : (window.Auth ? Auth.getSchool() : null);
+    if (!school) return true;
+    return !!(school.isDemo || school.id === '11111111-1111-1111-1111-111111111111' || school.id === 'sch_demo');
+  },
+
+  resetToDemo() {
+    if (window.DemoData) {
+      this.data = DemoData.getInitialState();
+      this.persist();
+      return this.data;
+    }
+    return null;
+  },
+
   persist() {
-    if (this.data) {
+    if (this.data && this.storageKey) {
       localStorage.setItem(this.storageKey, JSON.stringify(this.data));
     }
   },
@@ -134,7 +193,25 @@ const Store = {
   // ÉCOLE & PARAMÈTRES
   // ----------------------------------------------------------------------------
   getSchool() {
-    return this.data.school;
+    if (this.data && this.data.school && this.data.school.name) {
+      return this.data.school;
+    }
+    if (window.DemoData) {
+      return DemoData.getInitialState().school;
+    }
+    return {
+      id: '11111111-1111-1111-1111-111111111111',
+      name: "École Maternelle Les Papillons",
+      director_name: "Mme Aïssatou Ba",
+      director_phone: "+221 77 543 21 00",
+      region: "Dakar",
+      department: "Dakar",
+      commune: "Plateau",
+      school_year: "2026-2027",
+      status: "active",
+      stamp_color: "#1E3A8A",
+      isDemo: true
+    };
   },
 
   updateSchool(updates) {
@@ -145,6 +222,16 @@ const Store = {
     };
     this.persist();
     return this.data.school;
+  },
+
+  updateClassFees(classId, regFee, monthFee) {
+    if (!this.data || !this.data.classes) return;
+    const cls = this.data.classes.find(c => c.id === classId);
+    if (cls) {
+      if (regFee !== undefined) cls.registration_fee = parseInt(regFee, 10) || 0;
+      if (monthFee !== undefined) cls.monthly_fee = parseInt(monthFee, 10) || 0;
+      this.persist();
+    }
   },
 
   getClasses() {
@@ -638,19 +725,24 @@ const Store = {
   getGrandTotalSummary() {
     const regSummary = this.getRegistrationSummary();
     const annualOverview = this.getAnnualOverview();
+    const otherRevenuesSummary = this.getOtherRevenuesSummary();
     const totalExpenses = this.getTotalExpenses();
 
-    const grandExpected = regSummary.total_expected + annualOverview.cumulated_expected;
-    const grandCollected = regSummary.total_collected + annualOverview.cumulated_collected;
-    const grandRemaining = grandExpected - grandCollected;
-    const grandPercentage = grandExpected > 0 ? Math.round((grandCollected / grandExpected) * 1000) / 10 : 0.0;
+    const totalOtherRevenues = otherRevenuesSummary.total_amount;
+    const grandExpected = regSummary.total_expected + annualOverview.cumulated_expected + totalOtherRevenues;
+    const grandCollected = regSummary.total_collected + annualOverview.cumulated_collected + totalOtherRevenues;
+    const grandRemaining = (regSummary.total_expected + annualOverview.cumulated_expected) - (regSummary.total_collected + annualOverview.cumulated_collected);
+    const grandPercentage = (regSummary.total_expected + annualOverview.cumulated_expected) > 0 
+      ? Math.round(((regSummary.total_collected + annualOverview.cumulated_collected) / (regSummary.total_expected + annualOverview.cumulated_expected)) * 1000) / 10 
+      : 0.0;
 
-    // SOLDE RESTANT DISPONIBLE EN CAISSE AU MOMENT T
+    // SOLDE RESTANT DISPONIBLE EN CAISSE AU MOMENT T (Recettes totales - Dépenses)
     const netAvailable = grandCollected - totalExpenses;
 
     return {
       registration: regSummary,
       monthly: annualOverview,
+      other_revenues: otherRevenuesSummary,
       grand_expected: grandExpected,
       grand_collected: grandCollected,
       grand_remaining: grandRemaining,
@@ -907,54 +999,302 @@ const Store = {
   },
 
   // ----------------------------------------------------------------------------
+  // GESTION DES AUTRES RENTRÉES (§ HORS INSCRIPTIONS ET COTISATIONS)
+  // Dons, subventions, cantine, blouses/uniformes, activités périscolaires, etc.
+  // ----------------------------------------------------------------------------
+  getOtherRevenues() {
+    if (!this.data.other_revenues) this.data.other_revenues = [];
+    return [...this.data.other_revenues].sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at));
+  },
+
+  getOtherRevenueById(id) {
+    if (!this.data.other_revenues) return null;
+    return this.data.other_revenues.find(r => r.id === id);
+  },
+
+  getOtherRevenueRubriques() {
+    const defaultRubriques = [
+      "Dons & Subventions",
+      "Cantine scolaire & Goûters",
+      "Vente d'uniformes, blouses & fournitures",
+      "Activités périscolaires & Sorties éducatives",
+      "Garderie du soir & Mercredis",
+      "Kermesse & Événements de l'école",
+      "Autre encaissement exceptionnel"
+    ];
+
+    if (!this.data.custom_other_revenue_rubriques) {
+      this.data.custom_other_revenue_rubriques = [];
+    }
+
+    const combined = [...defaultRubriques];
+    if (Array.isArray(this.data.other_revenues)) {
+      this.data.other_revenues.forEach(r => {
+        if (r.category && !combined.includes(r.category)) {
+          combined.push(r.category);
+        }
+      });
+    }
+
+    this.data.custom_other_revenue_rubriques.forEach(cr => {
+      if (cr && !combined.includes(cr)) {
+        combined.push(cr);
+      }
+    });
+
+    return combined;
+  },
+
+  addCustomOtherRevenueRubrique(name) {
+    if (!name || typeof name !== 'string') return false;
+    const clean = name.trim();
+    if (!clean) return false;
+    if (!this.data.custom_other_revenue_rubriques) {
+      this.data.custom_other_revenue_rubriques = [];
+    }
+    if (!this.data.custom_other_revenue_rubriques.includes(clean)) {
+      this.data.custom_other_revenue_rubriques.push(clean);
+      this.persist();
+      return true;
+    }
+    return false;
+  },
+
+  addOtherRevenue(revenueData) {
+    if (!this.data || !this.data.school) throw new Error("Établissement non initialisé.");
+    if (!Array.isArray(this.data.other_revenues)) this.data.other_revenues = [];
+
+    const category = (revenueData.category || 'Autre encaissement exceptionnel').trim();
+    const nowIso = new Date().toISOString();
+    const schoolYear = this.data.school.school_year || '2026-2027';
+    const yearPrefix = schoolYear.substring(0, 4);
+
+    // Numérotation séquentielle certifiée pour le reçu
+    const nextVal = (this.data.receiptCounter || 1);
+    this.data.receiptCounter = nextVal + 1;
+    const receiptNumber = `REC-${yearPrefix}-${String(nextVal).padStart(4, '0')}`;
+    const publicToken = 'tok_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    const newRevenue = {
+      id: revenueData.id || ('other_rev_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
+      school_id: this.data.school.id,
+      motif: (revenueData.motif || '').trim(),
+      amount: parseInt(revenueData.amount, 10) || 0,
+      date: revenueData.date || nowIso.split('T')[0],
+      category: category,
+      payment_method: revenueData.payment_method || 'cash',
+      payer_name: (revenueData.payer_name || '').trim(),
+      receipt_number: receiptNumber,
+      public_token: publicToken,
+      status: revenueData.status || 'valid',
+      cancel_reason: null,
+      created_by: this.currentUser ? this.currentUser.id : 'director-user-id',
+      created_at: nowIso
+    };
+
+    // Émission du reçu officiel dans le registre
+    if (!Array.isArray(this.data.receipts)) this.data.receipts = [];
+    this.data.receipts.push({
+      id: 'rec_' + Math.random().toString(36).substring(2, 9),
+      school_id: this.data.school.id,
+      payment_id: newRevenue.id,
+      receipt_number: receiptNumber,
+      public_token: publicToken,
+      issued_at: nowIso,
+      status: 'valid'
+    });
+
+    this.data.other_revenues.push(newRevenue);
+    this.addCustomOtherRevenueRubrique(category);
+
+    this.logAudit('OTHER_REVENUE_ADDED', {
+      revenue_id: newRevenue.id,
+      receipt_number: receiptNumber,
+      motif: newRevenue.motif,
+      amount: newRevenue.amount,
+      category: newRevenue.category,
+      date: newRevenue.date
+    });
+
+    this.persist();
+    return newRevenue;
+  },
+
+  updateOtherRevenue(id, revenueData) {
+    if (!this.data || !Array.isArray(this.data.other_revenues)) return null;
+    const index = this.data.other_revenues.findIndex(r => r.id === id);
+    if (index === -1) throw new Error("Rentrée introuvable");
+
+    const existing = this.data.other_revenues[index];
+    const category = (revenueData.category !== undefined ? revenueData.category : (existing.category || 'Général')).trim();
+
+    const updated = {
+      ...existing,
+      motif: (revenueData.motif !== undefined ? revenueData.motif : existing.motif).trim(),
+      amount: revenueData.amount !== undefined ? (parseInt(revenueData.amount, 10) || 0) : existing.amount,
+      date: revenueData.date || existing.date,
+      category: category,
+      payment_method: revenueData.payment_method || existing.payment_method || 'cash',
+      payer_name: revenueData.payer_name !== undefined ? (revenueData.payer_name || '').trim() : existing.payer_name,
+      updated_at: new Date().toISOString()
+    };
+
+    this.data.other_revenues[index] = updated;
+    this.addCustomOtherRevenueRubrique(category);
+
+    this.logAudit('OTHER_REVENUE_UPDATED', {
+      revenue_id: id,
+      motif: updated.motif,
+      amount: updated.amount,
+      category: updated.category
+    });
+
+    this.persist();
+    return updated;
+  },
+
+  cancelOtherRevenue(id, cancelReason) {
+    if (!this.data || !Array.isArray(this.data.other_revenues)) return null;
+    if (!cancelReason || !cancelReason.trim()) {
+      throw new Error("Le motif d'annulation est obligatoire.");
+    }
+
+    const revenue = this.data.other_revenues.find(r => r.id === id);
+    if (!revenue) throw new Error("Rentrée introuvable");
+    if (revenue.status === 'cancelled') {
+      throw new Error("Cette rentrée a déjà été annulée.");
+    }
+
+    const nowIso = new Date().toISOString();
+    revenue.status = 'cancelled';
+    revenue.cancel_reason = cancelReason.trim();
+    revenue.cancelled_at = nowIso;
+    revenue.cancelled_by = this.currentUser ? this.currentUser.id : 'director-user-id';
+
+    // Mise à jour du statut du reçu associé
+    if (Array.isArray(this.data.receipts)) {
+      const rec = this.data.receipts.find(r => r.payment_id === id || r.receipt_number === revenue.receipt_number);
+      if (rec) {
+        rec.status = 'cancelled';
+      }
+    }
+
+    this.logAudit('OTHER_REVENUE_CANCELLED', {
+      revenue_id: id,
+      receipt_number: revenue.receipt_number,
+      motif: revenue.motif,
+      amount: revenue.amount,
+      cancel_reason: revenue.cancel_reason
+    });
+
+    this.persist();
+    return revenue;
+  },
+
+  deleteOtherRevenue(id) {
+    if (!this.data || !Array.isArray(this.data.other_revenues)) return false;
+    const index = this.data.other_revenues.findIndex(r => r.id === id);
+    if (index === -1) return false;
+
+    const removed = this.data.other_revenues.splice(index, 1)[0];
+
+    // Suppression du reçu associé
+    if (Array.isArray(this.data.receipts)) {
+      const rIdx = this.data.receipts.findIndex(r => r.payment_id === id || (removed && r.receipt_number === removed.receipt_number));
+      if (rIdx !== -1) {
+        this.data.receipts.splice(rIdx, 1);
+      }
+    }
+
+    this.logAudit('OTHER_REVENUE_DELETED', {
+      revenue_id: id,
+      motif: removed ? removed.motif : '',
+      amount: removed ? removed.amount : 0
+    });
+
+    this.persist();
+    return true;
+  },
+
+  getTotalOtherRevenues() {
+    if (!this.data || !Array.isArray(this.data.other_revenues)) return 0;
+    return this.data.other_revenues
+      .filter(r => r.status !== 'cancelled')
+      .reduce((sum, r) => sum + (parseInt(r.amount, 10) || 0), 0);
+  },
+
+  getOtherRevenuesSummary() {
+    const list = this.getOtherRevenues();
+    const active = list.filter(r => r.status !== 'cancelled');
+    const total = this.getTotalOtherRevenues();
+    return {
+      total_amount: total,
+      count: active.length,
+      total_count: list.length,
+      cancelled_count: list.length - active.length,
+      revenues: list
+    };
+  },
+
+  // ----------------------------------------------------------------------------
   // TABLEAU DE BORD (§ 3.8)
   // ----------------------------------------------------------------------------
   getDashboardMetrics() {
-    const regSummary = this.getRegistrationSummary();
-    const months = this.getMonths();
-    // Mois courant (par exemple le 1er ou 2ème mois selon la période)
-    const currentMonth = months[0];
-    const currentMonthSummary = this.getMonthSummary(currentMonth.id);
+    const regSummary = this.getRegistrationSummary() || {
+      total_collected: 0,
+      total_expected: 0,
+      paid_students: 0,
+      total_students: 0,
+      percentage: 0
+    };
+    const months = this.getMonths() || [];
+    // Mois courant (par défaut le 1er mois de l'année scolaire)
+    const currentMonth = (months.length > 0) ? months[0] : { id: 'mth_10', label: 'Octobre' };
+    const currentMonthSummary = (currentMonth && currentMonth.id) 
+      ? this.getMonthSummary(currentMonth.id)
+      : { total_collected: 0, total_expected: 0, paid_students: 0, unpaid_students: 0, percentage: 0 };
 
     // 5 derniers paiements
-    const lastPayments = [...this.data.payments]
-      .sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at))
-      .slice(0, 5)
-      .map(p => {
-        const student = this.getStudentById(p.student_id);
-        const receipt = this.data.receipts.find(r => r.payment_id === p.id);
-        const cls = student ? this.getClassById(student.class_id) : null;
-        let objectLabel = "Frais d'inscription";
-        if (p.kind === 'monthly') {
-          const m = this.getMonthById(p.month_id);
-          objectLabel = `Cotisation ${m ? m.label : 'mensuelle'}`;
-        }
-        return {
-          ...p,
-          receipt_number: receipt ? receipt.receipt_number : '-',
-          public_token: receipt ? receipt.public_token : null,
-          student_name: student ? `${student.last_name} ${student.first_names}` : 'Élève inconnu',
-          class_name: cls ? cls.name : '-',
-          object_label: objectLabel
-        };
-      });
+    const lastPayments = Array.isArray(this.data.payments)
+      ? [...this.data.payments]
+          .sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at))
+          .slice(0, 5)
+          .map(p => {
+            const student = this.getStudentById(p.student_id);
+            const receipt = Array.isArray(this.data.receipts) ? this.data.receipts.find(r => r.payment_id === p.id) : null;
+            const cls = student ? this.getClassById(student.class_id) : null;
+            let objectLabel = "Frais d'inscription";
+            if (p.kind === 'monthly') {
+              const m = this.getMonthById(p.month_id);
+              objectLabel = `Cotisation ${m ? m.label : 'mensuelle'}`;
+            }
+            return {
+              ...p,
+              receipt_number: receipt ? receipt.receipt_number : '-',
+              public_token: receipt ? receipt.public_token : null,
+              student_name: student ? `${student.last_name} ${student.first_names}` : 'Élève inconnu',
+              class_name: cls ? cls.name : '-',
+              object_label: objectLabel
+            };
+          })
+      : [];
 
     return {
       registration: {
-        total_collected: regSummary.total_collected,
-        total_expected: regSummary.total_expected,
-        paid_students: regSummary.paid_students,
-        total_students: regSummary.total_students,
-        percentage: regSummary.percentage
+        total_collected: regSummary.total_collected || 0,
+        total_expected: regSummary.total_expected || 0,
+        paid_students: regSummary.paid_students || 0,
+        total_students: regSummary.total_students || 0,
+        percentage: regSummary.percentage || 0
       },
       current_month: {
-        label: currentMonth.label,
-        id: currentMonth.id,
-        total_collected: currentMonthSummary.total_collected,
-        total_expected: currentMonthSummary.total_expected,
-        paid_students: currentMonthSummary.paid_students,
-        unpaid_students: currentMonthSummary.unpaid_students,
-        percentage: currentMonthSummary.percentage
+        label: currentMonth ? currentMonth.label : 'Octobre',
+        id: currentMonth ? currentMonth.id : 'mth_10',
+        total_collected: currentMonthSummary ? (currentMonthSummary.total_collected || 0) : 0,
+        total_expected: currentMonthSummary ? (currentMonthSummary.total_expected || 0) : 0,
+        paid_students: currentMonthSummary ? (currentMonthSummary.paid_students || 0) : 0,
+        unpaid_students: currentMonthSummary ? (currentMonthSummary.unpaid_students || 0) : 0,
+        percentage: currentMonthSummary ? (currentMonthSummary.percentage || 0) : 0
       },
       last_payments: lastPayments
     };
@@ -967,7 +1307,8 @@ const Store = {
     return [...this.data.receipts]
       .sort((a, b) => new Date(b.issued_at) - new Date(a.issued_at))
       .map(r => {
-        const payment = this.data.payments.find(p => p.id === r.payment_id);
+        const payment = this.data.payments ? this.data.payments.find(p => p.id === r.payment_id) : null;
+        const otherRev = !payment && this.data.other_revenues ? this.data.other_revenues.find(o => o.id === r.payment_id || o.receipt_number === r.receipt_number) : null;
         const student = payment ? this.getStudentById(payment.student_id) : null;
         const cls = student ? this.getClassById(student.class_id) : null;
 
@@ -975,6 +1316,8 @@ const Store = {
         if (payment && payment.kind === 'monthly') {
           const m = this.getMonthById(payment.month_id);
           objectLabel = `Cotisation ${m ? m.label : 'mensuelle'}`;
+        } else if (otherRev) {
+          objectLabel = `Autre rentrée : ${otherRev.category || 'Général'}`;
         }
 
         return {
@@ -983,17 +1326,18 @@ const Store = {
           public_token: r.public_token,
           issued_at: r.issued_at,
           status: r.status,
-          amount: payment ? payment.amount : 0,
-          method: payment ? payment.method : 'cash',
-          reference: payment ? payment.reference : null,
+          amount: payment ? payment.amount : (otherRev ? otherRev.amount : 0),
+          method: payment ? payment.method : (otherRev ? (otherRev.payment_method || 'cash') : 'cash'),
+          reference: payment ? payment.reference : (otherRev ? otherRev.motif : null),
           object_label: objectLabel,
           student_id: student ? student.id : null,
-          student_name: student ? `${student.last_name} ${student.first_names}` : 'Élève inconnu',
-          class_name: cls ? cls.name : '-',
-          parent_name: student ? student.parent_name : '',
+          student_name: student ? `${student.last_name} ${student.first_names}` : (otherRev && otherRev.payer_name ? `Payeur : ${otherRev.payer_name}` : (otherRev ? otherRev.motif : 'Rentrée diverse')),
+          class_name: cls ? cls.name : (otherRev ? (otherRev.category || 'Recette') : '-'),
+          parent_name: student ? student.parent_name : (otherRev ? (otherRev.payer_name || '-') : ''),
           parent_phone: student ? student.parent_phone : '',
           payment_id: r.payment_id,
-          cancel_reason: payment ? payment.cancel_reason : null
+          cancel_reason: payment ? payment.cancel_reason : (otherRev ? otherRev.cancel_reason : null),
+          is_other_revenue: !!otherRev
         };
       });
   },
@@ -1003,17 +1347,43 @@ const Store = {
    */
   getReceiptByPublicToken(token) {
     if (!token) return null;
-    const receipt = this.data.receipts.find(r => r.public_token === token);
-    if (!receipt) return null;
 
-    const payment = this.data.payments.find(p => p.id === receipt.payment_id);
-    const student = payment ? this.getStudentById(payment.student_id) : null;
-    const cls = student ? this.getClassById(student.class_id) : null;
+    let targetData = this.data;
+    let receipt = targetData && targetData.receipts ? targetData.receipts.find(r => r.public_token === token) : null;
+
+    // Si non trouvé dans l'école courante, chercher dans toutes les écoles locales
+    if (!receipt) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('gp_store_') || key.startsWith('gestion_prescolaire_store'))) {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(key));
+            if (parsed && Array.isArray(parsed.receipts)) {
+              const found = parsed.receipts.find(r => r.public_token === token);
+              if (found) {
+                receipt = found;
+                targetData = parsed;
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (!receipt || !targetData) return null;
+
+    const payment = targetData.payments ? targetData.payments.find(p => p.id === receipt.payment_id) : null;
+    const otherRev = !payment && targetData.other_revenues ? targetData.other_revenues.find(o => o.id === receipt.payment_id || o.receipt_number === receipt.receipt_number) : null;
+    const student = payment && targetData.students ? targetData.students.find(s => s.id === payment.student_id) : null;
+    const cls = student && targetData.classes ? targetData.classes.find(c => c.id === student.class_id) : null;
 
     let objectLabel = "Frais d'inscription";
     if (payment && payment.kind === 'monthly') {
-      const m = this.getMonthById(payment.month_id);
+      const m = targetData.months ? targetData.months.find(month => month.id === payment.month_id) : null;
       objectLabel = `Cotisation ${m ? m.label : 'mensuelle'}`;
+    } else if (otherRev) {
+      objectLabel = `Autre rentrée : ${otherRev.category || 'Général'}`;
     }
 
     return {
@@ -1021,19 +1391,19 @@ const Store = {
       public_token: receipt.public_token,
       issued_at: receipt.issued_at,
       status: receipt.status,
-      amount: payment ? payment.amount : 0,
-      method: payment ? payment.method : 'cash',
-      reference: payment ? payment.reference : null,
+      amount: payment ? payment.amount : (otherRev ? otherRev.amount : 0),
+      method: payment ? payment.method : (otherRev ? (otherRev.payment_method || 'cash') : 'cash'),
+      reference: payment ? payment.reference : (otherRev ? otherRev.motif : null),
       object_label: objectLabel,
-      school_name: this.data.school.name,
-      school_director: this.data.school.director_name,
-      school_phone: this.data.school.director_phone,
-      school_address: this.data.school.address,
-      school_commune: this.data.school.commune,
-      school_region: this.data.school.region,
-      student_name: student ? `${student.last_name} ${student.first_names}` : '-',
-      class_name: cls ? cls.name : '-',
-      parent_name: student ? student.parent_name : '-',
+      school_name: targetData.school ? targetData.school.name : 'Établissement Scolaire',
+      school_director: targetData.school ? targetData.school.director_name : 'Direction',
+      school_phone: targetData.school ? targetData.school.director_phone : '',
+      school_address: targetData.school ? targetData.school.address : '',
+      school_commune: targetData.school ? targetData.school.commune : '',
+      school_region: targetData.school ? targetData.school.region : '',
+      student_name: student ? `${student.last_name} ${student.first_names}` : (otherRev && otherRev.payer_name ? `Payeur : ${otherRev.payer_name}` : (otherRev ? otherRev.motif : '-')),
+      class_name: cls ? cls.name : (otherRev ? (otherRev.category || 'Recette diverse') : '-'),
+      parent_name: student ? student.parent_name : (otherRev ? (otherRev.payer_name || '-') : '-'),
       parent_phone: student ? student.parent_phone : '-'
     };
   }
