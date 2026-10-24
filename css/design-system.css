@@ -1186,13 +1186,15 @@ img, svg {
 }
 
 /* ==============================================================================
-   EN-TÊTE SUPÉRIEUR (TOPBAR ACTIONS DESIGN PREMIUM)
+   EN-TÊTE SUPÉRIEUR (TOPBAR ACTIONS DESIGN PREMIUM & RESPONSIVE UNIVERSEL)
    ============================================================================== */
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.app-topbar {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .topbar-school-title {
@@ -1201,12 +1203,20 @@ img, svg {
   color: var(--primary);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   letter-spacing: -0.01em;
 }
 
-.topbar-school-title .topbar-school-icon {
-  font-size: 1.15rem;
+.topbar-school-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.topbar-school-name {
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .topbar-school-title .topbar-school-logo {
@@ -1222,29 +1232,30 @@ img, svg {
 
 /* Bouton Référencer mon école placé avant Installer l'app */
 .btn-topbar-school {
-  background: rgba(30, 58, 138, 0.08);
-  color: #1E3A8A;
-  border: 1px solid rgba(30, 58, 138, 0.25);
+  background: #1E3A8A !important;
+  color: #FFFFFF !important;
+  border: 1px solid #1E3A8A !important;
   padding: 0.45rem 0.85rem;
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(30, 58, 138, 0.25);
+  white-space: nowrap;
+}
+.btn-topbar-school * {
+  color: #FFFFFF !important;
 }
 .btn-topbar-school:hover {
-  background: #1E3A8A;
-  color: #FFFFFF !important;
-  border-color: #1E3A8A;
+  background: #1D4ED8 !important;
+  border-color: #1D4ED8 !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
-}
-.btn-topbar-school:hover span {
-  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.45);
 }
 
 /* Bouton Installer l'app : fond rouge vif et texte strictement blanc */
@@ -1258,10 +1269,12 @@ img, svg {
   font-weight: 700;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 .btn-pwa-topbar-red:hover {
   background-color: #B91C1C !important;
@@ -1277,20 +1290,23 @@ img, svg {
 .btn-topbar-theme {
   background: var(--bg-card);
   color: var(--text-main);
-  border: 1px solid var(--border-light);
-  padding: 0.45rem 0.8rem;
+  border: 1.5px solid var(--border-medium);
+  padding: 0.45rem 0.75rem;
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 .btn-topbar-theme:hover {
   background: var(--bg-subtle);
-  border-color: var(--border-medium);
+  border-color: var(--primary);
   transform: translateY(-1px);
 }
 
@@ -1298,16 +1314,18 @@ img, svg {
 .btn-topbar-logout {
   background: rgba(239, 68, 68, 0.08);
   color: #DC2626;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  padding: 0.45rem 0.85rem;
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  padding: 0.45rem 0.75rem;
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 .btn-topbar-logout:hover {
   background: #DC2626;
@@ -1320,24 +1338,254 @@ img, svg {
   color: #FFFFFF !important;
 }
 
+/* Animation rotation & mise à jour */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.is-spinning {
+  display: inline-block;
+  animation: spin 0.8s linear infinite !important;
+}
+
+/* Bannière flottante de mise à jour PWA prête */
+.pwa-update-banner {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #1E3A8A;
+  color: #FFFFFF;
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 10px 25px -3px rgba(30, 58, 138, 0.45), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.pwa-update-btn {
+  background: #FFFFFF !important;
+  color: #1E3A8A !important;
+  border: none !important;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-weight: 800;
+  font-size: 11px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.pwa-update-btn:hover {
+  transform: scale(1.05);
+}
+
+/* DISPOSITION DESKTOP (>= 768px) */
+@media (min-width: 768px) {
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    gap: 1rem;
+  }
+
+  .topbar-main-row {
+    display: contents;
+  }
+
+  .topbar-school-title {
+    order: 1;
+    min-width: 0;
+  }
+
+  .topbar-actions-group {
+    order: 2;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .topbar-tools-group {
+    order: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+/* DISPOSITION MOBILE (< 768px) */
+@media (max-width: 767px) {
+  .app-topbar {
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0.75rem;
+    gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .topbar-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.4rem;
+  }
+
+  .topbar-school-title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .topbar-school-title .topbar-school-logo {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .topbar-school-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    overflow: hidden;
+    line-height: 1.15;
+  }
+
+  .topbar-school-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 135px;
+  }
+
+  .topbar-school-meta .badge {
+    margin-left: 0 !important;
+    margin-top: 2px;
+    font-size: 9.5px;
+    padding: 1px 6px;
+  }
+
+  .topbar-tools-group {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  /* Bouton Thème en Ligne 1 : Très visible, contrasté et compact */
+  .btn-topbar-theme {
+    padding: 0.35rem 0.55rem;
+    font-size: 11px;
+    font-weight: 700;
+    gap: 0.25rem;
+    border-radius: var(--radius-md);
+  }
+
+  .btn-topbar-logout {
+    padding: 0.35rem 0.55rem;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: var(--radius-md);
+  }
+
+  /* Ligne 2 : Boutons d'actions répartis harmonieusement sans coupure */
+  .topbar-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .topbar-actions-group:empty {
+    display: none !important;
+  }
+
+  .topbar-actions-group .btn-topbar-school {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+    padding: 0.45rem 0.55rem;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .topbar-actions-group .btn-pwa-topbar-red {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.6rem;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Écrans très étroits (< 350px) : empilement propre des deux boutons d'action */
+@media (max-width: 350px) {
+  .topbar-actions-group {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .topbar-actions-group .btn-topbar-school,
+  .topbar-actions-group .btn-pwa-topbar-red {
+    width: 100%;
+  }
+}
+
 /* Mode sombre ajustements */
 [data-theme="dark"] .btn-topbar-school {
-  background: rgba(59, 130, 246, 0.15);
-  color: #93C5FD;
-  border-color: rgba(59, 130, 246, 0.35);
+  background: #2563EB !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
 }
 [data-theme="dark"] .btn-topbar-school:hover {
-  background: #2563EB;
-  color: #FFFFFF !important;
-  border-color: #2563EB;
+  background: #1D4ED8 !important;
+  border-color: #2563EB !important;
 }
 [data-theme="dark"] .btn-topbar-theme {
   background: #1E293B;
-  color: #E2E8F0;
-  border-color: #334155;
+  color: #F8FAFC;
+  border-color: #475569;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 [data-theme="dark"] .btn-topbar-theme:hover {
   background: #334155;
+  border-color: #64748B;
+  color: #FFFFFF;
+}
+[data-theme="dark"] .btn-topbar-logout {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+[data-theme="dark"] .btn-topbar-logout:hover {
+  background: #DC2626;
+  color: #FFFFFF !important;
+  border-color: #DC2626;
 }
 
 /* ==============================================================================

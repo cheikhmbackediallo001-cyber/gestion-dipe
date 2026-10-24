@@ -265,6 +265,7 @@ const App = {
       } else {
         btnAddSchool.innerHTML = '<span>⚙️ Mon établissement</span>';
         btnAddSchool.onclick = () => App.navigate('settings');
+        btnAddSchool.style.display = 'inline-flex';
       }
     }
 
@@ -1995,6 +1996,40 @@ const App = {
           </div>
         ` : ''}
 
+        <!-- Apparence & Thème d'affichage (§ Mode Clair / Mode Sombre) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
+          <div>
+            <div style="font-weight:700; font-size:var(--text-base); color:var(--text-main); display:flex; align-items:center; gap:0.5rem;">
+              <span>🌓</span> <span>Apparence & Thème d'affichage</span>
+            </div>
+            <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.25rem;">
+              Basculez à tout moment entre le Mode Clair et le Mode Sombre selon vos préférences.
+            </p>
+          </div>
+          <div>
+            <button type="button" id="btnSettingToggleTheme" class="btn btn-secondary" onclick="App.toggleTheme()" style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700;">
+              <span>${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Passer en Mode Clair' : '🌙 Passer en Mode Sombre'}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mise à jour & Synchronisation PWA de l'application -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
+          <div>
+            <div style="font-weight:700; font-size:var(--text-base); color:var(--text-main); display:flex; align-items:center; gap:0.5rem;">
+              <span>📲</span> <span>Mise à jour & Synchronisation de l'application</span>
+            </div>
+            <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.25rem; line-height:1.4;">
+              Version : <strong>v1.0.4 (${CONFIG.DEFAULT_SCHOOL_YEAR || '2026-2027'})</strong>. Force le rechargement immédiat de l'application sur votre téléphone pour charger instantanément les dernières corrections sans attendre le cache.
+            </p>
+          </div>
+          <div>
+            <button type="button" id="btnForcePwaUpdate" class="btn btn-primary" onclick="App.forceAppUpdate()" style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700; background:#1E3A8A;">
+              <span>🔄 Actualiser & Forcer la mise à jour</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Édition du Cachet officiel (§ 6) -->
         <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.5rem;">
           <h2 style="font-size:var(--text-lg); margin-bottom:1rem; color:var(--primary); font-weight:700;">Cachet officiel & Coordonnées de l'école</h2>
@@ -3323,14 +3358,90 @@ const App = {
     document.documentElement.setAttribute('data-theme', theme);
     const iconEl = document.getElementById('themeToggleIcon');
     const labelEl = document.getElementById('themeToggleLabel');
+    const themeBtn = document.getElementById('themeToggleBtn');
     if (iconEl && labelEl) {
       if (theme === 'dark') {
         iconEl.textContent = '☀️';
-        labelEl.textContent = 'Mode Clair';
+        labelEl.innerHTML = '<span class="hide-mobile">Mode </span>Clair';
+        if (themeBtn) {
+          themeBtn.setAttribute('title', 'Activer le Mode Clair');
+          themeBtn.setAttribute('aria-label', 'Activer le Mode Clair');
+        }
       } else {
         iconEl.textContent = '🌙';
-        labelEl.textContent = 'Mode Sombre';
+        labelEl.innerHTML = '<span class="hide-mobile">Mode </span>Sombre';
+        if (themeBtn) {
+          themeBtn.setAttribute('title', 'Activer le Mode Sombre');
+          themeBtn.setAttribute('aria-label', 'Activer le Mode Sombre');
+        }
       }
+    }
+    // Mise à jour synchrone du bouton dans Réglages si présent
+    const settingsBtn = document.getElementById('btnSettingToggleTheme');
+    if (settingsBtn) {
+      settingsBtn.innerHTML = theme === 'dark' 
+        ? '<span>☀️ Passer en Mode Clair</span>' 
+        : '<span>🌙 Passer en Mode Sombre</span>';
+    }
+  },
+
+  // ----------------------------------------------------------------------------
+  // ACTUALISATION & SYNCHRONISATION FORCÉE DE L'APPLICATION (PWA & MOBILE)
+  // Purge immédiate de tous les caches et rechargement instantané avec le code frais
+  // ----------------------------------------------------------------------------
+  async forceAppUpdate() {
+    const refreshBtn = document.getElementById('btnTopbarRefresh');
+    const refreshIcon = refreshBtn ? refreshBtn.querySelector('span:first-child') : null;
+    const settingsBtn = document.getElementById('btnForcePwaUpdate');
+    
+    if (refreshIcon) refreshIcon.classList.add('is-spinning');
+    if (settingsBtn) {
+      settingsBtn.disabled = true;
+      settingsBtn.innerHTML = '<span class="is-spinning">🔄</span> <span>Actualisation en cours...</span>';
+    }
+
+    this.showToast("Synchronisation avec le serveur et vérification des mises à jour...", "info");
+
+    try {
+      // 1. Purge intégrale de tous les caches de CacheStorage
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log('[PWA] Caches locaux vidés avec succès :', keys);
+      }
+
+      // 2. Demander à tous les Service Workers de se mettre à jour
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          try {
+            await reg.update();
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          } catch (e) {
+            console.warn('[PWA] Erreur update SW :', e);
+          }
+        }
+      }
+
+      this.showToast("Mise à jour prête ! Chargement de la dernière version...", "success");
+
+      setTimeout(() => {
+        // Redirection avec timestamp unique pour contourner tout cache mémoire
+        const targetUrl = window.location.pathname + '?upd=' + Date.now() + window.location.hash;
+        window.location.replace(targetUrl);
+      }, 500);
+    } catch (err) {
+      console.error('[PWA] Erreur lors de l\'actualisation :', err);
+      window.location.reload();
+    }
+  },
+
+  notifyAppUpdateReady() {
+    const banner = document.getElementById('pwaUpdateBanner');
+    if (banner) {
+      banner.style.display = 'inline-flex';
     }
   },
 
@@ -3690,15 +3801,10 @@ const App = {
             </button>
             <button id="btnViewAddOtherRevenue" class="btn btn-success btn-sm" onclick="App.openAddOtherRevenueModal()" style="background:#16A34A; color:#FFFFFF; border-color:#16A34A;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>+ Autre entrée</span>
+              <span>Autre entrée</span>
             </button>
           </div>
         </div>
-      </div>
-
-      <!-- Bandeau explicatif officiel -->
-      <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-left:4px solid #3B82F6; padding:0.875rem 1.25rem; border-radius:var(--radius-md); font-size:var(--text-sm); color:#1E40AF; margin-bottom:1.25rem; line-height:1.5;">
-        ℹ️ <strong>Rubrique Autres Entrées :</strong> Cette section est exclusivement dédiée aux entrées d'argent hors inscriptions et cotisations mensuelles des élèves (dons, cantine scolaire, vente de tenues/blouses, activités périscolaires, kermesse, etc.). Elle reste vierge tant qu'aucune rentrée spécifique n'a été saisie.
       </div>
 
       <!-- KPI Synthèse Autres Entrées UNIQUEMENT (isolé des inscriptions et cotisations) -->

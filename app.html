@@ -51,9 +51,9 @@
   </script>
 
   <!-- Design System & Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=20261023_v1">
-  <link rel="stylesheet" href="css/app.css?v=20261023_v1">
-  <link rel="stylesheet" href="css/receipt.css?v=20261023_v1">
+  <link rel="stylesheet" href="css/design-system.css?v=20261024_v4">
+  <link rel="stylesheet" href="css/app.css?v=20261024_v4">
+  <link rel="stylesheet" href="css/receipt.css?v=20261024_v4">
 
   <!-- PWA Configuration & Official App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -138,14 +138,39 @@
       <!-- Topbar supérieure -->
       <!-- Topbar supérieure refaite, épurée et ultra-professionnelle -->
       <header class="app-topbar">
-        <div class="topbar-school-title">
-          <img src="images/logo.png" alt="Logo officiel Gestion Préscolaire" class="topbar-school-logo" id="topbarSchoolLogo" width="36" height="36">
-          <span id="topbarSchoolName">Gestion Préscolaire</span>
-          <span class="badge badge-warning" id="topbarDemoBadge" style="margin-left:0.5rem; font-size:11px; display:none;">Espace Démo</span>
+        <div class="topbar-main-row">
+          <div class="topbar-school-title">
+            <img src="images/logo.png" alt="Logo officiel Gestion Préscolaire" class="topbar-school-logo" id="topbarSchoolLogo" width="34" height="34">
+            <div class="topbar-school-meta">
+              <span id="topbarSchoolName" class="topbar-school-name">Gestion Préscolaire</span>
+              <span class="badge badge-warning" id="topbarDemoBadge" style="display:none;">Espace Démo</span>
+            </div>
+          </div>
+
+          <div class="topbar-tools-group">
+            <!-- Bouton Actualiser l'application (Purge cache & mise à jour immédiate) -->
+            <button type="button" id="btnTopbarRefresh" class="btn-topbar-theme" onclick="App.forceAppUpdate()" title="Rechercher et appliquer les dernières mises à jour" aria-label="Actualiser l'application">
+              <span>🔄</span>
+              <span class="btn-text hide-mobile">Actualiser</span>
+            </button>
+
+            <!-- Bouton Mode Sombre / Mode Clair -->
+            <button type="button" id="themeToggleBtn" class="btn-topbar-theme" onclick="App.toggleTheme()" aria-label="Basculer entre Mode Clair et Mode Sombre" title="Basculer Mode Clair / Sombre">
+              <span id="themeToggleIcon">🌙</span>
+              <span id="themeToggleLabel" class="btn-text"><span class="hide-mobile">Mode </span>Sombre</span>
+            </button>
+
+            <!-- Bouton Déconnexion -->
+            <button type="button" class="btn-topbar-logout" onclick="App.handleLogout()" title="Fermer la session de l'établissement" aria-label="Se déconnecter">
+              <span class="logout-icon">⏻</span>
+              <span class="btn-text hide-mobile">Déconnexion</span>
+            </button>
+          </div>
         </div>
-        <div class="topbar-actions">
+
+        <div class="topbar-actions-group" id="topbarActionsGroup">
           <!-- Bouton Référencer mon école visible et cliquable -->
-          <button type="button" id="btnTopbarAddSchool" class="btn btn-sm btn-primary" onclick="App.openReferenceSchoolModal()" style="display:inline-flex; align-items:center; gap:0.4rem; background:#1E3A8A; font-weight:700;" title="Configurer les coordonnées, sections et cachet de votre propre école">
+          <button type="button" id="btnTopbarAddSchool" class="btn-topbar-school" onclick="App.openReferenceSchoolModal()" title="Configurer les coordonnées, sections et cachet de votre propre école">
             <span>+ Référencer mon école</span>
           </button>
 
@@ -153,18 +178,6 @@
           <button type="button" id="btnPwaInstallApp" class="btn-pwa-topbar-red" onclick="App.triggerPwaInstall()" title="Télécharger et installer l'application sur votre écran d'accueil">
             <span class="pwa-icon">📲</span>
             <span class="btn-text">Installer l'app</span>
-          </button>
-
-          <!-- 3. Bouton Mode Sombre / Mode Clair -->
-          <button type="button" id="themeToggleBtn" class="btn-topbar-theme" onclick="App.toggleTheme()" aria-label="Basculer entre Mode Clair et Mode Sombre" title="Mode Clair / Sombre">
-            <span id="themeToggleIcon">🌙</span>
-            <span id="themeToggleLabel" class="btn-text">Mode Sombre</span>
-          </button>
-
-          <!-- 4. Bouton Déconnexion -->
-          <button type="button" class="btn-topbar-logout" onclick="App.handleLogout()" title="Fermer la session de l'établissement">
-            <span>⏻</span>
-            <span class="btn-text hide-mobile">Déconnexion</span>
           </button>
         </div>
       </header>
@@ -847,26 +860,75 @@
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=20261023_v1"></script>
-  <script src="js/utils.js?v=20261023_v1"></script>
-  <script src="js/stamp.js?v=20261023_v1"></script>
-  <script src="js/supabase.js?v=20261023_v1"></script>
-  <script src="js/auth.js?v=20261023_v1"></script>
-  <script src="js/demo-data.js?v=20261023_v1"></script>
-  <script src="js/store.js?v=20261023_v1"></script>
+  <script src="js/config.js?v=20261024_v4"></script>
+  <script src="js/utils.js?v=20261024_v4"></script>
+  <script src="js/stamp.js?v=20261024_v4"></script>
+  <script src="js/supabase.js?v=20261024_v4"></script>
+  <script src="js/auth.js?v=20261024_v4"></script>
+  <script src="js/demo-data.js?v=20261024_v4"></script>
+  <script src="js/store.js?v=20261024_v4"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20261023_v1"></script>
+  <script src="js/app.js?v=20261024_v4"></script>
+
+  <!-- Bannière flottante de mise à jour PWA -->
+  <div id="pwaUpdateBanner" class="pwa-update-banner" role="status" aria-live="polite">
+    <span>✨ Nouvelle version prête</span>
+    <button type="button" class="pwa-update-btn" onclick="App.forceAppUpdate()">
+      Actualiser
+    </button>
+  </div>
+
+  <!-- Gestionnaire PWA & Mises à jour instantanées -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.getRegistrations().then(regs => {
-          for (let reg of regs) {
-            reg.update();
+      window.addEventListener('load', async () => {
+        try {
+          // 1. Mettre à jour tous les workers existants sur l'appareil
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) {
+            reg.update().catch(() => {});
           }
-        });
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1').catch(err => {
+
+          // 2. Enregistrement canonique de ./sw.js sans query string
+          const reg = await navigator.serviceWorker.register('./sw.js');
+          reg.update().catch(() => {});
+
+          // 3. Détection de mise à jour en cours d'installation
+          reg.addEventListener('updatefound', () => {
+            const installing = reg.installing;
+            if (installing) {
+              installing.addEventListener('statechange', () => {
+                if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[PWA] Nouvelle version installée en arrière-plan.');
+                  const banner = document.getElementById('pwaUpdateBanner');
+                  if (banner) banner.style.display = 'inline-flex';
+                }
+              });
+            }
+          });
+        } catch (err) {
           console.warn('[PWA] SW register error:', err);
-        });
+        }
+      });
+
+      // 4. Rechargement immédiat et fluide quand le nouveau SW prend les commandes
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          console.log('[PWA] Nouveau Service Worker activé : rechargement automatique...');
+          window.location.reload();
+        }
+      });
+
+      // 5. Vérification systématique lors du retour sur l'application (déverrouillage téléphone / switch d'onglets)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update().catch(() => {})));
+        }
+      });
+      window.addEventListener('focus', () => {
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update().catch(() => {})));
       });
     }
   </script>

@@ -123,42 +123,7 @@
   padding-bottom: 72px; /* Dégagement pour barre mobile */
 }
 
-/* En-tête supérieur de l'application */
-.app-topbar {
-  background-color: var(--bg-card);
-  border-bottom: 1px solid var(--border-light);
-  padding: 0.875rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 40;
-}
-
-.topbar-school-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-@media (max-width: 600px) {
-  #themeToggleLabel {
-    display: none;
-  }
-  .topbar-school-title {
-    font-size: 0.95rem;
-  }
-}
+/* En-tête supérieur de l'application (Défini et harmonisé dans design-system.css) */
 
 .app-container {
   padding: 1.25rem;

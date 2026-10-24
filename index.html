@@ -32,9 +32,9 @@
   <link rel="apple-touch-icon" href="images/logo.png">
 
   <!-- Feuilles de style -->
-  <link rel="stylesheet" href="css/design-system.css?v=20261021_rev3">
-  <link rel="stylesheet" href="css/landing.css?v=20261021_rev3">
-  <link rel="stylesheet" href="css/receipt.css?v=20261021_rev3">
+  <link rel="stylesheet" href="css/design-system.css?v=20261024_v4">
+  <link rel="stylesheet" href="css/landing.css?v=20261024_v4">
+  <link rel="stylesheet" href="css/receipt.css?v=20261024_v4">
 
   <style>
     /* Disposition minimale sublimée avec Motion Design pour la page d'accueil */
@@ -932,26 +932,46 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/config.js?v=20261023_v1"></script>
-  <script src="js/utils.js?v=20261023_v1"></script>
-  <script src="js/stamp.js?v=20261023_v1"></script>
-  <script src="js/supabase.js?v=20261023_v1"></script>
-  <script src="js/auth.js?v=20261023_v1"></script>
-  <script src="js/demo-data.js?v=20261023_v1"></script>
-  <script src="js/store.js?v=20261023_v1"></script>
-  <script src="js/onboarding.js?v=20261023_v1"></script>
-  <script src="js/landing.js?v=20261023_v1"></script>
+  <script src="js/config.js?v=20261024_v4"></script>
+  <script src="js/utils.js?v=20261024_v4"></script>
+  <script src="js/stamp.js?v=20261024_v4"></script>
+  <script src="js/supabase.js?v=20261024_v4"></script>
+  <script src="js/auth.js?v=20261024_v4"></script>
+  <script src="js/demo-data.js?v=20261024_v4"></script>
+  <script src="js/store.js?v=20261024_v4"></script>
+  <script src="js/onboarding.js?v=20261024_v4"></script>
+  <script src="js/landing.js?v=20261024_v4"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.getRegistrations().then(regs => {
-          for (let reg of regs) {
-            reg.update();
+      window.addEventListener('load', async () => {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) {
+            reg.update().catch(() => {});
           }
-        });
-        navigator.serviceWorker.register('./sw.js?v=20261023_v1').catch(err => {
-          console.warn('[PWA] Service Worker registration failed:', err);
-        });
+          const reg = await navigator.serviceWorker.register('./sw.js');
+          reg.update().catch(() => {});
+        } catch (err) {
+          console.warn('[PWA] SW register error:', err);
+        }
+      });
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          console.log('[PWA] Nouveau Service Worker activé : rechargement...');
+          window.location.reload();
+        }
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update().catch(() => {})));
+        }
+      });
+      window.addEventListener('focus', () => {
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update().catch(() => {})));
       });
     }
   </script>
