@@ -818,16 +818,18 @@ const App = {
                   </td>
                   <td data-label="Actions / Reçu" style="text-align:right;">
                     ${isPaid ? `
-                      <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end;">
+                      <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end; flex-wrap:wrap;">
                         <button class="btn btn-secondary btn-sm" onclick="App.openEditPaymentModal('${payment.id}')" title="Modifier ce paiement (somme, date, mode)" style="padding:0.35rem 0.55rem;">
                           ✎
                         </button>
-                        <button class="btn btn-outline-primary btn-sm" onclick="App.viewReceipt('${payment.id}')" title="Afficher et imprimer le reçu officiel">
+                        <button class="btn btn-outline-primary btn-sm" onclick="App.viewReceipt('${payment.id}')" title="Afficher le reçu officiel A5">
                           📄 Reçu
                         </button>
-                        <button class="btn btn-whatsapp btn-sm" onclick="App.shareWhatsApp('${payment.id}')" title="Envoyer le reçu au parent sur WhatsApp" style="padding:0.35rem 0.55rem; font-size:12px;">
-                          <span>📲</span>
-                          <span>WhatsApp</span>
+                        <button class="btn btn-whatsapp btn-sm" onclick="App.shareReceiptPNG('${payment.id}')" title="Envoyer le reçu officiel en image PNG sur WhatsApp" style="padding:0.35rem 0.55rem; font-size:12px; background:#25D366; color:#FFFFFF; border:none; font-weight:700;">
+                          <span>📲 WhatsApp (PNG)</span>
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="App.downloadReceiptPNG('${payment.id}')" title="Télécharger le reçu officiel en image PNG" style="padding:0.35rem 0.55rem; font-size:12px;">
+                          <span>📥 PNG</span>
                         </button>
                       </div>
                     ` : `
@@ -1084,16 +1086,18 @@ const App = {
                     </td>
                     <td data-label="Actions / Reçu" style="text-align:right;">
                       ${isPaid ? `
-                        <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end;">
+                        <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end; flex-wrap:wrap;">
                           <button class="btn btn-secondary btn-sm" onclick="App.openEditPaymentModal('${payment.id}')" title="Modifier cette cotisation (somme, date, mode)" style="padding:0.35rem 0.55rem;">
                             ✎
                           </button>
-                          <button class="btn btn-outline-primary btn-sm" onclick="App.viewReceipt('${payment.id}')" title="Afficher et imprimer le reçu officiel">
+                          <button class="btn btn-outline-primary btn-sm" onclick="App.viewReceipt('${payment.id}')" title="Afficher le reçu officiel A5">
                             📄 Reçu
                           </button>
-                          <button class="btn btn-whatsapp btn-sm" onclick="App.shareWhatsApp('${payment.id}')" title="Envoyer le reçu au parent sur WhatsApp" style="padding:0.35rem 0.55rem; font-size:12px;">
-                            <span>📲</span>
-                            <span>WhatsApp</span>
+                          <button class="btn btn-whatsapp btn-sm" onclick="App.shareReceiptPNG('${payment.id}')" title="Envoyer le reçu officiel en image PNG sur WhatsApp" style="padding:0.35rem 0.55rem; font-size:12px; background:#25D366; color:#FFFFFF; border:none; font-weight:700;">
+                            <span>📲 WhatsApp (PNG)</span>
+                          </button>
+                          <button class="btn btn-outline-primary btn-sm" onclick="App.downloadReceiptPNG('${payment.id}')" title="Télécharger le reçu officiel en image PNG" style="padding:0.35rem 0.55rem; font-size:12px;">
+                            <span>📥 PNG</span>
                           </button>
                         </div>
                       ` : `
@@ -2357,14 +2361,18 @@ const App = {
   },
 
   // ----------------------------------------------------------------------------
-  // AFFICHAGE & ÉMISSION DU REÇU OFFICIEL FORMAT A5 (§ 7)
   // ----------------------------------------------------------------------------
-  viewReceipt(paymentId) {
+  // AFFICHAGE & ÉMISSION DU REÇU OFFICIEL FORMAT A5 EN IMAGE PNG (§ 7)
+  // Reçu en image PNG haute définition (CORS & vectoriel) - Aucun lien envoyé
+  // ----------------------------------------------------------------------------
+  getReceiptDocumentHtml(paymentId) {
     const receipt = Store.data.receipts ? Store.data.receipts.find(r => r.payment_id === paymentId || r.id === paymentId) : null;
     const payment = Store.data.payments ? Store.data.payments.find(p => p.id === paymentId) : null;
     const otherRev = !payment && Store.data.other_revenues ? Store.data.other_revenues.find(o => o.id === paymentId || (receipt && o.receipt_number === receipt.receipt_number)) : null;
 
-    if (!receipt || (!payment && !otherRev)) return;
+    if (!receipt || (!payment && !otherRev)) {
+      return '<div style="padding:2rem; text-align:center; color:var(--text-muted);">Reçu introuvable</div>';
+    }
 
     const school = Store.getSchool();
     let student = null;
@@ -2408,65 +2416,62 @@ const App = {
     const qrSvg = Utils.generateQRCodeSVG(verifyUrl, 84);
     const stampSvg = SchoolStamp.generateSVG(school, 155, false);
 
-    const modal = document.getElementById('receiptModal');
-    const container = document.getElementById('receiptModalBody');
-
-    container.innerHTML = `
-      <div class="receipt-document">
+    return `
+      <div class="receipt-document" style="background:#FFFFFF; color:#0F172A; padding:1.75rem; border-radius:12px; font-family:'Inter', sans-serif; box-shadow:0 4px 20px rgba(0,0,0,0.06); position:relative; overflow:hidden;">
         ${receipt.status === 'cancelled' ? `
           <div class="receipt-watermark-cancelled">ANNULÉ</div>
         ` : ''}
 
         <!-- En-tête -->
-        <div class="receipt-header">
+        <div class="receipt-header" style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0F172A; padding-bottom:1rem; margin-bottom:1.25rem; gap:1rem;">
           <div class="receipt-school-info">
-            <h2>${Utils.escapeHtml(school.name)}</h2>
-            <div class="receipt-school-meta">
+            <h2 style="font-size:1.25rem; font-weight:800; color:#1E3A8A; margin-bottom:0.25rem; text-transform:uppercase;">${Utils.escapeHtml(school.name)}</h2>
+            <div class="receipt-school-meta" style="font-size:0.875rem; color:#475569; line-height:1.4;">
               ${school.address ? `<div>${Utils.escapeHtml(school.address)}</div>` : ''}
-              <div>${Utils.escapeHtml(school.commune)}, ${Utils.escapeHtml(school.region)} — Sénégal</div>
-              <div>Tél : ${Utils.escapeHtml(school.director_phone)}</div>
+              <div>${Utils.escapeHtml(school.commune || '')}, ${Utils.escapeHtml(school.region || '')} — Sénégal</div>
+              <div>Tél : ${Utils.escapeHtml(school.director_phone || '')}</div>
             </div>
           </div>
-          <div class="receipt-title-box">
-            <span class="receipt-badge-title">REÇU DE PAIEMENT</span>
-            <div class="receipt-number">${Utils.escapeHtml(receipt.receipt_number)}</div>
-            <div class="receipt-datetime">${Utils.formatDateTime(receipt.issued_at)}</div>
+          <div class="receipt-title-box" style="text-align:right; min-width:170px;">
+            <span class="receipt-badge-title" style="display:inline-block; background-color:#1E3A8A; color:#FFFFFF; font-weight:700; font-size:0.95rem; letter-spacing:0.5px; padding:0.35rem 0.75rem; border-radius:4px;">REÇU OFFICIEL</span>
+            <div class="receipt-number" style="font-family:monospace; font-size:1.1rem; font-weight:800; color:#0F172A; margin-top:0.35rem;">${Utils.escapeHtml(receipt.receipt_number)}</div>
+            <div class="receipt-datetime" style="font-size:0.8rem; color:#64748B; margin-top:0.2rem;">${Utils.formatDateTime(receipt.issued_at)}</div>
           </div>
         </div>
 
         <!-- Corps du reçu -->
         <div class="receipt-body">
-          <div class="receipt-info-grid">
-            <div class="receipt-row">
-              <span class="receipt-label">${payment ? 'Élève' : 'Bénéficiaire / Payeur'}</span>
-              ${studentNameHtml}
+          <div class="receipt-info-grid" style="display:grid; grid-template-columns:1fr; gap:0.5rem; margin-bottom:1.25rem; font-size:0.95rem;">
+            <div class="receipt-row" style="display:flex; justify-content:space-between; border-bottom:1px dashed #E2E8F0; padding:0.4rem 0;">
+              <span class="receipt-label" style="font-weight:600; color:#64748B;">${payment ? 'Élève inscrit' : 'Bénéficiaire / Payeur'} :</span>
+              <span style="font-weight:700; color:#0F172A;">${studentNameHtml}</span>
             </div>
-            <div class="receipt-row">
-              <span class="receipt-label">Classe / Rubrique</span>
-              <span class="receipt-value">${Utils.escapeHtml(classNameStr)}</span>
+            <div class="receipt-row" style="display:flex; justify-content:space-between; border-bottom:1px dashed #E2E8F0; padding:0.4rem 0;">
+              <span class="receipt-label" style="font-weight:600; color:#64748B;">Classe / Rubrique :</span>
+              <span class="receipt-value" style="font-weight:700; color:#0F172A;">${Utils.escapeHtml(classNameStr)}</span>
             </div>
-            <div class="receipt-row">
-              <span class="receipt-label">Parent / Contact</span>
-              <span class="receipt-value">${Utils.escapeHtml(parentNameStr)}</span>
+            <div class="receipt-row" style="display:flex; justify-content:space-between; border-bottom:1px dashed #E2E8F0; padding:0.4rem 0;">
+              <span class="receipt-label" style="font-weight:600; color:#64748B;">Parent / Contact :</span>
+              <span class="receipt-value" style="font-weight:700; color:#0F172A;">${Utils.escapeHtml(parentNameStr)}</span>
             </div>
-            <div class="receipt-row">
-              <span class="receipt-label">Objet du versement</span>
-              <span class="receipt-value">${Utils.escapeHtml(objectLabel)}</span>
+            <div class="receipt-row" style="display:flex; justify-content:space-between; border-bottom:1px dashed #E2E8F0; padding:0.4rem 0;">
+              <span class="receipt-label" style="font-weight:600; color:#64748B;">Objet du versement :</span>
+              <span class="receipt-value" style="font-weight:700; color:#1E3A8A;">${Utils.escapeHtml(objectLabel)}</span>
             </div>
           </div>
 
           <!-- Montant officiel -->
-          <div class="receipt-amount-card">
-            <div class="receipt-amount-header">
-              <span style="font-weight:700; font-size:0.95rem; text-transform:uppercase;">Montant réglé :</span>
-              <span class="receipt-amount-figures">${Utils.formatFCFA(amount)}</span>
+          <div class="receipt-amount-card" style="background:#F8FAFC; border:1.5px solid #CBD5E1; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1.25rem;">
+            <div class="receipt-amount-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+              <span style="font-weight:800; font-size:0.95rem; text-transform:uppercase; color:#334155;">Montant réglé :</span>
+              <span class="receipt-amount-figures" style="font-size:1.6rem; font-weight:900; color:#16A34A; letter-spacing:-0.5px;">${Utils.formatFCFA(amount)}</span>
             </div>
-            <div class="receipt-amount-words">
+            <div class="receipt-amount-words" style="font-size:0.875rem; color:#475569; margin-bottom:0.5rem; font-style:italic;">
               Soit : <strong>${Utils.escapeHtml(amountInWords)}</strong>
             </div>
-            <div class="receipt-payment-details">
-              <span>Mode : <strong>${Utils.escapeHtml(method.toUpperCase())}</strong> ${reference ? `(Réf : ${Utils.escapeHtml(reference)})` : ''}</span>
-              <span style="color:#16A34A; font-weight:700;">Situation : Réglé en totalité</span>
+            <div class="receipt-payment-details" style="display:flex; justify-content:space-between; font-size:0.85rem; border-top:1px solid #E2E8F0; padding-top:0.45rem;">
+              <span>Règlement : <strong>${Utils.escapeHtml(method.toUpperCase())}</strong> ${reference ? `(Réf : ${Utils.escapeHtml(reference)})` : ''}</span>
+              <span style="color:#16A34A; font-weight:800;">✓ Situation : Réglé en totalité</span>
             </div>
           </div>
 
@@ -2477,44 +2482,56 @@ const App = {
           ` : ''}
 
           <!-- Signatures, Cachet & QR Code -->
-          <div class="receipt-signatures-area">
-            <div class="receipt-qr-box">
+          <div class="receipt-signatures-area" style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:1.25rem; padding-top:1rem; border-top:1px solid #E2E8F0;">
+            <div class="receipt-qr-box" style="text-align:center;">
               <div class="qr-wrapper">${qrSvg}</div>
-              <div class="receipt-qr-caption">Scannez pour vérifier l'authenticité</div>
+              <div class="receipt-qr-caption" style="font-size:10px; color:#64748B; margin-top:4px;">Authenticité certifiée</div>
             </div>
 
-            <div class="receipt-stamp-box">
+            <div class="receipt-stamp-box" style="display:flex; align-items:center; justify-content:center;">
               ${stampSvg}
             </div>
 
-            <div class="receipt-director-box">
-              <span class="receipt-signature-title">Le Directeur</span>
-              <div class="receipt-signature-line"></div>
-              <span class="receipt-director-name">${Utils.escapeHtml(school.director_name)}</span>
+            <div class="receipt-director-box" style="text-align:center; min-width:150px;">
+              <span class="receipt-signature-title" style="font-size:0.85rem; font-weight:700; color:#334155;">Le Directeur</span>
+              <div class="receipt-signature-line" style="height:35px; border-bottom:1px dashed #94A3B8; margin-bottom:4px;"></div>
+              <span class="receipt-director-name" style="font-size:0.85rem; font-weight:700; color:#0F172A;">${Utils.escapeHtml(school.director_name)}</span>
             </div>
           </div>
 
           <!-- Pied de page officiel -->
-          <div class="receipt-footer-text">
-            <span>Document généré par Gestion Préscolaire</span>
-            <span>Jeton sécurisé : ${receipt.public_token.substring(0, 16)}...</span>
+          <div class="receipt-footer-text" style="display:flex; justify-content:space-between; font-size:10.5px; color:#94A3B8; margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid #F1F5F9;">
+            <span>Reçu officiel certifié — Gestion Préscolaire</span>
+            <span>Document original authentique</span>
           </div>
         </div>
       </div>
+    `;
+  },
 
-      <!-- Barre d'outils (Partage WhatsApp, PDF, Imprimer) -->
-      <div class="receipt-actions-toolbar no-print">
-        <div class="receipt-actions-group">
-          <button class="btn btn-whatsapp btn-sm" onclick="App.shareWhatsApp('${payment.id}')">
-            <span>📲 Partager par WhatsApp</span>
+  viewReceipt(paymentId) {
+    const modal = document.getElementById('receiptModal');
+    const container = document.getElementById('receiptModalBody');
+    if (!modal || !container) return;
+
+    const receipt = Store.data.receipts ? Store.data.receipts.find(r => r.payment_id === paymentId || r.id === paymentId) : null;
+    const targetId = receipt ? (receipt.payment_id || receipt.id) : paymentId;
+    const receiptHtml = this.getReceiptDocumentHtml(targetId);
+
+    container.innerHTML = `
+      ${receiptHtml}
+
+      <!-- Barre d'outils (Export PNG exclusif, Partage WhatsApp Image PNG, Impression A5) -->
+      <div class="receipt-actions-toolbar no-print" style="margin-top:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <div class="receipt-actions-group" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+          <button class="btn btn-whatsapp btn-sm" onclick="App.shareReceiptPNG('${targetId}')" title="Envoyer le reçu en image PNG au parent sur WhatsApp" style="background:#25D366; color:#FFFFFF; border:none; font-weight:700; padding:0.5rem 0.85rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem; box-shadow:0 2px 6px rgba(37, 211, 102, 0.3);">
+            <span>📲 Partager l'image PNG (WhatsApp)</span>
           </button>
-          <button class="btn btn-primary btn-sm" onclick="window.print()">
+          <button class="btn btn-primary btn-sm" onclick="App.downloadReceiptPNG('${targetId}')" title="Télécharger l'image PNG haute définition" style="background:#1E3A8A; font-weight:700; padding:0.5rem 0.85rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;">
+            <span>📥 Télécharger l'image PNG</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="window.print()" title="Imprimer le reçu officiel A5" style="padding:0.5rem 0.85rem; border-radius:8px;">
             <span>🖨️ Imprimer (A5)</span>
-          </button>
-        </div>
-        <div>
-          <button class="btn btn-secondary btn-sm" onclick="App.copyReceiptLink('${receipt.public_token}')">
-            🔗 Copier le lien sécurisé
           </button>
         </div>
       </div>
@@ -2523,42 +2540,159 @@ const App = {
     modal.classList.add('is-open');
   },
 
-  shareWhatsApp(paymentId) {
-    const payment = Store.data.payments.find(p => p.id === paymentId);
-    const receipt = Store.data.receipts.find(r => r.payment_id === paymentId);
-    const student = payment ? Store.getStudentById(payment.student_id) : null;
-    const school = Store.getSchool();
+  async renderReceiptToBlob(paymentId) {
+    const receipt = Store.data.receipts ? Store.data.receipts.find(r => r.payment_id === paymentId || r.id === paymentId) : null;
+    const payment = Store.data.payments ? Store.data.payments.find(p => p.id === paymentId) : null;
+    const otherRev = !payment && Store.data.other_revenues ? Store.data.other_revenues.find(o => o.id === paymentId || (receipt && o.receipt_number === receipt.receipt_number)) : null;
 
-    let objectText = "l'inscription";
-    if (payment && payment.kind === 'monthly') {
-      const m = Store.getMonthById(payment.month_id);
-      objectText = `la cotisation de ${m ? m.label : 'mensualité'}`;
+    if (!receipt) throw new Error("Reçu introuvable.");
+
+    // Récupérer ou créer l'élément du document
+    let docEl = document.querySelector('#receiptModal .receipt-document');
+    let tempContainer = null;
+
+    if (!docEl) {
+      tempContainer = document.createElement('div');
+      tempContainer.id = 'tempReceiptCaptureContainer';
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '640px';
+      tempContainer.style.background = '#FFFFFF';
+      tempContainer.style.zIndex = '-9999';
+      tempContainer.innerHTML = this.getReceiptDocumentHtml(paymentId);
+      document.body.appendChild(tempContainer);
+      docEl = tempContainer.querySelector('.receipt-document') || tempContainer;
     }
 
-    const verifyUrl = `${window.location.origin}${window.location.pathname.replace('app.html', '')}verify.html?token=${receipt.public_token}`;
-    const studentName = student ? `${student.first_names} ${student.last_name}` : 'votre enfant';
-
-    const message = `Bonjour,\n\nVoici le reçu officiel de paiement n° ${receipt.receipt_number} de ${school.name} pour ${studentName} (${objectText}) d'un montant de ${Utils.formatFCFA(payment.amount)}.\n\nVous pouvez consulter et télécharger votre reçu sécurisé à tout moment sur ce lien :\n${verifyUrl}\n\nCordialement,\nLa Direction`;
-
-    let waPhone = '';
-    if (student && student.parent_phone) {
-      waPhone = Utils.toWhatsAppPhone(student.parent_phone);
+    if (typeof html2canvas === 'undefined') {
+      throw new Error("Bibliothèque html2canvas non chargée.");
     }
 
-    const waUrl = waPhone 
-      ? `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const canvas = await html2canvas(docEl, {
+      scale: 2, // 2x haute résolution pour une qualité d'image A5 exceptionnelle
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#FFFFFF',
+      logging: false
+    });
 
-    window.open(waUrl, '_blank');
+    if (tempContainer && tempContainer.parentNode) {
+      tempContainer.parentNode.removeChild(tempContainer);
+    }
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve({
+          blob,
+          dataUrl: canvas.toDataURL('image/png'),
+          receipt,
+          payment,
+          otherRev
+        });
+      }, 'image/png', 1.0);
+    });
   },
 
-  copyReceiptLink(token) {
-    const link = `${window.location.origin}${window.location.pathname.replace('app.html', '')}verify.html?token=${token}`;
-    navigator.clipboard.writeText(link).then(() => {
-      this.showToast("Lien sécurisé copié dans le presse-papier !", "success");
-    }).catch(() => {
-      prompt("Voici le lien du reçu à copier :", link);
-    });
+  async downloadReceiptPNG(paymentId) {
+    try {
+      this.showToast("Génération de l'image PNG en cours...", "info");
+      const { blob, receipt } = await this.renderReceiptToBlob(paymentId);
+      const cleanNum = (receipt.receipt_number || 'recu').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `recu_officiel_${cleanNum}.png`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 500);
+      this.showToast(`✓ Reçu officiel N° ${receipt.receipt_number} téléchargé en image PNG !`, "success");
+    } catch (err) {
+      console.error("Erreur téléchargement PNG:", err);
+      alert("Erreur lors de la génération de l'image PNG : " + err.message);
+    }
+  },
+
+  async shareReceiptPNG(paymentId) {
+    try {
+      this.showToast("Préparation de l'image PNG du reçu...", "info");
+      const { blob, receipt, payment, otherRev } = await this.renderReceiptToBlob(paymentId);
+      const school = Store.getSchool();
+      const cleanNum = (receipt.receipt_number || 'recu').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `recu_officiel_${cleanNum}.png`;
+      const pngFile = new File([blob], filename, { type: 'image/png' });
+
+      let student = payment ? Store.getStudentById(payment.student_id) : null;
+      let studentName = student ? `${student.first_names} ${student.last_name}` : 'votre enfant';
+      let objectText = "l'inscription";
+      let amount = payment ? payment.amount : (otherRev ? otherRev.amount : 0);
+
+      if (payment && payment.kind === 'monthly') {
+        const m = Store.getMonthById(payment.month_id);
+        objectText = `la cotisation de ${m ? m.label : 'mensualité'}`;
+      } else if (otherRev) {
+        objectText = otherRev.motif || "paiement";
+      }
+
+      const captionText = `Reçu officiel N° ${receipt.receipt_number} — ${school.name} pour ${studentName} (${objectText}) : ${Utils.formatFCFA(amount)}`;
+
+      // 1. Partage natif direct du fichier image PNG (Android, iPhone / iPad)
+      if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
+        await navigator.share({
+          files: [pngFile],
+          title: `Reçu officiel N° ${receipt.receipt_number}`,
+          text: captionText
+        });
+        this.showToast("✓ Image PNG du reçu partagée avec succès !", "success");
+        return;
+      }
+
+      // 2. Si le partage natif de fichier n'est pas supporté (ex: PC / Navigateurs sans partage de fichier) :
+      // Télécharger immédiatement l'image PNG
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 500);
+
+      // Copie dans le presse-papier si possible
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        } catch(e) {}
+      }
+
+      // Ouvrir WhatsApp avec message d'accompagnement (ZÉRO LIEN WEB)
+      let waPhone = '';
+      if (student && student.parent_phone) {
+        waPhone = Utils.toWhatsAppPhone(student.parent_phone);
+      }
+      const waMsg = `Bonjour,\n\nVeuillez trouver ci-joint l'image du reçu officiel de paiement n° ${receipt.receipt_number} de ${school.name} pour ${studentName} (${objectText}) d'un montant de ${Utils.formatFCFA(amount)}.\n\nCordialement,\nLa Direction`;
+      const waUrl = waPhone 
+        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`
+        : `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
+
+      window.open(waUrl, '_blank');
+      this.showToast("✓ Image PNG téléchargée ! Joignez-la dans WhatsApp pour l'envoyer au parent.", "success");
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error("Erreur partage PNG:", err);
+      alert("Erreur lors de la génération de l'image PNG : " + err.message);
+    }
+  },
+
+  shareWhatsApp(paymentId) {
+    // Redirection automatique vers l'envoi de l'image PNG officielle (aucun lien)
+    return this.shareReceiptPNG(paymentId);
   },
 
   // ----------------------------------------------------------------------------
@@ -2578,11 +2712,34 @@ const App = {
     document.getElementById('studentParentName').value = '';
     document.getElementById('studentParentPhone').value = '';
 
-    // Remplissage sélecteur classe
+    const classes = Store.getClasses();
     const classSelect = document.getElementById('studentClassSelect');
-    classSelect.innerHTML = Store.getClasses().map(c => `
+    classSelect.innerHTML = classes.map(c => `
       <option value="${c.id}">${Utils.escapeHtml(c.name)}</option>
     `).join('');
+
+    // Afficher la section d'encaissement et de reçu officiel pour une nouvelle inscription
+    const regBox = document.getElementById('studentRegistrationPaymentBox');
+    if (regBox) regBox.style.display = 'block';
+
+    const autoPayCheck = document.getElementById('studentAutoPayRegistration');
+    if (autoPayCheck) autoPayCheck.checked = true;
+
+    const regFields = document.getElementById('studentRegPaymentFields');
+    if (regFields) regFields.style.display = 'grid';
+
+    const regAmountInput = document.getElementById('studentRegAmount');
+    if (regAmountInput) {
+      const initialClass = classes[0];
+      regAmountInput.value = initialClass ? initialClass.registration_fee : 10000;
+    }
+
+    classSelect.onchange = () => {
+      const selClass = Store.getClassById(classSelect.value);
+      if (selClass && regAmountInput) {
+        regAmountInput.value = selClass.registration_fee;
+      }
+    };
 
     modal.classList.add('is-open');
   },
@@ -2608,6 +2765,10 @@ const App = {
     classSelect.innerHTML = Store.getClasses().map(c => `
       <option value="${c.id}" ${c.id === student.class_id ? 'selected' : ''}>${Utils.escapeHtml(c.name)}</option>
     `).join('');
+
+    // Masquer le bloc d'encaissement lors d'une simple modification
+    const regBox = document.getElementById('studentRegistrationPaymentBox');
+    if (regBox) regBox.style.display = 'none';
 
     modal.classList.add('is-open');
   },
@@ -2638,9 +2799,11 @@ const App = {
         parent_name: parentName,
         parent_phone: parentPhone ? Utils.normalizeSenegalPhone(parentPhone) : ''
       });
+      this.closeAllModals();
       this.showToast("Élève mis à jour avec succès.", "success");
+      this.navigate(this.currentTab);
     } else {
-      Store.addStudent({
+      const newStudent = Store.addStudent({
         last_name: lastName,
         first_names: firstNames,
         gender: gender,
@@ -2649,11 +2812,44 @@ const App = {
         parent_name: parentName,
         parent_phone: parentPhone
       });
-      this.showToast("Nouvel élève inscrit avec succès.", "success");
-    }
 
-    this.closeAllModals();
-    this.navigate(this.currentTab);
+      const autoPayCheck = document.getElementById('studentAutoPayRegistration');
+      const shouldRecordPayment = autoPayCheck && autoPayCheck.checked;
+      let recordedPayment = null;
+
+      if (shouldRecordPayment) {
+        const amountVal = parseInt(document.getElementById('studentRegAmount')?.value, 10);
+        const selClass = Store.getClassById(classId);
+        const fee = (!isNaN(amountVal) && amountVal >= 0) ? amountVal : (selClass ? selClass.registration_fee : 10000);
+        const method = document.getElementById('studentRegMethod')?.value || 'wave';
+
+        try {
+          const res = Store.recordPayment({
+            studentId: newStudent.id,
+            kind: 'registration',
+            amount: fee,
+            method: method,
+            reference: 'Inscription'
+          });
+          recordedPayment = res.payment;
+        } catch (payErr) {
+          console.warn("Notice enregistrement paiement inscription:", payErr);
+        }
+      }
+
+      this.closeAllModals();
+      this.navigate(this.currentTab);
+
+      if (recordedPayment) {
+        this.showToast(`✓ Inscription réussie et reçu officiel généré pour ${firstNames} ${lastName.toUpperCase()} !`, "success");
+        // Ouvrir automatiquement le reçu officiel au format A5 avec les boutons de téléchargement et d'envoi PNG WhatsApp
+        setTimeout(() => {
+          this.viewReceipt(recordedPayment.id);
+        }, 200);
+      } else {
+        this.showToast(`Nouvel élève ${firstNames} ${lastName.toUpperCase()} enregistré avec succès.`, "success");
+      }
+    }
   },
 
   deactivateStudent(id) {

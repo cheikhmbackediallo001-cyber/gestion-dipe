@@ -377,7 +377,34 @@
         <div class="form-group">
           <label class="form-label" for="studentParentPhone">Téléphone du parent (pour envoi WhatsApp)</label>
           <input type="tel" id="studentParentPhone" class="form-input" placeholder="+221 77 123 45 67">
-          <div class="form-helper">Recommandé pour permettre le partage direct du reçu en un clic.</div>
+          <div class="form-helper">Recommandé pour permettre le partage direct du reçu officiel en image PNG.</div>
+        </div>
+
+        <!-- Option d'encaissement immédiat de l'inscription et génération du reçu officiel PNG -->
+        <div id="studentRegistrationPaymentBox" style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:var(--radius-md); padding:0.875rem 1rem; margin-top:1.25rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:700; color:#15803D; font-size:13.5px; margin-bottom:0.4rem;">
+            <input type="checkbox" id="studentAutoPayRegistration" checked style="width:18px; height:18px; accent-color:#16A34A;" onchange="document.getElementById('studentRegPaymentFields').style.display = this.checked ? 'grid' : 'none'">
+            <span>Encaisser l'inscription & générer le reçu officiel (PNG)</span>
+          </label>
+          <div id="studentRegPaymentFields" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.5rem;">
+            <div>
+              <label class="form-label" for="studentRegAmount" style="font-size:11px; margin-bottom:2px; font-weight:700;">Montant encaissé (FCFA)</label>
+              <input type="number" id="studentRegAmount" class="form-input" style="padding:0.4rem 0.6rem; font-size:13px; font-weight:700;" min="0">
+            </div>
+            <div>
+              <label class="form-label" for="studentRegMethod" style="font-size:11px; margin-bottom:2px; font-weight:700;">Mode de paiement</label>
+              <select id="studentRegMethod" class="form-select" style="padding:0.4rem 0.6rem; font-size:13px;">
+                <option value="wave" selected>Wave</option>
+                <option value="orange_money">Orange Money</option>
+                <option value="cash">Espèces</option>
+                <option value="cheque">Chèque</option>
+                <option value="bank_transfer">Virement</option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size:11px; color:#166534; margin-top:0.35rem;">
+            ✓ Génère instantanément le reçu certifié avec cachet officiel, prêt à être envoyé au parent en image PNG sur WhatsApp.
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -827,6 +854,7 @@
   <script src="js/auth.js?v=20261023_v1"></script>
   <script src="js/demo-data.js?v=20261023_v1"></script>
   <script src="js/store.js?v=20261023_v1"></script>
+  <script src="js/html2canvas.min.js"></script>
   <script src="js/app.js?v=20261023_v1"></script>
   <script>
     if ('serviceWorker' in navigator) {

@@ -24,6 +24,7 @@ const STATIC_ASSETS = [
   './js/store.js',
   './js/landing.js',
   './js/onboarding.js',
+  './js/html2canvas.min.js',
   './js/app.js',
   './images/icon-192.png',
   './images/icon-512.png',
