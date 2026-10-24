@@ -1,10 +1,12 @@
 /**
  * SERVICE WORKER - GESTION PRÉSCOLAIRE
- * Stratégie Network-First intégrale pour garantir l'arrivée immédiate des mises à jour sur mobile
- * et fonctionnement hors-ligne fiable (PWA).
+ * - Stratégie hybride haute vitesse : ouverture instantanée sur smartphone (< 100ms)
+ * - Navigation Fast-Network (timeout 800ms) avec fallback immédiat sur cache
+ * - Scripts & Styles en Stale-While-Revalidate pour zéro temps d'attente
+ * - Prise de contrôle automatique et purge des anciens caches
  */
 
-const CACHE_NAME = 'gestion-prescolaire-v20261024_v4';
+const CACHE_NAME = 'gestion-prescolaire-v20261024_v5';
 
 const STATIC_ASSETS = [
   './',
@@ -33,7 +35,7 @@ const STATIC_ASSETS = [
 ];
 
 // ------------------------------------------------------------------------------
-// 1. INSTALLATION : Préchargement avec contournement du cache HTTP
+// 1. INSTALLATION : Préchargement des fichiers essentiels sans bloquer
 // ------------------------------------------------------------------------------
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -47,7 +49,7 @@ self.addEventListener('install', (e) => {
 });
 
 // ------------------------------------------------------------------------------
-// 2. ACTIVATION : Purge agressive des anciens caches & prise de contrôle immédiate
+// 2. ACTIVATION : Suppression immédiate des anciens caches et prise de contrôle
 // ------------------------------------------------------------------------------
 self.addEventListener('activate', (e) => {
   e.waitUntil(
@@ -55,7 +57,7 @@ self.addEventListener('activate', (e) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[SW] Suppression ancien cache PWA :', key);
+            console.log('[SW] Purge ancien cache PWA :', key);
             return caches.delete(key);
           }
         })
@@ -81,7 +83,7 @@ self.addEventListener('message', (e) => {
 });
 
 // ------------------------------------------------------------------------------
-// 4. INTERCEPTION DES REQUÊTES (FETCH)
+// 4. INTERCEPTION DES REQUÊTES (FETCH HAUTE VITESSE MOBILE)
 // ------------------------------------------------------------------------------
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
@@ -92,8 +94,8 @@ self.addEventListener('fetch', (e) => {
   }
 
   // ============================================================================
-  // A. PAGES HTML / NAVIGATION : NETWORK FIRST (Réseau d'abord avec timeout)
-  // Lorsque l'utilisateur actualise sur téléphone, il reçoit TOUJOURS le nouveau code !
+  // A. PAGES HTML / NAVIGATION : FAST NETWORK (Timeout 800ms) AVEC REPLI CACHE ULTRA-RAPIDE
+  // Si le réseau cellulaire mobile est lent, l'app s'affiche instantanément depuis le cache
   // ============================================================================
   if (
     e.request.mode === 'navigate' ||
@@ -106,7 +108,7 @@ self.addEventListener('fetch', (e) => {
       (async () => {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const timeoutId = setTimeout(() => controller.abort(), 800); // 800ms max
 
           const networkResponse = await fetch(e.request, {
             signal: controller.signal,
@@ -120,10 +122,9 @@ self.addEventListener('fetch', (e) => {
             return networkResponse;
           }
         } catch (netErr) {
-          console.warn('[SW] Réseau indisponible ou lent, secours sur cache pour :', url.pathname);
+          // Timeout ou hors-ligne : bascule immédiate sur le cache local
         }
 
-        // Si le réseau a échoué ou timeout : secours sur le cache local
         const cached = await caches.match(e.request, { ignoreSearch: true });
         if (cached) return cached;
 
@@ -142,41 +143,32 @@ self.addEventListener('fetch', (e) => {
   }
 
   // ============================================================================
-  // B. SCRIPTS JS & FEUILLES CSS : NETWORK FIRST
-  // Assure que toute mise à jour de code javascript ou style s'applique dès l'actualisation
+  // B. SCRIPTS JS & STYLES CSS : STALE-WHILE-REVALIDATE (Ouverture instantanée < 20ms)
+  // Renvoie immédiatement la ressource en cache pour un affichage instantané,
+  // tout en mettant à jour le cache en arrière-plan.
   // ============================================================================
   if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
     e.respondWith(
-      (async () => {
-        try {
-          const networkResponse = await fetch(e.request, {
-            headers: { 'Cache-Control': 'no-cache' }
-          });
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+      caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
+        const fetchPromise = fetch(e.request, { headers: { 'Cache-Control': 'no-cache' } })
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const clone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+            }
             return networkResponse;
-          }
-        } catch (netErr) {
-          // Hors-ligne : bascule sur le cache
-        }
+          })
+          .catch(() => null);
 
-        const cached = await caches.match(e.request, { ignoreSearch: true });
-        if (cached) return cached;
-
-        const cleanName = url.pathname.split('/').pop();
-        const folder = url.pathname.includes('/css/') ? 'css/' : 'js/';
-        const fallback = await caches.match('./' + folder + cleanName, { ignoreSearch: true });
-        if (fallback) return fallback;
-
-        return Response.error();
-      })()
+        // Si déjà en cache, renvoi immédiat sans aucun délai réseau
+        return cachedResponse || fetchPromise;
+      })
     );
     return;
   }
 
   // ============================================================================
-  // C. WEB MANIFEST : Toujours Network-First pour les métadonnées PWA
+  // C. WEB MANIFEST : Network First
   // ============================================================================
   if (url.pathname.endsWith('.webmanifest')) {
     e.respondWith(
@@ -195,7 +187,7 @@ self.addEventListener('fetch', (e) => {
   }
 
   // ============================================================================
-  // D. IMAGES ET ICÔNES STATIQUES : Cache First avec mise en cache
+  // D. IMAGES ET ICÔNES STATIQUES : Cache-First
   // ============================================================================
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {

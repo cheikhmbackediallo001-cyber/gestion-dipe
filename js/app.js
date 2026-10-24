@@ -4182,19 +4182,39 @@ const App = {
     this.showToast("Export CSV des autres rentrées téléchargé.", "success");
   },
 
-  triggerPwaInstall() {
-    if (window.Landing && window.Landing.triggerPwaInstall) {
-      window.Landing.triggerPwaInstall();
+  async triggerPwaInstall() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) {
+      this.showToast("Gestion Préscolaire est déjà installée sur cet appareil !", "info");
+      const btn = document.getElementById('btnPwaInstallApp');
+      if (btn) btn.style.display = 'none';
       return;
     }
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
     if (window.deferredPwaPrompt) {
-      window.deferredPwaPrompt.prompt();
-    } else if (isIos) {
-      alert("Pour installer l'application sur votre iPhone ou iPad :\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Sélectionnez « Sur l'écran d'accueil ➕ ».\n3. Appuyez sur « Ajouter ».");
-    } else {
-      alert("Pour installer Gestion Préscolaire sur votre écran :\nCliquez sur l'icône d'installation dans la barre d'adresse de votre navigateur ou sur « Ajouter à l'écran d'accueil » dans les options de votre navigateur.");
+      try {
+        const promptEvent = window.deferredPwaPrompt;
+        promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          this.showToast("✓ Application installée ! L'icône est prête sur votre écran d'accueil.", "success");
+          window.deferredPwaPrompt = null;
+          const btn = document.getElementById('btnPwaInstallApp');
+          if (btn) btn.style.display = 'none';
+        }
+      } catch (err) {
+        console.warn('[PWA] Erreur prompt:', err);
+      }
+      return;
     }
+
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIos) {
+      alert("Installation sur iPhone / iPad :\n\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Choisissez « Sur l'écran d'accueil ➕ ».\n3. Appuyez sur « Ajouter » en haut à droite.");
+      return;
+    }
+
+    alert("Pour installer l'application sur votre téléphone :\n\nAppuyez sur le menu de votre navigateur (les trois points ⋮ en haut à droite) puis sur « Installer l'application » ou « Ajouter à l'écran d'accueil ».");
   },
 
   // ----------------------------------------------------------------------------

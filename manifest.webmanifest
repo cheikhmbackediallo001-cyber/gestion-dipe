@@ -3,7 +3,7 @@
   "short_name": "Gestion Préscolaire",
   "description": "Plateforme complète pour écoles préscolaires au Sénégal : inscriptions, cotisations mensuelles en FCFA, autres rentrées, dépenses et reçus certifiés avec cachet officiel.",
   "id": "/gestion-prescolaire-v1",
-  "start_url": "./index.html",
+  "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",

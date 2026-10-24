@@ -1337,6 +1337,14 @@ img, svg {
 .btn-topbar-logout:hover span {
   color: #FFFFFF !important;
 }
+.btn-topbar-logout svg {
+  stroke: currentColor;
+  transition: transform 0.15s ease;
+}
+.btn-topbar-logout:hover svg {
+  stroke: #FFFFFF !important;
+  transform: translateX(1px);
+}
 
 /* Animation rotation & mise à jour */
 @keyframes spin {
