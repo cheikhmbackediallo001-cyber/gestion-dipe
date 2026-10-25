@@ -378,26 +378,29 @@ function initLoginForm() {
 // ------------------------------------------------------------------------------
 // GESTION DU TÉLÉCHARGEMENT & INSTALLATION PWA
 // ------------------------------------------------------------------------------
-let deferredPwaPrompt = null;
+let deferredPwaPrompt = window.deferredPwaPrompt || null;
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPwaPrompt = e;
   window.deferredPwaPrompt = e;
+  window.__pwaPromptReady = true;
   const btn = document.getElementById('btnPwaInstallLanding');
-  if (btn) btn.style.display = 'flex';
+  if (btn && !window.__isPwaStandalone) btn.style.display = 'flex';
 });
 
 window.addEventListener('appinstalled', () => {
   deferredPwaPrompt = null;
   window.deferredPwaPrompt = null;
+  window.__isPwaStandalone = true;
+  window.__pwaInstalled = true;
   const btn = document.getElementById('btnPwaInstallLanding');
   if (btn) {
     btn.innerHTML = `
       <span class="pwa-icon">✓</span>
       <span class="pwa-text-group">
-        <span class="pwa-btn-title">Application installée sur votre écran</span>
-        <span class="pwa-btn-sub">Accessible directement depuis vos applications</span>
+        <span class="pwa-btn-title">Application installée avec succès</span>
+        <span class="pwa-btn-sub">Accessible directement sur votre écran d'accueil</span>
       </span>
       <span class="pwa-badge" style="background:#DCFCE7; color:#166534;">Actif</span>
     `;
@@ -472,30 +475,85 @@ const Landing = {
 
   async triggerPwaInstall() {
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || window.__isPwaStandalone;
 
     if (isStandalone) {
-      alert("L'application Gestion Préscolaire est déjà installée sur cet appareil.");
+      alert("L'application Gestion Préscolaire est déjà installée sur cet appareil !\n\nVous pouvez l'ouvrir directement depuis votre écran d'accueil.");
       return;
     }
 
-    if (window.deferredPwaPrompt || deferredPwaPrompt) {
-      const promptEvent = window.deferredPwaPrompt || deferredPwaPrompt;
-      promptEvent.prompt();
-      const choice = await promptEvent.userChoice;
-      if (choice && choice.outcome === 'accepted') {
-        deferredPwaPrompt = null;
-        window.deferredPwaPrompt = null;
+    const btn = document.getElementById('btnPwaInstallLanding');
+    let promptEvent = window.deferredPwaPrompt || deferredPwaPrompt;
+
+    // Si le prompt n'a pas encore fini de s'initialiser, on patiente brièvement (jusqu'à 1.2s)
+    if (!promptEvent && !isIos) {
+      const originalHtml = btn ? btn.innerHTML : null;
+      if (btn) {
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = `
+          <span class="pwa-icon" style="display:inline-block; animation: spin 1s infinite linear;">⚙️</span>
+          <span class="pwa-text-group">
+            <span class="pwa-btn-title">Préparation de l'installation...</span>
+            <span class="pwa-btn-sub">Connexion directe avec votre appareil</span>
+          </span>
+        `;
       }
-    } else if (isIos) {
+
+      promptEvent = await new Promise((resolve) => {
+        if (window.deferredPwaPrompt) return resolve(window.deferredPwaPrompt);
+        const timer = setTimeout(() => resolve(window.deferredPwaPrompt || null), 1200);
+        document.addEventListener('pwa-prompt-ready', () => {
+          clearTimeout(timer);
+          resolve(window.deferredPwaPrompt);
+        }, { once: true });
+      });
+
+      if (btn && originalHtml && !window.__pwaInstalled) {
+        btn.innerHTML = originalHtml;
+        btn.style.pointerEvents = '';
+      }
+    }
+
+    if (promptEvent) {
+      try {
+        promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          deferredPwaPrompt = null;
+          window.deferredPwaPrompt = null;
+          if (btn) {
+            btn.innerHTML = `
+              <span class="pwa-icon">✓</span>
+              <span class="pwa-text-group">
+                <span class="pwa-btn-title">Installation en cours...</span>
+                <span class="pwa-btn-sub">L'icône s'ajoute directement sur votre écran</span>
+              </span>
+              <span class="pwa-badge" style="background:#DCFCE7; color:#166534;">En cours</span>
+            `;
+          }
+        }
+      } catch (err) {
+        console.warn('[PWA] Erreur prompt:', err);
+      }
+      return;
+    }
+
+    if (isIos) {
       const iosModal = document.getElementById('iosPwaModal');
       if (iosModal) {
         iosModal.classList.add('is-open');
       } else {
-        alert("Pour installer l'application sur votre iPhone ou iPad :\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Sélectionnez « Sur l'écran d'accueil » (➕).\n3. Appuyez sur « Ajouter ».");
+        alert("Pour installer l'application sur iPhone ou iPad :\n\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Sélectionnez « Sur l'écran d'accueil » (➕).\n3. Appuyez sur « Ajouter ».");
       }
+      return;
+    }
+
+    // Si le navigateur ne fournit pas le prompt direct (ex: navigateur intégré WhatsApp/Facebook ou déjà refusé)
+    const manualModal = document.getElementById('manualInstallModal');
+    if (manualModal) {
+      manualModal.classList.add('is-open');
     } else {
-      alert("Pour installer l'application Gestion Préscolaire sur votre écran :\nCliquez sur le bouton Installer (icône d'écran ou « + ») dans la barre d'adresse de votre navigateur ou sur « Ajouter à l'écran d'accueil » dans le menu de votre navigateur.");
+      alert("Installation directe :\n\nAppuyez sur le menu de votre navigateur (les trois points ⋮ en haut à droite) puis sélectionnez « Installer l'application ».");
     }
   },
 

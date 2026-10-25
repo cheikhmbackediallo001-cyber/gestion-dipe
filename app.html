@@ -61,20 +61,30 @@
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       window.__isPwaStandalone = isStandalone;
 
-      window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault();
-        window.deferredPwaPrompt = e;
-        if (!window.__isPwaStandalone) {
+      function showBtnIfReady() {
+        if (!window.__isPwaStandalone && window.deferredPwaPrompt) {
           const btn = document.getElementById('btnPwaInstallApp');
           if (btn) btn.style.display = 'inline-flex';
         }
+      }
+
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.deferredPwaPrompt = e;
+        window.__pwaPromptReady = true;
+        showBtnIfReady();
+        document.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
       });
+
+      window.addEventListener('DOMContentLoaded', showBtnIfReady);
 
       window.addEventListener('appinstalled', function() {
         window.deferredPwaPrompt = null;
         window.__isPwaStandalone = true;
+        window.__pwaInstalled = true;
         const btn = document.getElementById('btnPwaInstallApp');
         if (btn) btn.style.display = 'none';
+        document.dispatchEvent(new CustomEvent('pwa-installed'));
       });
     })();
   </script>

@@ -22,6 +22,43 @@
     })();
   </script>
 
+  <!-- Capture ultra-rapide du prompt d'installation PWA dès la première milliseconde -->
+  <script>
+    (function() {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      window.__isPwaStandalone = isStandalone;
+
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.deferredPwaPrompt = e;
+        window.__pwaPromptReady = true;
+        const btn = document.getElementById('btnPwaInstallLanding');
+        if (btn && !window.__isPwaStandalone) {
+          btn.style.display = 'flex';
+        }
+        document.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+      });
+
+      window.addEventListener('appinstalled', function() {
+        window.deferredPwaPrompt = null;
+        window.__isPwaStandalone = true;
+        window.__pwaInstalled = true;
+        const btn = document.getElementById('btnPwaInstallLanding');
+        if (btn) {
+          btn.innerHTML = `
+            <span class="pwa-icon">✓</span>
+            <span class="pwa-text-group">
+              <span class="pwa-btn-title">Application installée avec succès</span>
+              <span class="pwa-btn-sub">Disponible directement sur votre écran d'accueil</span>
+            </span>
+            <span class="pwa-badge" style="background:#DCFCE7; color:#166534;">Prêt</span>
+          `;
+        }
+        document.dispatchEvent(new CustomEvent('pwa-installed'));
+      });
+    })();
+  </script>
+
   <!-- PWA & Paramètres Mobiles -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1E3A8A">
@@ -492,6 +529,34 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" onclick="document.getElementById('iosPwaModal').classList.remove('is-open')" style="width:100%;">
+          J'ai compris
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale d'instructions si le navigateur bloque l'installation directe -->
+  <div class="modal-backdrop" id="manualInstallModal" role="dialog" aria-modal="true" aria-labelledby="manualModalTitle">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="manualModalTitle">Installer sur votre écran</h2>
+        <button class="modal-close-btn" onclick="document.getElementById('manualInstallModal').classList.remove('is-open')" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body" style="padding-top:1rem; text-align:left;">
+        <p style="font-size:var(--text-sm); color:var(--text-main); margin-bottom:1rem;">
+          Pour installer <strong>Gestion Préscolaire</strong> directement comme une application sur votre appareil :
+        </p>
+        <ol style="font-size:var(--text-sm); color:var(--text-muted); line-height:1.7; padding-left:1.25rem;">
+          <li>Appuyez sur le menu de votre navigateur (les trois points <strong>⋮</strong> en haut à droite).</li>
+          <li>Appuyez sur <strong>« Installer l'application »</strong>.</li>
+          <li>Confirmez : l'application s'installe directement sur votre écran d'accueil !</li>
+        </ol>
+        <div style="background:#F0FDF4; padding:0.75rem 1rem; border-radius:var(--radius-md); border-left:4px solid var(--success); font-size:var(--text-xs); color:#166534; margin-top:1rem;">
+          ✓ Fonctionne instantanément hors-ligne avec votre cachet officiel et zéro publicité.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('manualInstallModal').classList.remove('is-open')" style="width:100%;">
           J'ai compris
         </button>
       </div>

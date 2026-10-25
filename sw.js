@@ -6,7 +6,7 @@
  * - Prise de contrôle automatique et purge des anciens caches
  */
 
-const CACHE_NAME = 'gestion-prescolaire-v20261024_v5';
+const CACHE_NAME = 'gestion-prescolaire-v20261025_v1';
 
 const STATIC_ASSETS = [
   './',

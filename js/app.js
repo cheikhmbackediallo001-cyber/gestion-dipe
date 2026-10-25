@@ -42,18 +42,31 @@ const App = {
     }
 
     // Support de l'installation PWA
+    const showAppInstallBtn = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || window.__isPwaStandalone;
+      if (!isStandalone) {
+        const btn = document.getElementById('btnPwaInstallApp');
+        if (btn) btn.style.display = 'inline-flex';
+      }
+    };
+
+    if (window.deferredPwaPrompt) {
+      showAppInstallBtn();
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       window.deferredPwaPrompt = e;
-      const btn = document.getElementById('btnPwaInstallApp');
-      if (btn) btn.style.display = 'inline-flex';
+      window.__pwaPromptReady = true;
+      showAppInstallBtn();
     });
 
     window.addEventListener('appinstalled', () => {
       window.deferredPwaPrompt = null;
+      window.__isPwaStandalone = true;
       const btn = document.getElementById('btnPwaInstallApp');
       if (btn) btn.style.display = 'none';
-      this.showToast("Application installée avec succès sur votre écran !", "success");
+      this.showToast("✓ Application installée avec succès sur votre écran !", "success");
     });
 
     // Support du routing hash (ex. app.html#other-revenues ou #autres-rentrees)
@@ -4183,7 +4196,7 @@ const App = {
   },
 
   async triggerPwaInstall() {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || window.__isPwaStandalone;
     if (isStandalone) {
       this.showToast("Gestion Préscolaire est déjà installée sur cet appareil !", "info");
       const btn = document.getElementById('btnPwaInstallApp');
@@ -4191,13 +4204,26 @@ const App = {
       return;
     }
 
-    if (window.deferredPwaPrompt) {
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    let promptEvent = window.deferredPwaPrompt;
+
+    if (!promptEvent && !isIos) {
+      promptEvent = await new Promise((resolve) => {
+        if (window.deferredPwaPrompt) return resolve(window.deferredPwaPrompt);
+        const timer = setTimeout(() => resolve(window.deferredPwaPrompt || null), 1200);
+        document.addEventListener('pwa-prompt-ready', () => {
+          clearTimeout(timer);
+          resolve(window.deferredPwaPrompt);
+        }, { once: true });
+      });
+    }
+
+    if (promptEvent) {
       try {
-        const promptEvent = window.deferredPwaPrompt;
         promptEvent.prompt();
         const choice = await promptEvent.userChoice;
         if (choice && choice.outcome === 'accepted') {
-          this.showToast("✓ Application installée ! L'icône est prête sur votre écran d'accueil.", "success");
+          this.showToast("✓ Application en cours d'installation sur votre écran...", "success");
           window.deferredPwaPrompt = null;
           const btn = document.getElementById('btnPwaInstallApp');
           if (btn) btn.style.display = 'none';
@@ -4208,13 +4234,12 @@ const App = {
       return;
     }
 
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     if (isIos) {
       alert("Installation sur iPhone / iPad :\n\n1. Appuyez sur le bouton Partager ⎋ en bas de Safari.\n2. Choisissez « Sur l'écran d'accueil ➕ ».\n3. Appuyez sur « Ajouter » en haut à droite.");
       return;
     }
 
-    alert("Pour installer l'application sur votre téléphone :\n\nAppuyez sur le menu de votre navigateur (les trois points ⋮ en haut à droite) puis sur « Installer l'application » ou « Ajouter à l'écran d'accueil ».");
+    alert("Pour installer l'application sur votre écran d'accueil :\n\nAppuyez sur le menu de votre navigateur (les trois points ⋮ en haut à droite) puis sur « Installer l'application ».");
   },
 
   // ----------------------------------------------------------------------------
