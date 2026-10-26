@@ -1028,3 +1028,85 @@
   transform: translateY(-1px);
 }
 
+
+/* ==============================================================================
+   COULEURS ADAPTÉES AU THÈME (lisibilité en mode sombre)
+   Les cartes et encadrés colorés utilisent ces variables au lieu de couleurs fixes :
+   fond clair + texte foncé en mode clair, fond sombre teinté + texte clair en mode sombre.
+   ============================================================================== */
+:root {
+  --tone-green: #16A34A;
+  --tone-green-strong: #15803D;
+  --tone-green-deep: #166534;
+  --tone-red: #DC2626;
+  --tone-red-deep: #991B1B;
+  --tone-amber: #B45309;
+  --tone-indigo: #4F46E5;
+  --tone-navy: #1E3A8A;
+  --tone-navy-soft: #1E40AF;
+  --tone-boy: #002FA7;   /* Garçons : bleu BIC */
+  --tone-girl: #DC2626;  /* Filles : rouge */
+  --tint-green-bg: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+  --tint-green-flat: #F0FDF4;
+  --tint-green-border: #86EFAC;
+}
+
+[data-theme="dark"] {
+  --tone-green: #4ADE80;
+  --tone-green-strong: #4ADE80;
+  --tone-green-deep: #BBF7D0;
+  --tone-red: #F87171;
+  --tone-red-deep: #FECACA;
+  --tone-amber: #FBBF24;
+  --tone-indigo: #A5B4FC;
+  --tone-navy: #93C5FD;
+  --tone-navy-soft: #DBEAFE;
+  --tone-boy: #8AB4FF;
+  --tone-girl: #FF8A8A;
+  --tint-green-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(34, 197, 94, 0.07) 100%);
+  --tint-green-flat: rgba(34, 197, 94, 0.12);
+  --tint-green-border: rgba(74, 222, 128, 0.45);
+}
+
+/* Cartes chiffres à fond légèrement teinté */
+.kpi-card.kpi-tint-success { background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%); }
+.kpi-card.kpi-tint-primary { background: linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%); }
+.kpi-card.kpi-tint-neutral { background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%); }
+.kpi-card.kpi-tint-warning { background: linear-gradient(180deg, #FFFFFF 0%, #FEF3C7 100%); }
+
+[data-theme="dark"] .kpi-card.kpi-tint-success { background: linear-gradient(180deg, var(--bg-card) 0%, rgba(34, 197, 94, 0.12) 100%); }
+[data-theme="dark"] .kpi-card.kpi-tint-primary { background: linear-gradient(180deg, var(--bg-card) 0%, rgba(56, 189, 248, 0.12) 100%); }
+[data-theme="dark"] .kpi-card.kpi-tint-neutral { background: var(--bg-card); }
+[data-theme="dark"] .kpi-card.kpi-tint-warning { background: linear-gradient(180deg, var(--bg-card) 0%, rgba(245, 158, 11, 0.12) 100%); }
+
+/* Bandeau d'information (espace démonstration) */
+.tint-info-banner { background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); }
+[data-theme="dark"] .tint-info-banner { background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%); }
+
+/* Ligne de sous-total dans les tableaux du bilan */
+.row-subtotal { background: #F8FAFC; }
+[data-theme="dark"] .row-subtotal { background: rgba(255, 255, 255, 0.05); }
+[data-theme="dark"] .row-subtotal .badge-success {
+  background-color: rgba(34, 197, 94, 0.18);
+  color: #86EFAC;
+}
+
+/* Boutons bleu marine : en mode sombre, ils reprennent le bouton principal lisible */
+.btn-primary.btn-navy { background-color: #1E3A8A; color: #FFFFFF; }
+.btn-primary.btn-navy:hover { background-color: #1E40AF; color: #FFFFFF; }
+[data-theme="dark"] .btn-primary.btn-navy { background-color: var(--primary); color: #0B1220; }
+[data-theme="dark"] .btn-primary.btn-navy:hover { background-color: var(--primary-hover); color: #0B1220; }
+
+/* Noms des élèves : code couleur filles / garçons */
+.student-name-colored.is-boy { color: var(--tone-boy); }
+.student-name-colored.is-girl { color: var(--tone-girl); }
+/* Le reçu reste un document blanc, même en mode sombre */
+.receipt-document .student-name-colored.is-boy { color: #002FA7; }
+.receipt-document .student-name-colored.is-girl { color: #DC2626; }
+
+/* Puces de rubriques : texte lisible (un bouton ne prend pas la couleur du thème par défaut) */
+.rubrique-chip { color: var(--text-main); }
+
+/* Boutons « Payé » / « Impayé » actifs : texte blanc sur un fond assez foncé */
+[data-theme="dark"] .toggle-btn.btn-status-paid.is-active { background-color: #15803D !important; }
+[data-theme="dark"] .toggle-btn.btn-status-unpaid.is-active { background-color: #DC2626 !important; }

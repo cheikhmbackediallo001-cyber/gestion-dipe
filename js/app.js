@@ -228,7 +228,6 @@ const App = {
     const first = Utils.escapeHtml(student.first_names || '');
     const last = Utils.escapeHtml((student.last_name || '').toUpperCase());
     const isGirl = student.gender === 'F' || student.gender === 'fille';
-    const color = isGirl ? '#DC2626' : '#002FA7';
     const icon = isGirl ? '👧' : '👦';
     const label = isGirl ? 'Fille' : 'Garçon';
 
@@ -236,10 +235,11 @@ const App = {
       return `${student.first_names || ''} ${(student.last_name || '').toUpperCase()}`.trim();
     }
 
+    // Couleur portée par la classe CSS : rouge / bleu BIC en mode clair, teintes éclaircies en mode sombre
     return `
-      <span class="student-name-colored" style="color:${color}; font-weight:700; display:inline-flex; align-items:center; gap:0.4rem;" title="${label} (respect du code couleur)">
+      <span class="student-name-colored ${isGirl ? 'is-girl' : 'is-boy'}" style="font-weight:700; display:inline-flex; align-items:center; gap:0.4rem;" title="${label} (respect du code couleur)">
         <span style="font-size:1.05em;" aria-hidden="true">${icon}</span>
-        <span>${first} <strong style="color:${color}; font-weight:800;">${last}</strong></span>
+        <span>${first} <strong style="color:inherit; font-weight:800;">${last}</strong></span>
       </span>
     `;
   },
@@ -491,7 +491,7 @@ const App = {
 
       <!-- Synthèse Trésorerie Générale & Autres Entrées -->
       <div class="kpi-grid" style="margin-top:1rem;">
-        <div class="kpi-card" style="border-top:4px solid var(--success); background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);">
+        <div class="kpi-card kpi-tint-success" style="border-top:4px solid var(--success);">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span class="kpi-title">Autres Entrées Encaissées</span>
             <button class="btn btn-outline-primary btn-sm" onclick="App.openAddOtherRevenueModal()" style="font-size:11px; padding:2px 8px;">+ Autre entrée</button>
@@ -509,7 +509,7 @@ const App = {
           <div class="kpi-meta">${expensesSummary.count} sorties de caisse comptabilisées</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid var(--primary); background:linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%);">
+        <div class="kpi-card kpi-tint-primary" style="border-top:4px solid var(--primary);">
           <span class="kpi-title">Trésorerie Disponible en Caisse</span>
           <div class="kpi-figure" style="color:var(--primary); font-weight:800;">${Utils.formatFCFA(grand.net_available)}</div>
           <div class="kpi-meta">Recettes totales (${Utils.formatFCFA(grand.grand_collected)}) − Dépenses (${Utils.formatFCFA(grand.total_expenses)})</div>
@@ -746,16 +746,16 @@ const App = {
         </div>
 
         <!-- Grand format Total Encaissé en vert (#16A34A) demandé par la direction -->
-        <div class="registration-highlight-card" style="background:linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%); border:2px solid #86EFAC; border-radius:var(--radius-xl); padding:1.5rem 1.75rem; margin-top:1.25rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem; box-shadow:0 10px 25px -5px rgba(22, 163, 74, 0.15);">
+        <div class="registration-highlight-card" style="background:var(--tint-green-bg); border:2px solid var(--tint-green-border); border-radius:var(--radius-xl); padding:1.5rem 1.75rem; margin-top:1.25rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem; box-shadow:0 10px 25px -5px rgba(22, 163, 74, 0.15);">
           <div>
-            <div style="text-transform:uppercase; letter-spacing:0.08em; font-size:var(--text-xs); font-weight:800; color:#15803D; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.5rem;">
+            <div style="text-transform:uppercase; letter-spacing:0.08em; font-size:var(--text-xs); font-weight:800; color:var(--tone-green-strong); margin-bottom:0.35rem; display:flex; align-items:center; gap:0.5rem;">
               <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16A34A;"></span>
               Total Encaissé Inscriptions
             </div>
-            <div style="font-size:clamp(2.4rem, 6vw, 3.25rem); font-weight:900; color:#16A34A; line-height:1.05; letter-spacing:-0.03em;">
+            <div style="font-size:clamp(2.4rem, 6vw, 3.25rem); font-weight:900; color:var(--tone-green); line-height:1.05; letter-spacing:-0.03em;">
               ${Utils.formatFCFA(summary.total_collected)}
             </div>
-            <div style="font-size:var(--text-sm); color:#166534; font-weight:600; margin-top:0.4rem;">
+            <div style="font-size:var(--text-sm); color:var(--tone-green-deep); font-weight:600; margin-top:0.4rem;">
               ${summary.paid_students} élèves inscrits payés sur un effectif de ${summary.total_students} (${summary.percentage}%)
             </div>
             <div class="progress-bar-container" style="margin-top:0.65rem; max-width:320px; background:rgba(22, 163, 74, 0.2);">
@@ -764,25 +764,25 @@ const App = {
           </div>
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
             <div 
-              style="background:#FFFFFF; border:2px solid ${this.activeStatusFilter === 'all' && this.activeClassFilter === 'all' ? 'var(--primary)' : '#E2E8F0'}; border-radius:var(--radius-lg); padding:0.875rem 1.25rem; text-align:center; min-width:120px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all 0.15s;" 
+              style="background:var(--bg-card); border:2px solid ${this.activeStatusFilter === 'all' && this.activeClassFilter === 'all' ? 'var(--primary)' : 'var(--border-medium)'}; border-radius:var(--radius-lg); padding:0.875rem 1.25rem; text-align:center; min-width:120px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all 0.15s;" 
               onclick="App.showAllRegistrations()"
               title="Cliquer pour afficher tous les élèves de l'école">
               <div style="font-size:var(--text-xs); color:var(--text-muted); font-weight:700; text-transform:uppercase;">Tous les élèves</div>
               <div style="font-size:var(--text-2xl); font-weight:900; color:var(--primary);">${summary.total_students}</div>
             </div>
             <div 
-              style="background:#FFFFFF; border:2px solid ${this.activeStatusFilter === 'paid' ? '#16A34A' : '#BBF7D0'}; border-radius:var(--radius-lg); padding:0.875rem 1.25rem; text-align:center; min-width:120px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all 0.15s;"
+              style="background:var(--bg-card); border:2px solid ${this.activeStatusFilter === 'paid' ? '#16A34A' : '#BBF7D0'}; border-radius:var(--radius-lg); padding:0.875rem 1.25rem; text-align:center; min-width:120px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all 0.15s;"
               onclick="App.filterRegistrationsStatus('paid')"
               title="Cliquer pour afficher les élèves avec inscription payée">
-              <div style="font-size:var(--text-xs); color:#166534; font-weight:700; text-transform:uppercase;">Payés</div>
-              <div style="font-size:var(--text-2xl); font-weight:900; color:#16A34A;">${summary.paid_students}</div>
+              <div style="font-size:var(--text-xs); color:var(--tone-green-deep); font-weight:700; text-transform:uppercase;">Payés</div>
+              <div style="font-size:var(--text-2xl); font-weight:900; color:var(--tone-green);">${summary.paid_students}</div>
             </div>
             <div 
-              style="background:#FFFFFF; border:2px solid ${this.activeStatusFilter === 'unpaid' ? '#DC2626' : '#FECACA'}; border-radius:var(--radius-lg); padding:0.875rem 1.25rem; text-align:center; min-width:120px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all 0.15s;"
+              style="background:var(--bg-card); border:2px solid ${this.activeStatusFilter === 'unpaid' ? '#DC2626' : '#FECACA'}; border-radius:var(--radius-lg); padding:0.875rem 1.25rem; text-align:center; min-width:120px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all 0.15s;"
               onclick="App.filterRegistrationsStatus('unpaid')"
               title="Cliquer pour afficher les élèves avec inscription impayée">
-              <div style="font-size:var(--text-xs); color:#991B1B; font-weight:700; text-transform:uppercase;">Impayés</div>
-              <div style="font-size:var(--text-2xl); font-weight:900; color:#DC2626;">${summary.unpaid_students}</div>
+              <div style="font-size:var(--text-xs); color:var(--tone-red-deep); font-weight:700; text-transform:uppercase;">Impayés</div>
+              <div style="font-size:var(--text-2xl); font-weight:900; color:var(--tone-red);">${summary.unpaid_students}</div>
             </div>
           </div>
         </div>
@@ -1233,13 +1233,13 @@ const App = {
 
         <div class="kpi-card" style="border-top:4px solid #F59E0B;">
           <span class="kpi-title">Nombre d'opérations</span>
-          <div class="kpi-figure" style="color:#B45309;">${expensesSummary.count}</div>
+          <div class="kpi-figure" style="color:var(--tone-amber);">${expensesSummary.count}</div>
           <div class="kpi-meta">Sortie(s) de caisse enregistrée(s)</div>
         </div>
 
         <div class="kpi-card" style="border-top:4px solid #6366F1;">
           <span class="kpi-title">Dépense Moyenne</span>
-          <div class="kpi-figure" style="color:#4F46E5;">${Utils.formatFCFA(expensesSummary.count > 0 ? Math.round(expensesSummary.total_amount / expensesSummary.count) : 0)}</div>
+          <div class="kpi-figure" style="color:var(--tone-indigo);">${Utils.formatFCFA(expensesSummary.count > 0 ? Math.round(expensesSummary.total_amount / expensesSummary.count) : 0)}</div>
           <div class="kpi-meta">${Object.keys(rubriqueTotals).length} rubrique${Object.keys(rubriqueTotals).length > 1 ? 's' : ''} active${Object.keys(rubriqueTotals).length > 1 ? 's' : ''}</div>
         </div>
       </div>
@@ -1457,7 +1457,7 @@ const App = {
           <div class="kpi-meta">Budget prévisionnel total (Inscriptions + Mensualités)</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid var(--primary); background:linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);">
+        <div class="kpi-card kpi-tint-neutral" style="border-top:4px solid var(--primary);">
           <span class="kpi-title">2. Somme Totale Encaissée</span>
           <div class="kpi-figure" style="color:var(--primary);">${Utils.formatFCFA(grand.grand_collected)}</div>
           <div class="kpi-meta">Inscriptions (${Utils.formatFCFA(grand.registration.total_collected)}) + Cotisations (${Utils.formatFCFA(grand.monthly.cumulated_collected)}) + Autres entrées (${Utils.formatFCFA(grand.other_revenues ? grand.other_revenues.total_amount : 0)})</div>
@@ -1469,7 +1469,7 @@ const App = {
           <div class="kpi-meta">Sorties de caisse de l'école déduites</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid var(--success); background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);">
+        <div class="kpi-card kpi-tint-success" style="border-top:4px solid var(--success);">
           <span class="kpi-title">
             4. Somme Restante Disponible (Moment T)
             <button class="info-tooltip-btn" title="Total Recettes Encaissées - Total Dépenses = Trésorerie nette disponible en caisse">i</button>
@@ -1560,10 +1560,10 @@ const App = {
                   </button>
                 </td>
               </tr>
-              <tr style="background:#F8FAFC; font-weight:600;">
+              <tr class="row-subtotal" style="font-weight:600;">
                 <td data-label="Rubrique">
                   <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#0F172A;"></span>
+                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--text-main);"></span>
                     <strong>SOUS-TOTAL RECETTES BRUTES ENCAISSÉES</strong>
                   </div>
                 </td>
@@ -1663,7 +1663,7 @@ const App = {
           <div class="kpi-meta">Droits d'inscriptions et cotisations</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid var(--success); background:#F0FDF4;">
+        <div class="kpi-card kpi-tint-success" style="border-top:4px solid var(--success);">
           <span class="kpi-title">Solde Restant Disponible (Moment T)</span>
           <div class="kpi-figure" style="color:var(--success); font-weight:800;">${Utils.formatFCFA(grand.net_available)}</div>
           <div class="kpi-meta">Trésorerie nette disponible en caisse</div>
@@ -2039,17 +2039,17 @@ const App = {
 
       <div style="display:grid; grid-template-columns:1fr; gap:1.5rem;">
         ${isDemo ? `
-          <div style="background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border:1.5px solid #3B82F6; border-radius:var(--radius-lg); padding:1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
+          <div class="tint-info-banner" style="border:1.5px solid #3B82F6; border-radius:var(--radius-lg); padding:1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
             <div>
-              <div style="font-weight:800; font-size:1.1rem; color:#1E3A8A; display:flex; align-items:center; gap:0.5rem;">
+              <div style="font-weight:800; font-size:1.1rem; color:var(--tone-navy); display:flex; align-items:center; gap:0.5rem;">
                 <span>🌟</span> <span>Espace Démonstration Actif</span>
               </div>
-              <p style="font-size:var(--text-sm); color:#1E40AF; margin-top:0.25rem; max-width:620px;">
+              <p style="font-size:var(--text-sm); color:var(--tone-navy-soft); margin-top:0.25rem; max-width:620px;">
                 Vous utilisez actuellement les données modèles d'exemple (34 élèves, cotisations et dépenses). Vous pouvez tester toutes les fonctionnalités, ou bien enregistrer votre véritable école avec ses propres sections et son cachet certifié.
               </p>
             </div>
             <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="App.openReferenceSchoolModal()" style="background:#1E3A8A;">
+              <button class="btn btn-primary btn-navy" onclick="App.openReferenceSchoolModal()">
                 <span>+ Référencer mon école</span>
               </button>
               <button class="btn btn-secondary" onclick="App.restoreDemoFixtures()">
@@ -2092,7 +2092,7 @@ const App = {
             </p>
           </div>
           <div>
-            <button type="button" id="btnForcePwaUpdate" class="btn btn-primary" onclick="App.forceAppUpdate()" style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700; background:#1E3A8A;">
+            <button type="button" id="btnForcePwaUpdate" class="btn btn-primary btn-navy" onclick="App.forceAppUpdate()" style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700;">
               <span>🔄 Actualiser & Forcer la mise à jour</span>
             </button>
           </div>
@@ -2164,7 +2164,7 @@ const App = {
           </div>
 
           <div style="margin-top:1.25rem; display:flex; justify-content:flex-end;">
-            <button class="btn btn-primary" onclick="App.saveSettings()" style="background:#1E3A8A;">
+            <button class="btn btn-primary btn-navy" onclick="App.saveSettings()">
               <span>Enregistrer les modifications</span>
             </button>
           </div>
@@ -2690,7 +2690,7 @@ const App = {
           <button class="btn btn-whatsapp btn-sm" onclick="App.shareReceiptPNG('${targetId}')" title="Envoyer le reçu en image PNG au parent sur WhatsApp" style="background:#25D366; color:#FFFFFF; border:none; font-weight:700; padding:0.5rem 0.85rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem; box-shadow:0 2px 6px rgba(37, 211, 102, 0.3);">
             <span>📲 Partager l'image PNG (WhatsApp)</span>
           </button>
-          <button class="btn btn-primary btn-sm" onclick="App.downloadReceiptPNG('${targetId}')" title="Télécharger l'image PNG haute définition" style="background:#1E3A8A; font-weight:700; padding:0.5rem 0.85rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;">
+          <button class="btn btn-primary btn-sm btn-navy" onclick="App.downloadReceiptPNG('${targetId}')" title="Télécharger l'image PNG haute définition" style="font-weight:700; padding:0.5rem 0.85rem; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;">
             <span>📥 Télécharger l'image PNG</span>
           </button>
           <button class="btn btn-secondary btn-sm" onclick="window.print()" title="Imprimer le reçu officiel A5" style="padding:0.5rem 0.85rem; border-radius:8px;">
@@ -3913,7 +3913,7 @@ const App = {
 
       <!-- KPI Synthèse Autres Entrées UNIQUEMENT (isolé des inscriptions et cotisations) -->
       <div class="kpi-grid">
-        <div class="kpi-card" style="border-top:4px solid var(--success); background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);">
+        <div class="kpi-card kpi-tint-success" style="border-top:4px solid var(--success);">
           <span class="kpi-title">Total Autres Entrées</span>
           <div class="kpi-figure" style="color:var(--success); font-weight:800;">${Utils.formatFCFA(summary.total_amount)}</div>
           <div class="kpi-meta">${summary.count} entrée(s) active(s) comptabilisée(s)</div>
@@ -3925,9 +3925,9 @@ const App = {
           <div class="kpi-meta">${summary.cancelled_count > 0 ? `${summary.cancelled_count} annulée(s)` : 'Toutes les opérations sont valides'}</div>
         </div>
 
-        <div class="kpi-card" style="border-top:4px solid #F59E0B; background:linear-gradient(180deg, #FFFFFF 0%, #FEF3C7 100%);">
+        <div class="kpi-card kpi-tint-warning" style="border-top:4px solid #F59E0B;">
           <span class="kpi-title">Moyenne par opération</span>
-          <div class="kpi-figure" style="color:#B45309; font-weight:800;">
+          <div class="kpi-figure" style="color:var(--tone-amber); font-weight:800;">
             ${summary.count > 0 ? Utils.formatFCFA(Math.round(summary.total_amount / summary.count)) : '0 FCFA'}
           </div>
           <div class="kpi-meta">${summary.count > 0 ? 'Sur les rentrées actives' : 'Aucune entrée enregistrée'}</div>
@@ -3968,7 +3968,7 @@ const App = {
         ${filtered.length === 0 ? `
           <div style="text-align:center; padding:3.5rem 1.5rem; color:var(--text-muted); background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg);">
             <div style="font-size:2.8rem; margin-bottom:0.75rem;">💰</div>
-            <h3 style="font-size:1.2rem; color:#1E3A8A; margin-bottom:0.5rem; font-weight:700;">Cette rubrique est actuellement vierge</h3>
+            <h3 style="font-size:1.2rem; color:var(--tone-navy); margin-bottom:0.5rem; font-weight:700;">Cette rubrique est actuellement vierge</h3>
             <p style="font-size:var(--text-sm); max-width:480px; margin:0 auto 1.5rem auto; line-height:1.6;">
               ${this.searchTerm || activeFilter !== 'all' ? 'Aucune entrée ne correspond à vos filtres de recherche.' : 'Vous n\'avez pas encore enregistré d\'autres entrées d\'argent. Utilisez cette rubrique pour enregistrer les dons, cantine, blouses, kermesse ou autres rentrées hors mensualités.'}
             </p>

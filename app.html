@@ -90,10 +90,10 @@
   </script>
 
   <!-- Design System & Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=20261026_v3">
-  <link rel="stylesheet" href="css/app.css?v=20261026_v3">
-  <link rel="stylesheet" href="css/receipt.css?v=20261026_v3">
-  <link rel="stylesheet" href="css/datepicker.css?v=20261026_v3">
+  <link rel="stylesheet" href="css/design-system.css?v=20261026_v4">
+  <link rel="stylesheet" href="css/app.css?v=20261026_v4">
+  <link rel="stylesheet" href="css/receipt.css?v=20261026_v4">
+  <link rel="stylesheet" href="css/datepicker.css?v=20261026_v4">
 
   <!-- PWA Configuration & Official App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -336,7 +336,7 @@
         <button class="modal-close-btn" aria-label="Fermer">✕</button>
       </div>
       <div class="modal-body">
-        <div style="background:#FEE2E2; padding:0.875rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); margin-bottom:1.25rem;">
+        <div style="background:var(--danger-subtle); padding:0.875rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); margin-bottom:1.25rem;">
           <p style="font-size:var(--text-sm); color:#991B1B; margin-bottom:0;">
             ⚠️ <strong>Attention :</strong> Seul le directeur peut annuler un paiement. Le reçu existant passera au statut <strong>« ANNULÉ »</strong> (filigrane rouge indélébile) et sera conservé dans le registre pour l'audit.
           </p>
@@ -438,8 +438,8 @@
         </div>
 
         <!-- Option d'encaissement immédiat de l'inscription et génération du reçu officiel PNG -->
-        <div id="studentRegistrationPaymentBox" style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:var(--radius-md); padding:0.875rem 1rem; margin-top:1.25rem;">
-          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:700; color:#15803D; font-size:13.5px; margin-bottom:0.4rem;">
+        <div id="studentRegistrationPaymentBox" style="background:var(--tint-green-flat); border:1.5px solid var(--tint-green-border); border-radius:var(--radius-md); padding:0.875rem 1rem; margin-top:1.25rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:700; color:var(--tone-green-strong); font-size:13.5px; margin-bottom:0.4rem;">
             <input type="checkbox" id="studentAutoPayRegistration" checked style="width:18px; height:18px; accent-color:#16A34A;" onchange="document.getElementById('studentRegPaymentFields').style.display = this.checked ? 'grid' : 'none'">
             <span>Encaisser l'inscription & générer le reçu officiel (PNG)</span>
           </label>
@@ -459,7 +459,7 @@
               </select>
             </div>
           </div>
-          <div style="font-size:11px; color:#166534; margin-top:0.35rem;">
+          <div style="font-size:11px; color:var(--tone-green-deep); margin-top:0.35rem;">
             ✓ Génère instantanément le reçu certifié avec cachet officiel, prêt à être envoyé au parent en image PNG sur WhatsApp.
           </div>
         </div>
@@ -647,7 +647,7 @@
             </div>
           </div>
 
-          <div style="background:#F0FDF4; padding:0.75rem 1rem; border-radius:var(--radius-md); border-left:4px solid var(--success); font-size:var(--text-xs); color:#166534;">
+          <div style="background:var(--tint-green-flat); padding:0.75rem 1rem; border-radius:var(--radius-md); border-left:4px solid var(--success); font-size:var(--text-xs); color:var(--tone-green-deep);">
             ✓ Un reçu officiel certifié avec numéro de série et cachet sera automatiquement généré et téléchargeable pour le payeur.
           </div>
         </div>
@@ -677,7 +677,7 @@
         <button class="modal-close-btn" aria-label="Fermer" onclick="App.closeAllModals()">✕</button>
       </div>
       <div class="modal-body">
-        <div style="background:#FEE2E2; padding:0.875rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); margin-bottom:1.25rem;">
+        <div style="background:var(--danger-subtle); padding:0.875rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); margin-bottom:1.25rem;">
           <p style="font-size:var(--text-sm); color:#991B1B; margin-bottom:0;">
             ⚠️ <strong>Attention :</strong> Le reçu existant passera au statut <strong>« ANNULÉ »</strong> avec filigrane rouge et sera archivé dans le registre. Le montant sera déduit du solde en caisse.
           </p>
@@ -833,22 +833,22 @@
               Sections et mensualités (FCFA) :
             </div>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem;">
-              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+              <div style="background:var(--bg-card); padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
                 <div style="font-weight:700; font-size:12px; color:var(--primary);">Crèche</div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeeCrecheReg" class="form-input form-input-sm" value="25000" style="padding:2px 4px; height:28px;"></div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeeCrecheMonth" class="form-input form-input-sm" value="15000" style="padding:2px 4px; height:28px;"></div>
               </div>
-              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+              <div style="background:var(--bg-card); padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
                 <div style="font-weight:700; font-size:12px; color:var(--primary);">Petite section</div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeePsReg" class="form-input form-input-sm" value="25000" style="padding:2px 4px; height:28px;"></div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeePsMonth" class="form-input form-input-sm" value="15000" style="padding:2px 4px; height:28px;"></div>
               </div>
-              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+              <div style="background:var(--bg-card); padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
                 <div style="font-weight:700; font-size:12px; color:var(--primary);">Moyenne section</div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeeMsReg" class="form-input form-input-sm" value="25000" style="padding:2px 4px; height:28px;"></div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeeMsMonth" class="form-input form-input-sm" value="15000" style="padding:2px 4px; height:28px;"></div>
               </div>
-              <div style="background:#FFFFFF; padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
+              <div style="background:var(--bg-card); padding:0.6rem; border-radius:8px; border:1px solid var(--border-light);">
                 <div style="font-weight:700; font-size:12px; color:var(--primary);">Grande section</div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Inscr: <input type="number" id="refFeeGsReg" class="form-input form-input-sm" value="30000" style="padding:2px 4px; height:28px;"></div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Mois: <input type="number" id="refFeeGsMonth" class="form-input form-input-sm" value="18000" style="padding:2px 4px; height:28px;"></div>
@@ -859,7 +859,7 @@
 
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:0.75rem;">
           <button type="button" class="btn btn-secondary" onclick="App.closeAllModals()">Annuler</button>
-          <button type="submit" id="btnSubmitRefSchool" class="btn btn-primary" style="background:#1E3A8A;">
+          <button type="submit" id="btnSubmitRefSchool" class="btn btn-primary btn-navy">
             <span>Valider et ouvrir mon école</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
@@ -888,7 +888,7 @@
           <!-- Injecté dynamiquement par App.openConfirmModal -->
         </div>
 
-        <div style="background:#FEE2E2; padding:0.75rem 1rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); font-size:var(--text-xs); color:#991B1B;">
+        <div style="background:var(--danger-subtle); padding:0.75rem 1rem; border-radius:var(--radius-md); border-left:4px solid var(--danger); font-size:var(--text-xs); color:var(--tone-red-deep);">
           ⚠️ <strong>Attention :</strong> Cette opération est irréversible. Pour une dépense, la somme décaissée sera automatiquement réintégrée dans le solde disponible de l'école.
         </div>
       </div>
@@ -904,17 +904,17 @@
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=20261026_v3"></script>
-  <script src="js/utils.js?v=20261026_v3"></script>
-  <script src="js/datepicker.js?v=20261026_v3"></script>
-  <script src="js/stamp.js?v=20261026_v3"></script>
-  <script src="js/supabase.js?v=20261026_v3"></script>
-  <script src="js/auth.js?v=20261026_v3"></script>
-  <script src="js/demo-data.js?v=20261026_v3"></script>
-  <script src="js/store.js?v=20261026_v3"></script>
-  <script src="js/cloud-sync.js?v=20261026_v3"></script>
+  <script src="js/config.js?v=20261026_v4"></script>
+  <script src="js/utils.js?v=20261026_v4"></script>
+  <script src="js/datepicker.js?v=20261026_v4"></script>
+  <script src="js/stamp.js?v=20261026_v4"></script>
+  <script src="js/supabase.js?v=20261026_v4"></script>
+  <script src="js/auth.js?v=20261026_v4"></script>
+  <script src="js/demo-data.js?v=20261026_v4"></script>
+  <script src="js/store.js?v=20261026_v4"></script>
+  <script src="js/cloud-sync.js?v=20261026_v4"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20261026_v3"></script>
+  <script src="js/app.js?v=20261026_v4"></script>
 
   <!-- Bannière flottante de mise à jour PWA -->
   <div id="pwaUpdateBanner" class="pwa-update-banner" role="status" aria-live="polite">
