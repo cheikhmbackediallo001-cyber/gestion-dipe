@@ -6,7 +6,9 @@
  * - Prise de contrôle automatique et purge des anciens caches
  */
 
-const CACHE_NAME = 'gestion-prescolaire-v20261026_v4';
+// Même numéro que les « ?v= » des pages HTML : à changer à chaque publication
+const ASSET_VERSION = '20261026_v5';
+const CACHE_NAME = 'gestion-prescolaire-v' + ASSET_VERSION;
 
 const STATIC_ASSETS = [
   './',
@@ -47,7 +49,14 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.allSettled(
-        STATIC_ASSETS.map((url) => cache.add(new Request(url, { cache: 'reload' })))
+        STATIC_ASSETS.map(async (url) => {
+          const res = await fetch(new Request(url, { cache: 'reload' }));
+          if (!res || !res.ok) throw new Error('Préchargement impossible : ' + url);
+          // Les scripts et styles sont aussi rangés sous le nom exact demandé par les pages (?v=...)
+          const versioned = /\.(js|css)$/.test(url) && !url.includes('html2canvas');
+          if (versioned) await cache.put(url + '?v=' + ASSET_VERSION, res.clone());
+          await cache.put(url, res);
+        })
       );
     })
   );
@@ -149,26 +158,42 @@ self.addEventListener('fetch', (e) => {
   }
 
   // ============================================================================
-  // B. SCRIPTS JS & STYLES CSS : STALE-WHILE-REVALIDATE (Ouverture instantanée < 20ms)
-  // Renvoie immédiatement la ressource en cache pour un affichage instantané,
-  // tout en mettant à jour le cache en arrière-plan.
+  // B. SCRIPTS JS & STYLES CSS
+  // Les pages demandent chaque fichier avec son numéro de version (?v=...).
+  // - Fichier versionné déjà en cache sous CE numéro : renvoi immédiat.
+  // - Sinon (nouvelle version publiée) : téléchargement réseau, pour ne jamais mélanger
+  //   une page récente avec un ancien script ou un ancien style.
+  // - Hors ligne : repli sur la copie en cache, quel que soit son numéro.
   // ============================================================================
   if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    const versioned = url.searchParams.has('v');
     e.respondWith(
-      caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
-        const fetchPromise = fetch(e.request, { headers: { 'Cache-Control': 'no-cache' } })
+      (async () => {
+        const exact = await caches.match(e.request);
+        const network = fetch(e.request, { cache: 'no-cache' })
           .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const clone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              const forExact = networkResponse.clone();
+              const forPlain = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(e.request, forExact);
+                // Copie sans numéro de version, utilisée hors ligne
+                if (versioned) cache.put(url.origin + url.pathname, forPlain);
+              });
             }
             return networkResponse;
           })
           .catch(() => null);
 
-        // Si déjà en cache, renvoi immédiat sans aucun délai réseau
-        return cachedResponse || fetchPromise;
-      })
+        if (exact && versioned) return exact;          // même version : instantané
+        if (exact && !versioned) {                      // sans version : cache puis mise à jour en arrière-plan
+          e.waitUntil(network);
+          return exact;
+        }
+        const fresh = await network;
+        if (fresh && fresh.ok) return fresh;
+        return (await caches.match(e.request, { ignoreSearch: true })) || fresh || Response.error();
+      })()
     );
     return;
   }
