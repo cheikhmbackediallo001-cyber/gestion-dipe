@@ -23,11 +23,11 @@ const App = {
       }
 
       await Store.init();
-      
-      // Définition du mois courant par défaut (Octobre)
-      const months = Store.getMonths();
-      if (months.length > 0) {
-        this.currentMonthId = months[0].id;
+
+      // Définition du mois courant par défaut (mois calendaire du jour)
+      const currentMonth = Store.getCurrentMonth();
+      if (currentMonth) {
+        this.currentMonthId = currentMonth.id;
       }
     } catch (e) {
       console.warn("[App] Initialisation résiliente:", e);
@@ -39,6 +39,18 @@ const App = {
       this.renderHeader();
     } catch (e) {
       console.warn("[App] Initialisation UI résiliente:", e);
+    }
+
+    // Synchronisation cloud en arrière-plan (sauvegarde + reçus vérifiables depuis tout téléphone)
+    if (window.CloudSync) {
+      document.addEventListener('cloudsync-status', () => {
+        if (this.currentTab === 'settings') this.updateCloudSyncCard();
+      });
+      CloudSync.startupSync(() => {
+        this.renderHeader();
+        this.navigate(this.currentTab, { preserveFilters: true, keepScroll: true });
+        this.showToast("Données mises à jour depuis votre sauvegarde en ligne.", "info");
+      }).catch(() => {});
     }
 
     // Support de l'installation PWA
@@ -130,6 +142,10 @@ const App = {
       this.activeStatusFilter = 'all';
       this.searchTerm = '';
     }
+    // La recherche saisie dans un onglet ne doit pas filtrer les autres onglets
+    if (resolvedTab !== this.currentTab && !options.preserveFilters) {
+      this.searchTerm = '';
+    }
 
     this.currentTab = resolvedTab;
 
@@ -197,7 +213,9 @@ const App = {
       } catch (e) {}
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!options.keepScroll) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   },
 
   // ----------------------------------------------------------------------------
@@ -599,6 +617,7 @@ const App = {
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
+          <tbody>
             ${filtered.length === 0 ? `
               <tr>
                 <td colspan="7" style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
@@ -640,7 +659,7 @@ const App = {
                   <td data-label="Parent">${Utils.escapeHtml(s.parent_name || '-')}</td>
                   <td data-label="Téléphone">
                     ${s.parent_phone ? `
-                      <a href="tel:${s.parent_phone}" style="color:var(--primary); font-weight:600;">${Utils.escapeHtml(s.parent_phone)}</a>
+                      <a href="tel:${Utils.escapeHtml(String(s.parent_phone).replace(/[^\d+]/g, ''))}" style="color:var(--primary); font-weight:600;">${Utils.escapeHtml(s.parent_phone)}</a>
                     ` : '-'}
                   </td>
                   <td data-label="Actions" style="text-align:right;">
@@ -1137,9 +1156,9 @@ const App = {
     const expensesSummary = Store.getExpensesSummary();
     const rubriques = Store.getExpenseRubriques();
 
-    // Calcul des totaux par rubrique
+    // Calcul des totaux par rubrique (les dépenses annulées sont exclues des totaux)
     const rubriqueTotals = {};
-    expenses.forEach(e => {
+    expenses.filter(e => e.status !== 'cancelled').forEach(e => {
       const cat = e.category || 'Fournitures scolaires & papeterie';
       rubriqueTotals[cat] = (rubriqueTotals[cat] || 0) + (parseInt(e.amount, 10) || 0);
     });
@@ -1147,7 +1166,8 @@ const App = {
     const activeFilter = this.activeExpenseRubriqueFilter || 'all';
 
     const filtered = expenses.filter(e => {
-      const matchSearch = !this.searchTerm 
+      if (e.status === 'cancelled') return false;
+      const matchSearch = !this.searchTerm
         || (e.motif && e.motif.toLowerCase().includes(this.searchTerm.toLowerCase()))
         || (e.category && e.category.toLowerCase().includes(this.searchTerm.toLowerCase()));
       const matchRubrique = activeFilter === 'all' || e.category === activeFilter;
@@ -1216,12 +1236,12 @@ const App = {
             </button>
             ${Object.keys(rubriqueTotals).map(r => `
               <div style="display:inline-flex; align-items:center; gap:0.25rem; margin-right:0.25rem;">
-                <button type="button" class="rubrique-chip ${activeFilter === r ? 'active' : ''}" onclick="App.onExpenseRubriqueFilterChange('${Utils.escapeHtml(r)}')">
+                <button type="button" class="rubrique-chip ${activeFilter === r ? 'active' : ''}" onclick="App.onExpenseRubriqueFilterChange(${Utils.jsArg(r)})">
                   <span>${Utils.escapeHtml(r)}</span>
                   <strong>${Utils.formatFCFA(rubriqueTotals[r])}</strong>
                 </button>
                 ${Store.isCustomExpenseRubrique(r) ? `
-                  <button type="button" class="rubrique-chip-del" onclick="App.deleteCustomRubrique('${Utils.escapeHtml(r)}')" title="Supprimer la rubrique ${Utils.escapeHtml(r)}" aria-label="Supprimer la rubrique">✕</button>
+                  <button type="button" class="rubrique-chip-del" onclick="App.deleteCustomRubrique(${Utils.jsArg(r)})" title="Supprimer la rubrique ${Utils.escapeHtml(r)}" aria-label="Supprimer la rubrique">✕</button>
                 ` : ''}
               </div>
             `).join('')}
@@ -1410,7 +1430,7 @@ const App = {
         <div class="kpi-card" style="border-top:4px solid var(--primary); background:linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);">
           <span class="kpi-title">2. Somme Totale Encaissée</span>
           <div class="kpi-figure" style="color:var(--primary);">${Utils.formatFCFA(grand.grand_collected)}</div>
-          <div class="kpi-meta">Inscriptions (${Utils.formatFCFA(grand.registration.total_collected)}) + Cotisations (${Utils.formatFCFA(grand.monthly.cumulated_collected)})</div>
+          <div class="kpi-meta">Inscriptions (${Utils.formatFCFA(grand.registration.total_collected)}) + Cotisations (${Utils.formatFCFA(grand.monthly.cumulated_collected)}) + Autres entrées (${Utils.formatFCFA(grand.other_revenues ? grand.other_revenues.total_amount : 0)})</div>
         </div>
 
         <div class="kpi-card" style="border-top:4px solid var(--danger);">
@@ -1433,7 +1453,7 @@ const App = {
       <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem; margin-top:1.5rem;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
           <h2 style="font-size:var(--text-lg); margin-bottom:0;">Synthèse financière générale de l'établissement</h2>
-          <span class="badge badge-info">Année scolaire 2026-2027</span>
+          <span class="badge badge-info">Année scolaire ${Utils.escapeHtml(Store.getSchool().school_year || CONFIG.DEFAULT_SCHOOL_YEAR)}</span>
         </div>
 
         <div class="data-table-container">
@@ -1474,7 +1494,7 @@ const App = {
                 <td data-label="Rubrique">
                   <div style="display:flex; align-items:center; gap:0.5rem;">
                     <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16A34A;"></span>
-                    <strong>2. Cotisations mensuelles (Octobre à Juillet)</strong>
+                    <strong>2. Cotisations mensuelles (Octobre à Juin)</strong>
                   </div>
                 </td>
                 <td data-label="Attendu">${Utils.formatFCFA(grand.monthly.cumulated_expected)}</td>
@@ -1580,7 +1600,7 @@ const App = {
 
   // 4. Contenu du SOUS-ONGLET : BILAN DÉPENSES
   renderBilanExpensesContent(expensesSummary, grand) {
-    const expenses = Store.getExpenses();
+    const expenses = Store.getExpenses().filter(e => e.status !== 'cancelled');
 
     // Regroupement par catégorie
     const byCategory = {};
@@ -2026,6 +2046,11 @@ const App = {
           </div>
         </div>
 
+        <!-- Sauvegarde en ligne & vérification des reçus depuis tout téléphone -->
+        <div id="cloudSyncCard" style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
+          ${this.renderCloudSyncCardContent()}
+        </div>
+
         <!-- Mise à jour & Synchronisation PWA de l'application -->
         <div style="background:var(--bg-card); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
           <div>
@@ -2132,6 +2157,60 @@ const App = {
   },
 
   // ----------------------------------------------------------------------------
+  // CARTE « SAUVEGARDE EN LIGNE » (PARAMÈTRES)
+  // ----------------------------------------------------------------------------
+  renderCloudSyncCardContent() {
+    const status = window.CloudSync ? CloudSync.status : { state: 'unavailable', message: '' };
+    const palette = {
+      ok: { dot: '#16A34A', label: 'Active' },
+      syncing: { dot: '#2563EB', label: 'Synchronisation...' },
+      error: { dot: '#DC2626', label: 'En attente' },
+      'no-session': { dot: '#D97706', label: 'Inactive' },
+      demo: { dot: '#94A3B8', label: 'Non disponible en démo' },
+      idle: { dot: '#94A3B8', label: 'Vérification...' },
+      unavailable: { dot: '#94A3B8', label: 'Indisponible' }
+    };
+    const p = palette[status.state] || palette.idle;
+    let detail = status.message || '';
+    if (status.state === 'ok') {
+      detail = `Dernière sauvegarde : ${status.lastBackupAt ? Utils.formatDateTime(status.lastBackupAt) : 'à jour'}. ${status.publishedCount || 0} reçu(s) vérifiable(s) par QR code depuis n'importe quel téléphone.`;
+    }
+    const canSync = window.CloudSync && CloudSync.canSync();
+    return `
+      <div style="flex:1; min-width:240px;">
+        <div style="font-weight:700; font-size:var(--text-base); color:var(--text-main); display:flex; align-items:center; gap:0.5rem;">
+          <span>☁️</span> <span>Sauvegarde en ligne & vérification des reçus</span>
+          <span style="display:inline-flex; align-items:center; gap:0.35rem; font-size:var(--text-xs); font-weight:700; color:${p.dot};">
+            <span style="width:9px; height:9px; border-radius:50%; background:${p.dot}; display:inline-block;"></span>${Utils.escapeHtml(p.label)}
+          </span>
+        </div>
+        <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.25rem; line-height:1.45;">${Utils.escapeHtml(detail || "Vos données sont sauvegardées automatiquement dans votre espace en ligne privé, et vos reçus deviennent vérifiables par les parents.")}</p>
+      </div>
+      <div>
+        <button type="button" class="btn btn-secondary" onclick="App.forceCloudSync()" ${canSync ? '' : 'disabled'} style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700;">
+          <span>☁️ Sauvegarder maintenant</span>
+        </button>
+      </div>
+    `;
+  },
+
+  updateCloudSyncCard() {
+    const card = document.getElementById('cloudSyncCard');
+    if (card) card.innerHTML = this.renderCloudSyncCardContent();
+  },
+
+  async forceCloudSync() {
+    if (!window.CloudSync) return;
+    const status = await CloudSync.syncNow({ force: true });
+    this.updateCloudSyncCard();
+    if (status.state === 'ok') {
+      this.showToast("✓ Sauvegarde en ligne effectuée.", "success");
+    } else if (status.message) {
+      this.showToast(status.message, status.state === 'error' ? 'danger' : 'warning');
+    }
+  },
+
+  // ----------------------------------------------------------------------------
   // GESTION DU FLUX DE PAIEMENT & MODALE DE VALIDATION (§ 3.3 & § 3.4)
   // ----------------------------------------------------------------------------
   
@@ -2229,15 +2308,20 @@ const App = {
     const amount = parseInt(document.getElementById('payValAmount').value, 10);
     const method = document.getElementById('payValMethod').value;
     const reference = document.getElementById('payValReference').value;
+    const paidAt = (document.getElementById('payValDate') || {}).value || null;
 
     try {
+      if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error("Veuillez saisir un montant valide en FCFA.");
+      }
       const res = Store.recordPayment({
         studentId,
         kind,
         monthId,
         amount,
         method,
-        reference
+        reference,
+        paidAt
       });
 
       modal.classList.remove('is-open');
@@ -2460,8 +2544,9 @@ const App = {
     }
 
     const amountInWords = Utils.amountToFrenchWords(amount);
-    const verifyUrl = `${window.location.origin}${window.location.pathname.replace('app.html', '')}verify.html?token=${receipt.public_token}`;
-    const qrSvg = Utils.generateQRCodeSVG(verifyUrl, 84);
+    const basePath = window.location.pathname.replace(/[^/]*$/, '');
+    const verifyUrl = `${window.location.origin}${basePath}verify.html?token=${encodeURIComponent(receipt.public_token)}`;
+    const qrSvg = Utils.generateQRCodeSVG(verifyUrl, 104);
     const stampSvg = SchoolStamp.generateSVG(school, 155, false);
 
     return `
@@ -2518,7 +2603,7 @@ const App = {
               Soit : <strong>${Utils.escapeHtml(amountInWords)}</strong>
             </div>
             <div class="receipt-payment-details" style="display:flex; justify-content:space-between; font-size:0.85rem; border-top:1px solid #E2E8F0; padding-top:0.45rem;">
-              <span>Règlement : <strong>${Utils.escapeHtml(method.toUpperCase())}</strong> ${reference ? `(Réf : ${Utils.escapeHtml(reference)})` : ''}</span>
+              <span>Règlement : <strong>${Utils.escapeHtml(Utils.paymentMethodLabel(method))}</strong> ${reference ? `(Réf : ${Utils.escapeHtml(reference)})` : ''}</span>
               <span style="color:#16A34A; font-weight:800;">✓ Situation : Réglé en totalité</span>
             </div>
           </div>
@@ -2930,78 +3015,98 @@ const App = {
   },
 
   downloadCsvTemplate() {
-    const content = "PRENOMS,NOM,GENRE,CLASSE,DATE_NAISSANCE,NOM_PARENT,TELEPHONE_PARENT\nMamadou,DIOP,M,Petite section,2023-03-12,Ousmane Diop,+221 77 123 45 67\nFatou,SOW,F,Crèche (2 ans),2024-05-24,Ibrahima Sow,+221 78 234 56 78";
-    const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "modele_import_eleves_gestion_prescolaire.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    let content = Utils.csvRow(["PRENOMS", "NOM", "GENRE", "CLASSE", "DATE_NAISSANCE", "NOM_PARENT", "TELEPHONE_PARENT"]);
+    content += Utils.csvRow(["Mamadou", "DIOP", "M", "Petite section", "2023-03-12", "Ousmane Diop", "+221 77 123 45 67"]);
+    content += Utils.csvRow(["Fatou", "SOW", "F", "Crèche", "2024-05-24", "Ibrahima Sow", "+221 78 234 56 78"]);
+    Utils.downloadCSV(content, "modele_import_eleves_gestion_prescolaire.csv");
   },
 
   processCsvFile(input) {
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
+
+    // Garde-fous : taille et type de fichier
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Le fichier est trop volumineux (2 Mo maximum).");
+      input.value = '';
+      return;
+    }
+    if (!/\.(csv|txt)$/i.test(file.name)) {
+      alert("Veuillez choisir un fichier au format CSV (.csv).");
+      input.value = '';
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
-      const text = e.target.result;
-      const lines = text.split(/\r\n|\n/).filter(line => line.trim().length > 0);
-      if (lines.length <= 1) {
+      const rows = Utils.parseCSV(e.target.result);
+      input.value = '';
+      if (rows.length <= 1) {
         alert("Le fichier CSV est vide ou ne contient que l'en-tête.");
         return;
       }
+      if (rows.length > 2001) {
+        alert("Le fichier contient trop de lignes (2000 élèves maximum par import).");
+        return;
+      }
 
+      const normalize = (str) => String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
       const classes = Store.getClasses();
+      const findClass = (name) => {
+        const n = normalize(name);
+        if (!n) return classes[0];
+        return classes.find(c => normalize(c.name) === n)
+          || classes.find(c => n.startsWith(normalize(c.name)) || normalize(c.name).startsWith(n))
+          || classes[0];
+      };
+
+      const header = rows[0].map(h => normalize(h));
+      const isPrenomFirst = header[0] && header[0].includes('prenom');
       let importedCount = 0;
-      const headerParts = lines[0].split(',').map(p => p.trim().toUpperCase());
-      const isPrenomFirst = headerParts[0].includes('PRENOM');
+      let skippedCount = 0;
 
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(',').map(p => p.trim());
-        if (parts.length >= 2 && (parts[0] || parts[1])) {
-          let firstNames, lastName, gender, className, birthDate, parentName, parentPhone;
-          if (isPrenomFirst) {
-            firstNames = parts[0];
-            lastName = parts[1];
-            gender = (parts[2] || 'M').toUpperCase().startsWith('F') ? 'F' : 'M';
-            className = parts[3] || '';
-            birthDate = parts[4] || null;
-            parentName = parts[5] || '';
-            parentPhone = parts[6] || '';
-          } else {
-            lastName = parts[0];
-            firstNames = parts[1] || '';
-            gender = 'M';
-            className = parts[2] || '';
-            birthDate = parts[3] || null;
-            parentName = parts[4] || '';
-            parentPhone = parts[5] || '';
-          }
+      for (let i = 1; i < rows.length; i++) {
+        const parts = rows[i];
+        let firstNames, lastName, gender, className, birthDate, parentName, parentPhone;
+        if (isPrenomFirst) {
+          [firstNames, lastName] = [parts[0], parts[1]];
+          gender = String(parts[2] || 'M').toUpperCase().startsWith('F') ? 'F' : 'M';
+          [className, birthDate, parentName, parentPhone] = [parts[3], parts[4], parts[5], parts[6]];
+        } else {
+          [lastName, firstNames] = [parts[0], parts[1]];
+          gender = 'M';
+          [className, birthDate, parentName, parentPhone] = [parts[2], parts[3], parts[4], parts[5]];
+        }
 
-          // Recherche classe correspondante ou première classe
-          const matchedClass = classes.find(c => c.name.toLowerCase() === className.toLowerCase()) || classes[0];
+        if (!lastName || !firstNames) {
+          skippedCount++;
+          continue;
+        }
 
+        try {
           Store.addStudent({
             last_name: lastName,
             first_names: firstNames,
             gender: gender,
-            class_id: matchedClass.id,
+            class_id: (findClass(className) || {}).id,
             birth_date: birthDate,
             parent_name: parentName,
             parent_phone: parentPhone
           });
           importedCount++;
+        } catch (err) {
+          skippedCount++;
         }
       }
 
       this.closeAllModals();
-      this.showToast(`${importedCount} élèves importés avec succès !`, "success");
-      this.renderStudents(document.getElementById('appViewContent'));
+      const skippedMsg = skippedCount > 0 ? ` (${skippedCount} ligne(s) ignorée(s) : nom ou prénom manquant)` : '';
+      this.showToast(`${importedCount} élève(s) importé(s) avec succès${skippedMsg}.`, importedCount > 0 ? "success" : "warning");
+      this.navigate(this.currentTab, { preserveFilters: true });
     };
 
+    reader.onerror = () => alert("Impossible de lire ce fichier.");
     reader.readAsText(file, "UTF-8");
   },
 
@@ -3189,56 +3294,6 @@ const App = {
   // ----------------------------------------------------------------------------
   // MODALE DE CONFIRMATION SÉCURISÉE OUI / NON AVANT SUPPRESSION
   // ----------------------------------------------------------------------------
-  openConfirmModal(options = {}) {
-    const modal = document.getElementById('confirmDeleteModal');
-    if (!modal) {
-      if (typeof options.onConfirm === 'function') options.onConfirm();
-      return;
-    }
-
-    const titleEl = document.getElementById('confirmDeleteTitle');
-    const msgEl = document.getElementById('confirmDeleteMessage');
-    const detailsEl = document.getElementById('confirmDeleteDetails');
-    const btnNo = document.getElementById('confirmDeleteBtnNo');
-    const btnYes = document.getElementById('confirmDeleteBtnYes');
-
-    if (titleEl && options.title) {
-      titleEl.innerHTML = `<span>⚠️</span> <span>${Utils.escapeHtml(options.title)}</span>`;
-    }
-    if (msgEl && options.message) {
-      msgEl.textContent = options.message;
-    }
-    if (detailsEl) {
-      if (options.detailsHtml) {
-        detailsEl.innerHTML = options.detailsHtml;
-        detailsEl.style.display = 'block';
-      } else {
-        detailsEl.innerHTML = '';
-        detailsEl.style.display = 'none';
-      }
-    }
-    if (btnNo && options.cancelText) {
-      btnNo.textContent = options.cancelText;
-    }
-    if (btnYes && options.confirmText) {
-      btnYes.textContent = options.confirmText;
-    }
-
-    this.pendingConfirmAction = typeof options.onConfirm === 'function' ? options.onConfirm : null;
-    modal.classList.add('is-open');
-  },
-
-  executeConfirmedDelete() {
-    const modal = document.getElementById('confirmDeleteModal');
-    if (modal) modal.classList.remove('is-open');
-
-    if (typeof this.pendingConfirmAction === 'function') {
-      const action = this.pendingConfirmAction;
-      this.pendingConfirmAction = null;
-      action();
-    }
-  },
-
   promptDeleteExpense(id) {
     const expense = Store.getExpenseById(id);
     if (!expense) return;
@@ -3463,88 +3518,94 @@ const App = {
   // ----------------------------------------------------------------------------
   exportCsvGrandTotal() {
     const grand = Store.getGrandTotalSummary();
-    let csv = "RUBRIQUE,ATTENDU_FCFA,ENCAISSE_FCFA,RESTE_OU_CHARGES_FCFA,POURCENTAGE\n";
-    csv += `"1. Droits d'inscriptions annuels",${grand.registration.total_expected},${grand.registration.total_collected},${grand.registration.total_remaining},${grand.registration.percentage}%\n`;
-    csv += `"2. Cotisations mensuelles (Octobre a Juillet)",${grand.monthly.cumulated_expected},${grand.monthly.cumulated_collected},${grand.monthly.cumulated_remaining},${grand.monthly.cumulated_percentage}%\n`;
-    csv += `"SOUS-TOTAL RECETTES BRUTES ENCAISSEES",${grand.grand_expected},${grand.grand_collected},${grand.grand_remaining},${grand.grand_percentage}%\n`;
-    csv += `"3. Total Depenses de fonctionnement decaissees",-,${grand.total_expenses},-,Charges\n`;
-    csv += `"SOLDE RESTANT DISPONIBLE AU MOMENT T",-,${grand.net_available},-,${grand.net_available >= 0 ? 'Positif' : 'Deficit'}\n`;
+    const other = grand.other_revenues ? grand.other_revenues.total_amount : 0;
+    let csv = Utils.csvRow(["RUBRIQUE", "ATTENDU_FCFA", "ENCAISSE_FCFA", "RESTE_OU_CHARGES_FCFA", "POURCENTAGE"]);
+    csv += Utils.csvRow(["1. Droits d'inscriptions annuels", grand.registration.total_expected, grand.registration.total_collected, grand.registration.total_remaining, grand.registration.percentage + "%"]);
+    csv += Utils.csvRow(["2. Cotisations mensuelles (Octobre à Juin)", grand.monthly.cumulated_expected, grand.monthly.cumulated_collected, grand.monthly.cumulated_remaining, grand.monthly.cumulated_percentage + "%"]);
+    csv += Utils.csvRow(["3. Autres rentrées (dons, cantine, blouses...)", "", other, "", ""]);
+    csv += Utils.csvRow(["SOUS-TOTAL RECETTES BRUTES ENCAISSÉES", grand.grand_expected, grand.grand_collected, grand.grand_remaining, grand.grand_percentage + "%"]);
+    csv += Utils.csvRow(["4. Total dépenses de fonctionnement décaissées", "", grand.total_expenses, "", "Charges"]);
+    csv += Utils.csvRow(["SOLDE RESTANT DISPONIBLE AU MOMENT T", "", grand.net_available, "", grand.net_available >= 0 ? "Positif" : "Déficit"]);
 
-    this._downloadFile(csv, "bilan_general_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+    Utils.downloadCSV(csv, "bilan_general_gestion_prescolaire.csv");
   },
 
   exportStudentsCsv() {
     const students = Store.getStudents(true);
-    let csv = "MATRICULE,PRENOM,NOM,GENRE,SECTION,DATE_NAISSANCE,STATUT,PARENT,TELEPHONE\n";
+    let csv = Utils.csvRow(["PRENOMS", "NOM", "GENRE", "SECTION", "DATE_NAISSANCE", "STATUT", "NOM_PARENT", "TELEPHONE_PARENT"]);
     students.forEach(s => {
-      const matricule = (s.matricule || '').replace(/"/g, '""');
-      const first = (s.first_names || '').replace(/"/g, '""');
-      const last = (s.last_name || '').replace(/"/g, '""');
-      const gender = s.gender === 'F' ? 'Fille' : 'Garçon';
-      const className = (Store.getClassName(s.class_id) || '').replace(/"/g, '""');
-      const dob = s.birth_date || '';
-      const status = s.status === 'active' ? 'Inscrit' : 'Quitté';
-      const parent = (s.parent_name || '').replace(/"/g, '""');
-      const phone = (s.parent_phone || '').replace(/"/g, '""');
-      csv += `"${matricule}","${first}","${last}","${gender}","${className}","${dob}","${status}","${parent}","${phone}"\n`;
+      csv += Utils.csvRow([
+        s.first_names || "",
+        s.last_name || "",
+        s.gender === "F" ? "Fille" : "Garçon",
+        Store.getClassName(s.class_id),
+        s.birth_date || "",
+        s.active === false ? "Quitté" : "Inscrit",
+        s.parent_name || "",
+        s.parent_phone || ""
+      ]);
     });
-    this._downloadFile(csv, "liste_eleves_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+    Utils.downloadCSV(csv, "liste_eleves_gestion_prescolaire.csv");
     this.showToast("Export CSV de l'ensemble des élèves téléchargé.", "success");
   },
 
   exportExpensesCsv() {
-    const expenses = Store.getExpenses();
-    let csv = "DATE,MOTIF,CATEGORIE,MONTANT_FCFA\n";
+    const expenses = Store.getExpenses().filter(e => e.status !== "cancelled");
+    let csv = Utils.csvRow(["DATE", "MOTIF", "RUBRIQUE", "MONTANT_FCFA"]);
     expenses.forEach(e => {
-      const cleanMotif = (e.motif || '').replace(/"/g, '""');
-      const cleanCat = (e.category || 'Général').replace(/"/g, '""');
-      csv += `"${e.date}","${cleanMotif}","${cleanCat}",${e.amount}\n`;
+      csv += Utils.csvRow([e.date || "", e.motif || "", e.category || "Général", parseInt(e.amount, 10) || 0]);
     });
-    const total = Store.getTotalExpenses();
-    csv += `"TOTAL","TOTAL GENERAL DES DEPENSES DECAISSEES","-",${total}\n`;
+    csv += Utils.csvRow(["TOTAL", "TOTAL GÉNÉRAL DES DÉPENSES DÉCAISSÉES", "", Store.getTotalExpenses()]);
 
-    this._downloadFile(csv, "depenses_ecole_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+    Utils.downloadCSV(csv, "depenses_ecole_gestion_prescolaire.csv");
   },
 
   exportCsvRegistrations() {
     const summary = Store.getRegistrationSummary();
-    let csv = "SECTION,FRAIS_FCFA,EFFECTIF,PAYES,IMPAYES,ATTENDU_FCFA,ENCAISSE_FCFA,RESTE_FCFA,POURCENTAGE\n";
+    let csv = Utils.csvRow(["SECTION", "FRAIS_FCFA", "EFFECTIF", "PAYES", "IMPAYES", "ATTENDU_FCFA", "ENCAISSE_FCFA", "RESTE_FCFA", "POURCENTAGE"]);
     summary.classes.forEach(c => {
-      csv += `"${c.class_name}",${c.fee},${c.total_students},${c.paid_students},${c.unpaid_students},${c.expected_amount},${c.collected_amount},${c.remaining_amount},${c.percentage}%\n`;
+      csv += Utils.csvRow([c.class_name, c.fee, c.total_students, c.paid_students, c.unpaid_students, c.expected_amount, c.collected_amount, c.remaining_amount, c.percentage + "%"]);
     });
-    csv += `"TOTAL",-,${summary.total_students},${summary.paid_students},${summary.unpaid_students},${summary.total_expected},${summary.total_collected},${summary.total_remaining},${summary.percentage}%\n`;
+    csv += Utils.csvRow(["TOTAL", "", summary.total_students, summary.paid_students, summary.unpaid_students, summary.total_expected, summary.total_collected, summary.total_remaining, summary.percentage + "%"]);
 
-    this._downloadFile(csv, "total_inscriptions_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+    Utils.downloadCSV(csv, "total_inscriptions_gestion_prescolaire.csv");
   },
 
   exportCsvAnnual() {
     const annual = Store.getAnnualOverview();
-    let csv = "MOIS,ATTENDU_FCFA,ENCAISSE_FCFA,RESTE_FCFA,PAYES,IMPAYES,POURCENTAGE\n";
+    let csv = Utils.csvRow(["MOIS", "ATTENDU_FCFA", "ENCAISSE_FCFA", "RESTE_FCFA", "PAYES", "IMPAYES", "POURCENTAGE"]);
     annual.months.forEach(m => {
-      csv += `"${m.month_label}",${m.expected_amount},${m.collected_amount},${m.remaining_amount},${m.paid_students},${m.unpaid_students},${m.percentage}%\n`;
+      csv += Utils.csvRow([m.month_label, m.expected_amount, m.collected_amount, m.remaining_amount, m.paid_students, m.unpaid_students, m.percentage + "%"]);
     });
-    csv += `"TOTAL CUMULE",${annual.cumulated_expected},${annual.cumulated_collected},${annual.cumulated_remaining},-,-,${annual.cumulated_percentage}%\n`;
+    csv += Utils.csvRow(["TOTAL CUMULÉ", annual.cumulated_expected, annual.cumulated_collected, annual.cumulated_remaining, "", "", annual.cumulated_percentage + "%"]);
 
-    this._downloadFile(csv, "bilan_annuel_gestion_prescolaire.csv", "text/csv;charset=utf-8;");
+    Utils.downloadCSV(csv, "bilan_annuel_gestion_prescolaire.csv");
   },
 
-  _downloadFile(content, fileName, mimeType) {
-    const blob = new Blob(["\uFEFF" + content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  _downloadFile(content, fileName) {
+    Utils.downloadCSV(content, fileName);
   },
 
   // ----------------------------------------------------------------------------
   // INTERACTIONS FILTRES ET PARAMÈTRES
   // ----------------------------------------------------------------------------
   onSearchInput(val) {
-    this.searchTerm = val;
-    this.navigate(this.currentTab);
+    this.searchTerm = String(val || '').slice(0, 100);
+    // Rafraîchit la vue en conservant les filtres puis redonne le focus au champ de recherche
+    this.navigate(this.currentTab, { preserveFilters: true, keepScroll: true });
+    this.restoreSearchFocus('.search-input');
+  },
+
+  /**
+   * Après un nouveau rendu de la vue, remet le curseur dans le champ de recherche
+   * (sinon la saisie s'interrompt après chaque lettre).
+   */
+  restoreSearchFocus(selector) {
+    const input = document.querySelector(`#appViewContent ${selector}`);
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    const end = input.value.length;
+    try { input.setSelectionRange(end, end); } catch (e) {}
   },
 
   onClassFilterChange(val) {
@@ -3915,7 +3976,7 @@ const App = {
                     <span class="badge badge-info">${Utils.escapeHtml(r.category || 'Général')}</span>
                   </td>
                   <td data-label="Mode">
-                    <span style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-muted);">${Utils.escapeHtml(r.payment_method || 'CASH')}</span>
+                    <span style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-muted);">${Utils.escapeHtml(Utils.paymentMethodLabel(r.payment_method || 'cash'))}</span>
                   </td>
                   <td data-label="Montant" style="font-weight:800; color:${r.status === 'cancelled' ? 'var(--text-muted)' : 'var(--success)'}; font-size:var(--text-base);">
                     ${r.status === 'cancelled' ? `<del>${Utils.formatFCFA(r.amount)}</del>` : `+ ${Utils.formatFCFA(r.amount)}`}
@@ -4117,7 +4178,7 @@ const App = {
     this.openConfirmModal({
       title: "Supprimer la rentrée",
       message: `Confirmez-vous la suppression de la rentrée « ${revenue.motif} » d'un montant de ${Utils.formatFCFA(revenue.amount)} ?`,
-      details: `Cette suppression effacera définitivement cette écriture et son reçu n° ${revenue.receipt_number || '-'} du registre.`,
+      detailsHtml: `<div style="font-size:var(--text-sm); color:var(--text-muted); line-height:1.5;">Cette suppression effacera définitivement cette écriture et son reçu n° ${Utils.escapeHtml(revenue.receipt_number || '-')} du registre.</div>`,
       onConfirm: () => {
         Store.deleteOtherRevenue(id);
         this.closeAllModals();
@@ -4167,8 +4228,9 @@ const App = {
   },
 
   onOtherRevenueSearch(term) {
-    this.searchTerm = term;
+    this.searchTerm = String(term || '').slice(0, 100);
     this.renderOtherRevenues(document.getElementById('appViewContent'));
+    this.restoreSearchFocus('.search-input-wrapper input');
   },
 
   onOtherRevenueCategoryFilter(cat) {
@@ -4184,14 +4246,29 @@ const App = {
   exportOtherRevenuesCsv() {
     const list = Store.getOtherRevenues();
     const school = Store.getSchool();
-    let csv = `\uFEFFÉtablissement: ${school.name}\nAnnée scolaire: ${school.school_year}\nExport: Autres Rentrées Financières\nDate d'export: ${new Date().toLocaleDateString('fr-SN')}\n\n`;
-    csv += "N° Reçu,Date,Motif,Payeur,Rubrique,Mode,Montant (FCFA),Statut,Motif Annulation\n";
+    let csv = Utils.csvRow(["Établissement", school.name]);
+    csv += Utils.csvRow(["Année scolaire", school.school_year]);
+    csv += Utils.csvRow(["Export", "Autres rentrées financières"]);
+    csv += Utils.csvRow(["Date d'export", new Date().toLocaleDateString('fr-FR')]);
+    csv += '\r\n';
+    csv += Utils.csvRow(["N° Reçu", "Date", "Motif", "Payeur", "Rubrique", "Mode", "Montant (FCFA)", "Statut", "Motif annulation"]);
 
     list.forEach(r => {
-      csv += `"${r.receipt_number || ''}","${r.date}","${(r.motif || '').replace(/"/g, '""')}","${(r.payer_name || '').replace(/"/g, '""')}","${r.category || ''}","${r.payment_method || ''}",${r.amount},"${r.status === 'cancelled' ? 'Annulé' : 'Valide'}","${(r.cancel_reason || '').replace(/"/g, '""')}"\n`;
+      csv += Utils.csvRow([
+        r.receipt_number || '',
+        r.date || '',
+        r.motif || '',
+        r.payer_name || '',
+        r.category || '',
+        Utils.paymentMethodLabel(r.payment_method || 'cash'),
+        parseInt(r.amount, 10) || 0,
+        r.status === 'cancelled' ? 'Annulé' : 'Valide',
+        r.cancel_reason || ''
+      ]);
     });
 
-    Utils.downloadCSV(csv, `autres_rentrees_${school.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    const safeSchool = String(school.name || 'ecole').replace(/[^a-zA-Z0-9À-ÿ_-]+/g, '_').slice(0, 60);
+    Utils.downloadCSV(csv, `autres_rentrees_${safeSchool}_${new Date().toISOString().split('T')[0]}.csv`);
     this.showToast("Export CSV des autres rentrées téléchargé.", "success");
   },
 

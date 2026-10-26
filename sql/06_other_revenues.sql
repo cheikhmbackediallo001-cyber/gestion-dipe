@@ -70,9 +70,6 @@ ON public.other_revenues FOR DELETE
 TO authenticated
 USING (school_id = public.current_user_school_id() AND public.current_user_role() = 'director');
 
--- Accès public pour la vérification du reçu sans authentification
+-- AUCUN accès anonyme : une politique USING (true) exposait toutes les rentrées de toutes les écoles.
 DROP POLICY IF EXISTS "Public can verify other revenue receipt by token" ON public.other_revenues;
-CREATE POLICY "Public can verify other revenue receipt by token"
-ON public.other_revenues FOR SELECT
-TO anon
-USING (true);
+REVOKE ALL ON public.other_revenues FROM anon;

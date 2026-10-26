@@ -24,7 +24,8 @@ const SchoolStamp = {
 
     const uniqueId = 'stamp_' + Math.random().toString(36).substring(2, 8);
     // Couleur rouge officielle vive et contrastée demandée par l'utilisateur
-    const color = schoolData.stamp_color || '#DC2626';
+    // (seules les couleurs hexadécimales sont acceptées pour éviter toute injection dans le SVG)
+    const color = /^#[0-9a-fA-F]{3,8}$/.test(String(schoolData.stamp_color || '')) ? schoolData.stamp_color : '#DC2626';
 
     // Rayons des cercles concentriques (centrés à (100, 100))
     const cx = 100;

@@ -10,7 +10,11 @@
   "background_color": "#1E3A8A",
   "theme_color": "#1E3A8A",
   "lang": "fr-SN",
-  "categories": ["education", "finance", "business"],
+  "categories": [
+    "education",
+    "finance",
+    "business"
+  ],
   "icons": [
     {
       "src": "images/icon-192.png",
@@ -19,19 +23,13 @@
       "purpose": "any"
     },
     {
-      "src": "images/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
       "src": "images/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "images/icon-512.png",
+      "src": "images/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -59,14 +57,26 @@
       "short_name": "Direction",
       "description": "Ouvrir le tableau de bord de l'école",
       "url": "./app.html",
-      "icons": [{ "src": "images/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "images/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Vérifier un reçu",
       "short_name": "Vérification",
       "description": "Contrôler l'authenticité d'un reçu avec QR code",
       "url": "./verify.html",
-      "icons": [{ "src": "images/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "images/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

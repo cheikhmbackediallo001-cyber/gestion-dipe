@@ -90,9 +90,9 @@
   </script>
 
   <!-- Design System & Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=20261024_v5">
-  <link rel="stylesheet" href="css/app.css?v=20261024_v5">
-  <link rel="stylesheet" href="css/receipt.css?v=20261024_v5">
+  <link rel="stylesheet" href="css/design-system.css?v=20261026_v1">
+  <link rel="stylesheet" href="css/app.css?v=20261026_v1">
+  <link rel="stylesheet" href="css/receipt.css?v=20261026_v1">
 
   <!-- PWA Configuration & Official App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -102,7 +102,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Gestion Préscolaire">
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="apple-touch-icon" href="images/logo.png">
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 </head>
 <body>
   <div class="app-layout">
@@ -903,15 +903,16 @@
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=20261024_v5"></script>
-  <script src="js/utils.js?v=20261024_v5"></script>
-  <script src="js/stamp.js?v=20261024_v5"></script>
-  <script src="js/supabase.js?v=20261024_v5"></script>
-  <script src="js/auth.js?v=20261024_v5"></script>
-  <script src="js/demo-data.js?v=20261024_v5"></script>
-  <script src="js/store.js?v=20261024_v5"></script>
+  <script src="js/config.js?v=20261026_v1"></script>
+  <script src="js/utils.js?v=20261026_v1"></script>
+  <script src="js/stamp.js?v=20261026_v1"></script>
+  <script src="js/supabase.js?v=20261026_v1"></script>
+  <script src="js/auth.js?v=20261026_v1"></script>
+  <script src="js/demo-data.js?v=20261026_v1"></script>
+  <script src="js/store.js?v=20261026_v1"></script>
+  <script src="js/cloud-sync.js?v=20261026_v1"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20261024_v5"></script>
+  <script src="js/app.js?v=20261026_v1"></script>
 
   <!-- Bannière flottante de mise à jour PWA -->
   <div id="pwaUpdateBanner" class="pwa-update-banner" role="status" aria-live="polite">
@@ -956,8 +957,10 @@
 
       // 4. Rechargement immédiat et fluide quand le nouveau SW prend les commandes
       let refreshing = false;
+      // Pas de rechargement lors de la toute première installation (évite un double chargement)
+      const hadController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
+        if (!refreshing && hadController) {
           refreshing = true;
           console.log('[PWA] Nouveau Service Worker activé : rechargement automatique...');
           window.location.reload();

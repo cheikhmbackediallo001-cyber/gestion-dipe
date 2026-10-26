@@ -1,0 +1,8 @@
+# Fichiers internes à ne jamais publier sur le site
+sql/
+scratch/
+server.js
+README.md
+SECURITE.md
+.env*
+*.log

@@ -121,7 +121,7 @@ const DemoData = {
       payments.push(payment);
 
       const rNum = `REC-2026-${String(receiptCounter).padStart(4, '0')}`;
-      const token = 'token_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const token = 'tok_' + Utils.randomHex(16);
 
       const receipt = {
         id: '66666666-' + String(receiptCounter).padStart(4, '0') + '-1111-1111-111111111111',

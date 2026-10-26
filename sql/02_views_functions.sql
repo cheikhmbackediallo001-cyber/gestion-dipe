@@ -33,7 +33,7 @@ BEGIN
     v_receipt_number := 'REC-' || v_year_prefix || '-' || LPAD(v_next_val::TEXT, 4, '0');
     RETURN v_receipt_number;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 -- ------------------------------------------------------------------------------
 -- 2. Fonction RPC pour valider un paiement et générer le reçu automatiquement
@@ -107,7 +107,7 @@ BEGIN
         'public_token', v_public_token
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 -- ------------------------------------------------------------------------------
 -- 3. Fonction RPC pour annuler un paiement (Directeur uniquement)
@@ -163,12 +163,12 @@ BEGIN
 
     RETURN jsonb_build_object('success', true, 'payment_id', p_payment_id, 'receipt_number', v_receipt_num);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 -- ------------------------------------------------------------------------------
 -- 4. Vue : Synthèse des Inscriptions par Classe
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.view_registration_summary_by_class AS
+CREATE OR REPLACE VIEW public.view_registration_summary_by_class WITH (security_invoker = true) AS
 SELECT 
     c.school_id,
     c.id AS class_id,
@@ -194,7 +194,7 @@ GROUP BY c.school_id, c.id, c.name, c.registration_fee, c.position;
 -- ------------------------------------------------------------------------------
 -- 5. Vue : Total Global des Inscriptions de l'École
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.view_registration_school_total AS
+CREATE OR REPLACE VIEW public.view_registration_school_total WITH (security_invoker = true) AS
 SELECT 
     school_id,
     SUM(total_students)::BIGINT AS total_students,
@@ -219,7 +219,7 @@ GROUP BY school_id;
 -- ------------------------------------------------------------------------------
 -- 6. Vue : Bilan Mensuel de l'Année Scolaire (Récapitulatif par mois)
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.view_monthly_summary_by_month AS
+CREATE OR REPLACE VIEW public.view_monthly_summary_by_month WITH (security_invoker = true) AS
 SELECT 
     m.school_id,
     m.id AS month_id,
@@ -256,7 +256,7 @@ GROUP BY m.school_id, m.id, m.school_year, m.month_number, m.label, m.position;
 -- ------------------------------------------------------------------------------
 -- 7. Vue : État Mensuel par Classe (pour chaque mois et chaque classe)
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.view_monthly_detail_by_class AS
+CREATE OR REPLACE VIEW public.view_monthly_detail_by_class WITH (security_invoker = true) AS
 SELECT 
     m.school_id,
     m.id AS month_id,

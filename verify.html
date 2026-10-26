@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vérification officielle de reçu — Gestion Préscolaire</title>
-  <meta name="robots" content="noindex, follow">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
 
   <!-- Préchargement immédiat du thème clair/sombre pour éviter tout flash -->
   <script>
@@ -21,9 +22,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="icon" type="image/png" href="images/logo.png">
-  <link rel="apple-touch-icon" href="images/logo.png">
-  <link rel="stylesheet" href="css/design-system.css?v=20261024_v5">
-  <link rel="stylesheet" href="css/receipt.css?v=20261024_v5">
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/design-system.css?v=20261026_v1">
+  <link rel="stylesheet" href="css/receipt.css?v=20261026_v1">
 
   <style>
     body {
@@ -164,66 +165,99 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="js/config.js?v=20261023_v1"></script>
-  <script src="js/utils.js?v=20261023_v1"></script>
-  <script src="js/supabase.js?v=20261023_v1"></script>
-  <script src="js/auth.js?v=20261023_v1"></script>
-  <script src="js/demo-data.js?v=20261023_v1"></script>
-  <script src="js/store.js?v=20261023_v1"></script>
+  <script src="js/config.js?v=20261026_v1"></script>
+  <script src="js/utils.js?v=20261026_v1"></script>
+  <script src="js/store.js?v=20261026_v1"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      if (window.Auth) {
-        await Auth.init();
-      }
-      await Store.init();
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
-
       const loadingEl = document.getElementById('loadingState');
       const verifiedEl = document.getElementById('verifiedState');
       const notFoundEl = document.getElementById('notFoundState');
 
-      if (!token) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = (urlParams.get('token') || '').trim();
+
+      // Jeton attendu : lettres, chiffres, tiret, souligné (8 à 128 caractères)
+      if (!/^[A-Za-z0-9_-]{8,128}$/.test(token)) {
         showNotFound();
         return;
       }
 
-      const receipt = Store.getReceiptByPublicToken(token);
+      // 1. Recherche dans le registre local de l'établissement (appareil de l'école)
+      let receipt = null;
+      try {
+        receipt = Store.getReceiptByPublicToken(token);
+      } catch (e) {
+        receipt = null;
+      }
+
+      // 2. Vérification en ligne dans le registre officiel (fonction sécurisée côté serveur)
+      if (!receipt && navigator.onLine && CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
+        receipt = await verifyOnline(token);
+      }
+
       if (receipt) {
         renderVerification(receipt);
       } else {
         showNotFound();
       }
 
+      async function verifyOnline(tok) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 8000);
+          const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/verify_receipt_public`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: CONFIG.SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ p_token: tok }),
+            signal: controller.signal
+          });
+          clearTimeout(timer);
+          if (!res.ok) return null;
+          const rows = await res.json();
+          const row = Array.isArray(rows) ? rows[0] : null;
+          if (!row) return null;
+          return {
+            receipt_number: row.receipt_number,
+            school_name: row.school_name,
+            issued_at: row.issued_at,
+            object_label: row.object_label || 'Paiement scolaire',
+            amount: row.amount,
+            method: row.method || null,
+            status: row.status
+          };
+        } catch (e) {
+          return null;
+        }
+      }
+
       function renderVerification(data) {
-        if (!data) return showNotFound();
         loadingEl.style.display = 'none';
         notFoundEl.style.display = 'none';
         verifiedEl.style.display = 'block';
 
-        const badgeContainer = document.getElementById('statusBadgeContainer');
+        const badge = document.createElement('span');
         if (data.status === 'valid') {
-          badgeContainer.innerHTML = `<span class="verify-status-badge verify-status-valid">✓ REÇU AUTHENTIQUE & VALIDE</span>`;
+          badge.className = 'verify-status-badge verify-status-valid';
+          badge.textContent = '✓ REÇU AUTHENTIQUE & VALIDE';
         } else {
-          badgeContainer.innerHTML = `<span class="verify-status-badge verify-status-cancelled">✕ REÇU ANNULÉ</span>`;
+          badge.className = 'verify-status-badge verify-status-cancelled';
+          badge.textContent = '✕ REÇU ANNULÉ';
         }
+        const badgeContainer = document.getElementById('statusBadgeContainer');
+        badgeContainer.textContent = '';
+        badgeContainer.appendChild(badge);
 
-        document.getElementById('receiptNumberDisplay').textContent = data.receipt_number;
-        document.getElementById('schoolNameDisplay').textContent = data.school_name;
+        document.getElementById('receiptNumberDisplay').textContent = data.receipt_number || '-';
+        document.getElementById('schoolNameDisplay').textContent = data.school_name || '-';
         document.getElementById('issuedAtDisplay').textContent = Utils.formatDateTime(data.issued_at);
-        document.getElementById('objectDisplay').textContent = data.object_label;
+        document.getElementById('objectDisplay').textContent = data.object_label || '-';
         document.getElementById('amountDisplay').textContent = Utils.formatFCFA(data.amount);
-
-        const methodMap = {
-          'cash': 'Espèces',
-          'wave': 'Wave Mobile Money',
-          'orange_money': 'Orange Money',
-          'cheque': 'Chèque',
-          'bank_transfer': 'Virement bancaire',
-          'other': 'Autre'
-        };
-        document.getElementById('methodDisplay').textContent = methodMap[data.method] || data.method;
+        document.getElementById('methodDisplay').textContent = data.method ? Utils.paymentMethodLabel(data.method) : '-';
       }
 
       function showNotFound() {

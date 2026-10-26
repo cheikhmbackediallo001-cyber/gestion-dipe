@@ -144,6 +144,10 @@ const Store = {
       this.data.custom_other_revenue_rubriques = [];
     }
 
+    if (this._upgradeWeakReceiptTokens()) {
+      this.persist();
+    }
+
     return this.data;
   },
 
@@ -185,8 +189,33 @@ const Store = {
 
   persist() {
     if (this.data && this.storageKey) {
+      // Horodatage de la dernière modification (utilisé par la synchronisation entre appareils)
+      this.data._savedAt = new Date().toISOString();
       localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+      if (window.CloudSync) {
+        CloudSync.onLocalChange();
+      }
     }
+  },
+
+  /**
+   * Remplace les anciens jetons de reçus générés sans cryptographie par des jetons sûrs (128 bits).
+   * Sans risque : les anciens QR codes étaient décoratifs et n'ont jamais pu être scannés.
+   */
+  _upgradeWeakReceiptTokens() {
+    if (!this.data || !Array.isArray(this.data.receipts) || this.isDemo()) return false;
+    let changed = false;
+    this.data.receipts.forEach(r => {
+      if (!/^tok_[0-9a-f]{32}$/.test(String(r.public_token || ''))) {
+        const oldToken = r.public_token;
+        r.public_token = 'tok_' + Utils.randomHex(16);
+        (this.data.other_revenues || []).forEach(o => {
+          if (o.public_token === oldToken || o.id === r.payment_id) o.public_token = r.public_token;
+        });
+        changed = true;
+      }
+    });
+    return changed;
   },
 
   // ----------------------------------------------------------------------------
@@ -242,12 +271,28 @@ const Store = {
     return this.data.classes.find(c => c.id === classId);
   },
 
+  getClassName(classId) {
+    const cls = this.getClassById(classId);
+    return cls ? cls.name : '';
+  },
+
   getMonths() {
     return [...this.data.months].sort((a, b) => a.position - b.position);
   },
 
   getMonthById(monthId) {
     return this.data.months.find(m => m.id === monthId);
+  },
+
+  /**
+   * Mois scolaire correspondant à la date du jour (ex. novembre -> « Novembre »).
+   * Hors période scolaire (juillet à septembre), retourne le premier mois de l'année.
+   */
+  getCurrentMonth() {
+    const months = this.getMonths();
+    if (months.length === 0) return null;
+    const calendarMonth = new Date().getMonth() + 1;
+    return months.find(m => Number(m.month_number) === calendarMonth) || months[0];
   },
 
   // ----------------------------------------------------------------------------
@@ -275,17 +320,44 @@ const Store = {
     return this.data.students.find(s => s.id === id);
   },
 
+  /**
+   * Nettoie une saisie texte : supprime les caractères de contrôle et limite la longueur
+   */
+  _cleanText(value, maxLength = 120) {
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/[\u0000-\u001F\u007F]/g, ' ')
+      .trim()
+      .slice(0, maxLength);
+  },
+
+  /**
+   * Valide une date de naissance (AAAA-MM-JJ) ; retourne null si invalide
+   */
+  _cleanDate(value) {
+    if (!value) return null;
+    const str = String(value).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return null;
+    const d = new Date(str + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : str;
+  },
+
   addStudent(studentData) {
+    const lastName = this._cleanText(studentData.last_name, 100).toUpperCase();
+    const firstNames = this._cleanText(studentData.first_names, 150);
+    if (!lastName || !firstNames) {
+      throw new Error("Le nom et les prénoms de l'élève sont obligatoires.");
+    }
+    const classId = this.getClassById(studentData.class_id) ? studentData.class_id : (this.getClasses()[0] || {}).id;
     const newStudent = {
-      id: 'student_' + Math.random().toString(36).substring(2, 9),
+      id: Utils.randomId('student'),
       school_id: this.data.school.id,
-      class_id: studentData.class_id,
-      last_name: studentData.last_name.trim().toUpperCase(),
-      first_names: studentData.first_names.trim(),
+      class_id: classId,
+      last_name: lastName,
+      first_names: firstNames,
       gender: (studentData.gender === 'F' || studentData.gender === 'fille') ? 'F' : 'M',
-      birth_date: studentData.birth_date || null,
-      parent_name: studentData.parent_name ? studentData.parent_name.trim() : '',
-      parent_phone: studentData.parent_phone ? Utils.normalizeSenegalPhone(studentData.parent_phone) : '',
+      birth_date: this._cleanDate(studentData.birth_date),
+      parent_name: this._cleanText(studentData.parent_name, 200),
+      parent_phone: studentData.parent_phone ? Utils.normalizeSenegalPhone(this._cleanText(studentData.parent_phone, 30)) : '',
       active: true,
       created_at: new Date().toISOString()
     };
@@ -297,7 +369,19 @@ const Store = {
   updateStudent(id, updates) {
     const index = this.data.students.findIndex(s => s.id === id);
     if (index === -1) throw new Error("Élève introuvable");
-    const safeUpdates = { ...updates };
+    // Seuls les champs modifiables sont acceptés (l'identifiant et l'école ne peuvent pas être changés)
+    const allowed = ['last_name', 'first_names', 'gender', 'class_id', 'birth_date', 'parent_name', 'parent_phone', 'active'];
+    const safeUpdates = {};
+    allowed.forEach(key => {
+      if (updates[key] !== undefined) safeUpdates[key] = updates[key];
+    });
+    if (safeUpdates.last_name !== undefined) safeUpdates.last_name = this._cleanText(safeUpdates.last_name, 100).toUpperCase();
+    if (safeUpdates.first_names !== undefined) safeUpdates.first_names = this._cleanText(safeUpdates.first_names, 150);
+    if (safeUpdates.parent_name !== undefined) safeUpdates.parent_name = this._cleanText(safeUpdates.parent_name, 200);
+    if (safeUpdates.parent_phone !== undefined) safeUpdates.parent_phone = this._cleanText(safeUpdates.parent_phone, 30);
+    if (safeUpdates.birth_date !== undefined) safeUpdates.birth_date = this._cleanDate(safeUpdates.birth_date);
+    if (safeUpdates.class_id !== undefined && !this.getClassById(safeUpdates.class_id)) delete safeUpdates.class_id;
+    if (safeUpdates.active !== undefined) safeUpdates.active = !!safeUpdates.active;
     if (safeUpdates.gender) {
       safeUpdates.gender = (safeUpdates.gender === 'F' || safeUpdates.gender === 'fille') ? 'F' : 'M';
     }
@@ -334,19 +418,39 @@ const Store = {
   /**
    * Enregistre un paiement et génère automatiquement le reçu officiel
    */
-  recordPayment({ studentId, kind, monthId = null, amount, method, reference = null }) {
+  recordPayment({ studentId, kind, monthId = null, amount, method, reference = null, paidAt = null }) {
+    if (kind !== 'registration' && kind !== 'monthly') {
+      throw new Error("Type de paiement invalide.");
+    }
+    if (kind === 'monthly' && !this.getMonthById(monthId)) {
+      throw new Error("Mois scolaire introuvable pour cette cotisation.");
+    }
+    if (kind === 'registration') monthId = null;
+
     // 1. Règle d'unicité stricte : un élève ne peut avoir qu'un seul paiement valide pour un objet donné
     const existing = this.getPaymentStatus(studentId, kind, monthId);
     if (existing) {
-      throw new Error(`Un paiement valide existe déjà pour cet élève et ce mois/inscription (Reçu n° ${existing.id}).`);
+      const existingReceipt = (this.data.receipts || []).find(r => r.payment_id === existing.id);
+      throw new Error(`Un paiement valide existe déjà pour cet élève et ce mois/inscription (Reçu n° ${existingReceipt ? existingReceipt.receipt_number : '-'}).`);
     }
 
     const student = this.getStudentById(studentId);
     if (!student) throw new Error("Élève introuvable");
 
     const parsedAmount = Math.round(Number(amount));
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 0 || parsedAmount > 100000000) {
       throw new Error("Le montant doit être un entier positif en FCFA.");
+    }
+
+    const validMethods = (CONFIG.PAYMENT_METHODS || []).map(m => m.id);
+    if (!validMethods.includes(method)) method = 'cash';
+
+    // Date de règlement saisie (AAAA-MM-JJ) : conservée avec l'heure actuelle
+    let paidAtIso = new Date().toISOString();
+    if (paidAt && /^\d{4}-\d{2}-\d{2}$/.test(String(paidAt))) {
+      const now = new Date();
+      const d = new Date(`${paidAt}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`);
+      if (!isNaN(d.getTime())) paidAtIso = d.toISOString();
     }
 
     const schoolYear = this.data.school.school_year || '2026-2027';
@@ -358,11 +462,11 @@ const Store = {
     const receiptNumber = `REC-${yearPrefix}-${String(nextVal).padStart(4, '0')}`;
 
     // 3. Jeton public cryptographique non devinable
-    const publicToken = 'tok_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const publicToken = 'tok_' + Utils.randomHex(16);
     const nowIso = new Date().toISOString();
 
-    const paymentId = 'pay_' + Math.random().toString(36).substring(2, 9);
-    const receiptId = 'rec_' + Math.random().toString(36).substring(2, 9);
+    const paymentId = Utils.randomId('pay');
+    const receiptId = Utils.randomId('rec');
 
     const payment = {
       id: paymentId,
@@ -372,8 +476,8 @@ const Store = {
       month_id: monthId,
       amount: parsedAmount,
       method: method,
-      reference: reference ? reference.trim() : null,
-      paid_at: nowIso,
+      reference: reference ? this._cleanText(reference, 100) : null,
+      paid_at: paidAtIso,
       status: 'valid',
       cancel_reason: null,
       created_by: this.currentUser.id
@@ -394,7 +498,7 @@ const Store = {
 
     // Journal d'audit
     this.data.audit_log.push({
-      id: 'audit_' + Math.random().toString(36).substring(2, 9),
+      id: Utils.randomId('audit'),
       school_id: this.data.school.id,
       user_id: this.currentUser.id,
       action: 'PAYMENT_RECORDED',
@@ -442,7 +546,7 @@ const Store = {
     const student = this.getStudentById(payment.student_id);
 
     this.data.audit_log.push({
-      id: 'audit_' + Math.random().toString(36).substring(2, 9),
+      id: Utils.randomId('audit'),
       school_id: this.data.school.id,
       user_id: this.currentUser.id,
       action: 'PAYMENT_CANCELLED',
@@ -484,15 +588,18 @@ const Store = {
     }
 
     if (updates.method) {
-      payment.method = updates.method;
+      const validMethods = (CONFIG.PAYMENT_METHODS || []).map(m => m.id);
+      if (validMethods.includes(updates.method)) payment.method = updates.method;
     }
 
     if (updates.reference !== undefined) {
-      payment.reference = updates.reference ? updates.reference.trim() : null;
+      payment.reference = updates.reference ? this._cleanText(updates.reference, 100) : null;
     }
 
     if (updates.date) {
-      payment.paid_at = new Date(updates.date).toISOString();
+      const d = new Date(updates.date);
+      if (isNaN(d.getTime())) throw new Error("Date de règlement invalide.");
+      payment.paid_at = d.toISOString();
     }
 
     payment.updated_at = new Date().toISOString();
@@ -840,7 +947,7 @@ const Store = {
     }
     const schoolId = (this.data.school && this.data.school.id) ? this.data.school.id : '11111111-1111-1111-1111-111111111111';
     this.data.audit_log.push({
-      id: 'audit_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      id: Utils.randomId('audit'),
       school_id: schoolId,
       user_id: this.currentUser ? this.currentUser.id : 'director-user-id',
       action: action,
@@ -855,12 +962,12 @@ const Store = {
   addExpense(expenseData) {
     if (!this.data) this.data = DemoData.getInitialState();
     if (!Array.isArray(this.data.expenses)) this.data.expenses = [];
-    const category = (expenseData.category || 'Fournitures scolaires & papeterie').trim();
+    const category = this._cleanText(expenseData.category || 'Fournitures scolaires & papeterie', 150) || 'Général';
     const schoolId = (this.data.school && this.data.school.id) ? this.data.school.id : '11111111-1111-1111-1111-111111111111';
     const newExpense = {
-      id: expenseData.id || ('expense_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
+      id: expenseData.id || Utils.randomId('expense'),
       school_id: schoolId,
-      motif: (expenseData.motif || '').trim(),
+      motif: this._cleanText(expenseData.motif, 255),
       amount: parseInt(expenseData.amount, 10) || 0,
       date: expenseData.date || new Date().toISOString().split('T')[0],
       category: category,
@@ -892,10 +999,10 @@ const Store = {
     const index = this.data.expenses.findIndex(e => e.id === id);
     if (index !== -1) {
       const existing = this.data.expenses[index];
-      const category = (expenseData.category !== undefined ? expenseData.category : (existing.category || 'Général')).trim();
+      const category = this._cleanText(expenseData.category !== undefined ? expenseData.category : (existing.category || 'Général'), 150) || 'Général';
       const updated = {
         ...existing,
-        motif: (expenseData.motif !== undefined ? expenseData.motif : existing.motif).trim(),
+        motif: this._cleanText(expenseData.motif !== undefined ? expenseData.motif : existing.motif, 255),
         amount: expenseData.amount !== undefined ? (parseInt(expenseData.amount, 10) || 0) : existing.amount,
         date: expenseData.date || existing.date,
         category: category,
@@ -1064,7 +1171,7 @@ const Store = {
     if (!this.data || !this.data.school) throw new Error("Établissement non initialisé.");
     if (!Array.isArray(this.data.other_revenues)) this.data.other_revenues = [];
 
-    const category = (revenueData.category || 'Autre encaissement exceptionnel').trim();
+    const category = this._cleanText(revenueData.category || 'Autre encaissement exceptionnel', 150) || 'Général';
     const nowIso = new Date().toISOString();
     const schoolYear = this.data.school.school_year || '2026-2027';
     const yearPrefix = schoolYear.substring(0, 4);
@@ -1073,17 +1180,17 @@ const Store = {
     const nextVal = (this.data.receiptCounter || 1);
     this.data.receiptCounter = nextVal + 1;
     const receiptNumber = `REC-${yearPrefix}-${String(nextVal).padStart(4, '0')}`;
-    const publicToken = 'tok_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const publicToken = 'tok_' + Utils.randomHex(16);
 
     const newRevenue = {
-      id: revenueData.id || ('other_rev_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
+      id: revenueData.id || Utils.randomId('other_rev'),
       school_id: this.data.school.id,
-      motif: (revenueData.motif || '').trim(),
+      motif: this._cleanText(revenueData.motif, 255),
       amount: parseInt(revenueData.amount, 10) || 0,
       date: revenueData.date || nowIso.split('T')[0],
       category: category,
       payment_method: revenueData.payment_method || 'cash',
-      payer_name: (revenueData.payer_name || '').trim(),
+      payer_name: this._cleanText(revenueData.payer_name, 255),
       receipt_number: receiptNumber,
       public_token: publicToken,
       status: revenueData.status || 'valid',
@@ -1095,7 +1202,7 @@ const Store = {
     // Émission du reçu officiel dans le registre
     if (!Array.isArray(this.data.receipts)) this.data.receipts = [];
     this.data.receipts.push({
-      id: 'rec_' + Math.random().toString(36).substring(2, 9),
+      id: Utils.randomId('rec'),
       school_id: this.data.school.id,
       payment_id: newRevenue.id,
       receipt_number: receiptNumber,
@@ -1126,11 +1233,11 @@ const Store = {
     if (index === -1) throw new Error("Rentrée introuvable");
 
     const existing = this.data.other_revenues[index];
-    const category = (revenueData.category !== undefined ? revenueData.category : (existing.category || 'Général')).trim();
+    const category = this._cleanText(revenueData.category !== undefined ? revenueData.category : (existing.category || 'Général'), 150) || 'Général';
 
     const updated = {
       ...existing,
-      motif: (revenueData.motif !== undefined ? revenueData.motif : existing.motif).trim(),
+      motif: this._cleanText(revenueData.motif !== undefined ? revenueData.motif : existing.motif, 255),
       amount: revenueData.amount !== undefined ? (parseInt(revenueData.amount, 10) || 0) : existing.amount,
       date: revenueData.date || existing.date,
       category: category,
@@ -1248,8 +1355,8 @@ const Store = {
       percentage: 0
     };
     const months = this.getMonths() || [];
-    // Mois courant (par défaut le 1er mois de l'année scolaire)
-    const currentMonth = (months.length > 0) ? months[0] : { id: 'mth_10', label: 'Octobre' };
+    // Mois courant : mois calendaire du jour (à défaut, 1er mois de l'année scolaire)
+    const currentMonth = (months.length > 0) ? this.getCurrentMonth() : { id: 'mth_10', label: 'Octobre' };
     const currentMonthSummary = (currentMonth && currentMonth.id) 
       ? this.getMonthSummary(currentMonth.id)
       : { total_collected: 0, total_expected: 0, paid_students: 0, unpaid_students: 0, percentage: 0 };

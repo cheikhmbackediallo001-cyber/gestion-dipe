@@ -136,7 +136,9 @@ const Onboarding = {
         document.getElementById('groupEmail').classList.add('has-error');
         isValid = false;
       }
-      if (!pass || pass.length < 6) {
+      let passwordOk = true;
+      try { Auth.validatePasswordStrength(pass); } catch (e) { passwordOk = false; }
+      if (!passwordOk) {
         document.getElementById('groupPassword').classList.add('has-error');
         isValid = false;
       }
@@ -282,6 +284,7 @@ const Onboarding = {
 
       // Exécution de la séquence atomique complète via Auth
       await Auth.registerSchoolAtomic(this.formData);
+      this.formData.password = ''; // Ne pas conserver le mot de passe en mémoire
 
       if (submitBtn) {
         submitBtn.innerHTML = '<span>Établissement créé ! Redirection...</span>';

@@ -20,7 +20,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModals();
   initRegisterForm();
   initLoginForm();
+  initGoogleButtons();
 });
+
+/**
+ * Les boutons « Continuer avec Google » ne sont affichés que si le fournisseur
+ * Google est réellement activé dans Supabase (aucune connexion simulée).
+ */
+async function initGoogleButtons() {
+  const buttons = ['btnGoogleRegister', 'btnGoogleLogin']
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+  const setVisible = (visible) => {
+    buttons.forEach(btn => {
+      btn.style.display = visible ? '' : 'none';
+      const divider = btn.nextElementSibling;
+      if (divider && divider.classList.contains('auth-divider')) {
+        divider.style.display = visible ? '' : 'none';
+      }
+    });
+  };
+  setVisible(false);
+  if (!window.Auth || !Auth.client || !navigator.onLine) return;
+  try {
+    if (await Auth.isGoogleProviderEnabled()) setVisible(true);
+  } catch (e) {}
+}
 
 /**
  * Gestion des ouvertures et fermetures de modales
@@ -30,7 +55,7 @@ function initModals() {
   const onboardModal = document.getElementById('onboardingModal');
   const loginModal = document.getElementById('loginModal');
   const forgotModal = document.getElementById('forgotPasswordModal');
-  const googlePickerModal = document.getElementById('googleAccountPickerModal');
+  
 
   const closeRegisterBtn = document.getElementById('closeRegisterModal');
   const closeOnboardBtn = document.getElementById('closeOnboardingModal');
@@ -179,8 +204,10 @@ function initRegisterForm() {
         return;
       }
 
-      if (password.length < 6) {
-        showRegisterError("Le mot de passe est obligatoire et doit comporter au moins 6 caractères.");
+      try {
+        Auth.validatePasswordStrength(password);
+      } catch (pwdErr) {
+        showRegisterError(pwdErr.message);
         return;
       }
 
@@ -249,9 +276,6 @@ function initLoginForm() {
   const loginErrorBox = document.getElementById('loginErrorBox');
   const togglePassBtn = document.getElementById('toggleLoginPassword');
 
-  let failedAttempts = 0;
-  let lockUntilTime = 0;
-
   // Afficher / masquer mot de passe
   if (togglePassBtn && loginPassword) {
     togglePassBtn.addEventListener('click', () => {
@@ -271,14 +295,7 @@ function initLoginForm() {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Vérification limitation de tentatives (anti-bruteforce)
-      const now = Date.now();
-      if (now < lockUntilTime) {
-        const remainingSeconds = Math.ceil((lockUntilTime - now) / 1000);
-        showLoginError(`Trop de tentatives infructueuses. Veuillez patienter ${remainingSeconds} secondes.`);
-        return;
-      }
-
+      // La limitation des tentatives (anti-force brute) est gérée et mémorisée par Auth.signIn
       const email = loginEmail.value.trim();
       const password = loginPassword.value;
 
@@ -307,20 +324,12 @@ function initLoginForm() {
         window.location.replace('app.html');
 
       } catch (err) {
-        failedAttempts++;
         loginSubmitBtn.disabled = false;
         loginSubmitBtn.innerHTML = `
           <span>Se connecter à mon école</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         `;
-
-        if (failedAttempts >= 5) {
-          lockUntilTime = Date.now() + 30000; // Blocage 30s
-          failedAttempts = 0;
-          showLoginError("Nombre maximal d'essais atteint. Accès verrouillé pendant 30 secondes.");
-        } else {
-          showLoginError(err.message || "Identifiant ou mot de passe incorrect.");
-        }
+        showLoginError(err.message || "E-mail ou mot de passe incorrect.");
       }
     });
   }
@@ -555,32 +564,6 @@ const Landing = {
     } else {
       alert("Installation directe :\n\nAppuyez sur le menu de votre navigateur (les trois points ⋮ en haut à droite) puis sélectionnez « Installer l'application ».");
     }
-  },
-
-  async chooseGoogleAccount(name, email) {
-    try {
-      await Auth.signInGoogleDirect({ name, email });
-      const picker = document.getElementById('googleAccountPickerModal');
-      if (picker) picker.classList.remove('is-open');
-      window.history.replaceState(null, '', 'app.html');
-      window.location.replace('app.html');
-    } catch (err) {
-      alert(err.message || "Erreur de connexion Google.");
-    }
-  },
-
-  async submitCustomGoogleAccount() {
-    const input = document.getElementById('customGoogleEmail');
-    const nameInput = document.getElementById('customGoogleName');
-    if (!input) return;
-    const email = input.value.trim();
-    if (!email || !email.includes('@')) {
-      alert("Veuillez saisir une adresse e-mail Google valide (ex: directrice@gmail.com).");
-      return;
-    }
-    const enteredName = nameInput ? nameInput.value.trim() : '';
-    const name = enteredName || email.split('@')[0];
-    await this.chooseGoogleAccount(name, email);
   }
 };
 

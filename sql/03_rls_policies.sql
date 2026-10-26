@@ -22,12 +22,12 @@ ALTER TABLE public.receipt_sequences ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.current_user_school_id()
 RETURNS UUID AS $$
     SELECT school_id FROM public.profiles WHERE id = auth.uid() LIMIT 1;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp;
 
 CREATE OR REPLACE FUNCTION public.current_user_role()
 RETURNS user_role AS $$
     SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp;
 
 -- ------------------------------------------------------------------------------
 -- 3. Politiques pour `schools`
@@ -45,11 +45,8 @@ TO authenticated
 USING (id = public.current_user_school_id() AND public.current_user_role() = 'director')
 WITH CHECK (id = public.current_user_school_id() AND public.current_user_role() = 'director');
 
--- Création lors du référencement
-CREATE POLICY "Authenticated users can create a school during onboarding"
-ON public.schools FOR INSERT
-TO authenticated
-WITH CHECK (true);
+-- Création d'une école : uniquement via la fonction sécurisée register_school_atomically (script 05/07).
+-- Aucune insertion directe n'est autorisée depuis l'API.
 
 -- ------------------------------------------------------------------------------
 -- 4. Politiques pour `profiles`
@@ -59,15 +56,18 @@ ON public.profiles FOR SELECT
 TO authenticated
 USING (school_id = public.current_user_school_id() OR id = auth.uid() OR public.current_user_role() = 'superadmin');
 
+-- Un utilisateur ne peut créer que SON profil, sans école ni rôle privilégié
 CREATE POLICY "Users can insert their initial profile"
 ON public.profiles FOR INSERT
 TO authenticated
-WITH CHECK (id = auth.uid());
+WITH CHECK (id = auth.uid() AND school_id IS NULL AND role = 'director');
 
+-- Le directeur gère les profils de son école, sans jamais pouvoir créer de superadmin
 CREATE POLICY "Directors can manage profiles of their school"
 ON public.profiles FOR ALL
 TO authenticated
-USING (school_id = public.current_user_school_id() AND public.current_user_role() = 'director');
+USING (school_id = public.current_user_school_id() AND public.current_user_role() = 'director')
+WITH CHECK (school_id = public.current_user_school_id() AND public.current_user_role() = 'director' AND role IN ('director', 'staff'));
 
 -- ------------------------------------------------------------------------------
 -- 5. Politiques pour `classes`
@@ -151,12 +151,8 @@ ON public.receipts FOR SELECT
 TO authenticated
 USING (school_id = public.current_user_school_id());
 
--- ACCÈS PUBLIC SÉCURISÉ : Les parents / tiers peuvent vérifier l'authenticité d'un reçu 
--- UNIQUEMENT via le public_token aléatoire
-CREATE POLICY "Public can view receipt verification by token"
-ON public.receipts FOR SELECT
-TO anon
-USING (public_token IS NOT NULL);
+-- ACCÈS PUBLIC : AUCUNE lecture anonyme de la table (elle exposerait tous les jetons).
+-- Les parents / tiers vérifient un reçu UNIQUEMENT via la fonction verify_receipt_public(jeton) ci-dessous.
 
 -- ------------------------------------------------------------------------------
 -- 10. Fonction publique de vérification sans exposition des données sensibles
@@ -182,7 +178,7 @@ BEGIN
     JOIN public.payments p ON p.id = r.payment_id
     WHERE r.public_token = p_token;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 -- ------------------------------------------------------------------------------
 -- 11. Politiques pour `audit_log`

@@ -6,7 +6,7 @@
  * - Prise de contrôle automatique et purge des anciens caches
  */
 
-const CACHE_NAME = 'gestion-prescolaire-v20261025_v1';
+const CACHE_NAME = 'gestion-prescolaire-v20261026_v2';
 
 const STATIC_ASSETS = [
   './',
@@ -25,12 +25,15 @@ const STATIC_ASSETS = [
   './js/auth.js',
   './js/demo-data.js',
   './js/store.js',
+  './js/cloud-sync.js',
   './js/landing.js',
   './js/onboarding.js',
   './js/html2canvas.min.js',
   './js/app.js',
   './images/icon-192.png',
   './images/icon-512.png',
+  './images/icon-maskable-512.png',
+  './images/apple-touch-icon.png',
   './images/logo.png'
 ];
 
@@ -88,8 +91,8 @@ self.addEventListener('message', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Ignorer requêtes non-GET et requêtes externes (Supabase, API tierces)
-  if (e.request.method !== 'GET' || !url.origin.includes(self.location.origin)) {
+  // Ignorer requêtes non-GET et requêtes externes (Supabase, API tierces) : jamais mises en cache
+  if (e.request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
 
@@ -116,9 +119,10 @@ self.addEventListener('fetch', (e) => {
           });
           clearTimeout(timeoutId);
 
-          if (networkResponse && networkResponse.status === 200) {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
             const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+            const cacheKey = url.origin + url.pathname; // sans « ?token=... »
+            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, clone));
             return networkResponse;
           }
         } catch (netErr) {
