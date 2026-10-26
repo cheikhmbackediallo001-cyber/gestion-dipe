@@ -158,6 +158,7 @@ const App = {
     document.querySelectorAll('.mobile-nav-item').forEach(el => {
       el.classList.toggle('active', el.getAttribute('data-tab') === resolvedTab);
     });
+    this.syncMobileNav(true);
 
     const contentArea = document.getElementById('appViewContent');
     if (!contentArea) return;
@@ -243,7 +244,36 @@ const App = {
     `;
   },
 
+  // Barre du bas (mobile) : garde l'onglet actif visible et signale les onglets cachés sur les petits écrans
+  syncMobileNav(revealActive = false) {
+    const nav = document.querySelector('.mobile-bottom-nav');
+    if (!nav) return;
+    if (revealActive) {
+      const active = nav.querySelector('.mobile-nav-item.active');
+      if (active && nav.scrollWidth > nav.clientWidth + 1) {
+        const left = active.offsetLeft;
+        const right = left + active.offsetWidth;
+        if (left < nav.scrollLeft + 8) {
+          nav.scrollLeft = Math.max(0, left - 28);
+        } else if (right > nav.scrollLeft + nav.clientWidth - 8) {
+          nav.scrollLeft = right - nav.clientWidth + 28;
+        }
+      }
+    }
+    const overflow = nav.scrollWidth > nav.clientWidth + 1;
+    nav.classList.toggle('has-more-left', overflow && nav.scrollLeft > 2);
+    nav.classList.toggle('has-more-right', overflow && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2);
+  },
+
   bindGlobalEvents() {
+    const mobileNav = document.querySelector('.mobile-bottom-nav');
+    if (mobileNav) {
+      mobileNav.scrollLeft = 0;
+      mobileNav.addEventListener('scroll', () => this.syncMobileNav(), { passive: true });
+      window.addEventListener('resize', () => this.syncMobileNav(true));
+      requestAnimationFrame(() => this.syncMobileNav(true));
+    }
+
     // Navigation globale par délégation d'événements (sidebar, mobile nav, cartes dashboard)
     document.addEventListener('click', (e) => {
       const tabTarget = e.target.closest('[data-tab]');

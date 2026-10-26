@@ -6,7 +6,7 @@
  * - Prise de contrôle automatique et purge des anciens caches
  */
 
-const CACHE_NAME = 'gestion-prescolaire-v20261026_v2';
+const CACHE_NAME = 'gestion-prescolaire-v20261026_v3';
 
 const STATIC_ASSETS = [
   './',
@@ -18,8 +18,10 @@ const STATIC_ASSETS = [
   './css/landing.css',
   './css/app.css',
   './css/receipt.css',
+  './css/datepicker.css',
   './js/config.js',
   './js/utils.js',
+  './js/datepicker.js',
   './js/stamp.js',
   './js/supabase.js',
   './js/auth.js',

@@ -654,17 +654,40 @@
   background-color: var(--bg-card);
   border-top: 1px solid var(--border-light);
   display: flex;
-  justify-content: space-around;
+  /* flex-start (et non space-around) : si les onglets dépassent la largeur de l'écran,
+     « Accueil » reste visible à gauche au lieu de sortir de l'écran, hors d'atteinte. */
+  justify-content: flex-start;
   align-items: center;
+  padding: 0 2px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: content-box;
   z-index: 100;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  overscroll-behavior-x: contain;
 }
 
 .mobile-bottom-nav::-webkit-scrollbar {
   display: none;
+}
+
+/* Fondu sur le bord quand d'autres onglets sont cachés (on peut faire glisser la barre) */
+.mobile-bottom-nav.has-more-right {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.mobile-bottom-nav.has-more-left {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+}
+
+.mobile-bottom-nav.has-more-left.has-more-right {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
 }
 
 .mobile-nav-item {
@@ -674,21 +697,47 @@
   justify-content: center;
   gap: 2px;
   color: #64748B;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: -0.1px;
   text-decoration: none !important;
   flex: 1 0 auto;
   height: 100%;
-  min-width: 48px;
-  padding: 4px 5px;
+  min-width: 44px;
+  padding: 4px 3px;
   position: relative;
   transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-nav-item svg {
-  width: 21px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
   transition: all var(--transition-fast);
+}
+
+/* Seul l'onglet actif est coloré (le survol « collant » des écrans tactiles ne doit pas en allumer un second) */
+.mobile-nav-item:not(.active):hover {
+  color: #64748B;
+}
+
+[data-theme="dark"] .mobile-nav-item:not(.active):hover {
+  color: var(--text-muted);
+}
+
+/* Téléphones étroits : un peu plus compact pour que les 8 onglets tiennent */
+@media (max-width: 400px) {
+  .mobile-nav-item {
+    font-size: 9.5px;
+    padding: 4px 2px;
+    min-width: 40px;
+    letter-spacing: -0.2px;
+  }
+  .mobile-nav-item svg {
+    width: 19px;
+    height: 19px;
+  }
 }
 
 .mobile-nav-item.active {
