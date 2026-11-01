@@ -463,7 +463,7 @@ const Auth = {
     const registry = this.getSchoolsRegistry();
     const existing = registry.find(r => (r.email || '').toLowerCase() === cleanEmail);
     if (existing && (existing.pwdHash || existing.password)) {
-      throw new Error("Un compte existe déjà avec cette adresse e-mail. Veuillez vous connecter.");
+      throw new Error("Un compte existe déjà avec cette adresse e-mail sur cet appareil : cliquez sur « Se connecter » avec votre mot de passe habituel. Toutes les données de votre école sont conservées.");
     }
 
     const userId = existing ? existing.directorId : Utils.randomId('usr');
@@ -683,11 +683,14 @@ const Auth = {
       }
 
       // Compte uniquement local : création du compte en ligne pour activer la sauvegarde cloud
-      // (Supabase envoie un e-mail de confirmation ; au plus une demande par 24 h)
+      // (Supabase envoie un e-mail de confirmation ; au plus une demande par 24 h et par projet Supabase,
+      //  pour que les comptes soient recréés tout de suite si la plateforme change de base en ligne)
       if (this.client && navigator.onLine && remoteErrorMessage && /invalid login credentials/i.test(remoteErrorMessage)) {
         const lastRequest = Date.parse(found.cloudSignupRequestedAt || '') || 0;
-        if (Date.now() - lastRequest > 24 * 60 * 60 * 1000) {
+        const sameProject = found.cloudSignupProject === CONFIG.SUPABASE_URL;
+        if (!sameProject || Date.now() - lastRequest > 24 * 60 * 60 * 1000) {
           found.cloudSignupRequestedAt = new Date().toISOString();
+          found.cloudSignupProject = CONFIG.SUPABASE_URL;
           this.saveSchoolsRegistry(registry);
           this.client.auth.signUp({
             email: cleanEmail,
@@ -717,6 +720,96 @@ const Auth = {
       throw new Error("Votre adresse e-mail n'est pas encore confirmée. Ouvrez le lien de confirmation reçu par e-mail, puis reconnectez-vous.");
     }
     throw new Error(genericError);
+  },
+
+  /**
+   * Active la sauvegarde en ligne d'une directrice déjà connectée sur cet appareil, sans déconnexion.
+   * Le mot de passe est d'abord vérifié sur l'appareil, puis le compte en ligne est ouvert, ou créé
+   * s'il n'existe pas (ex. nouvelle base Supabase). Les données de l'école présentes sur l'appareil
+   * restent la référence : elles sont ensuite envoyées dans la sauvegarde en ligne.
+   * Retourne { state: 'active' | 'confirm-email' | 'error', message }
+   */
+  async activateCloudAccount(password) {
+    const email = this._cleanEmail(this.userProfile && this.userProfile.email);
+    const pwd = String(password || '');
+    if (!this._isValidEmail(email)) {
+      return { state: 'error', message: "Adresse e-mail du compte introuvable : déconnectez-vous puis reconnectez-vous." };
+    }
+    if (!pwd) return { state: 'error', message: "Veuillez saisir votre mot de passe." };
+    if (!this.client || !navigator.onLine) {
+      return { state: 'error', message: "Une connexion Internet est nécessaire pour activer la sauvegarde en ligne." };
+    }
+    try {
+      this.checkLoginGuard(email);
+    } catch (e) {
+      return { state: 'error', message: e.message };
+    }
+
+    const registry = this.getSchoolsRegistry();
+    const entry = registry.find(r => (r.email || '').toLowerCase() === email) || null;
+    if (entry && (entry.pwdHash || entry.password)) {
+      const ok = await this.verifyPassword(pwd, entry);
+      if (!ok) {
+        this.recordLoginFailure(email);
+        return { state: 'error', message: "Mot de passe incorrect." };
+      }
+    }
+
+    const markLinked = async (user, session) => {
+      this.clearLoginGuard(email);
+      if (entry) {
+        entry.supabaseUserId = user.id;
+        if (!entry.pwdHash) await this.setEntryPassword(entry, pwd);
+        this.saveSchoolsRegistry(registry);
+      }
+      this.session = this.session || {};
+      if (session) this.session.supabaseSession = session;
+      this.saveActiveSession();
+      return { state: 'active', message: "Sauvegarde en ligne activée : vos données sont maintenant protégées." };
+    };
+
+    try {
+      const { data, error } = await this.client.auth.signInWithPassword({ email, password: pwd });
+      if (!error && data && data.user) return await markLinked(data.user, data.session);
+
+      const msg = (error && error.message) || '';
+      if (/confirm/i.test(msg)) {
+        return { state: 'confirm-email', message: `Votre adresse ${email} n'est pas encore confirmée. Ouvrez le lien reçu par e-mail (pensez aux spams), puis revenez ici et appuyez de nouveau sur « Activer ».` };
+      }
+      if (!/invalid login credentials/i.test(msg)) {
+        return { state: 'error', message: "Activation impossible pour le moment. Réessayez dans quelques minutes." };
+      }
+
+      // Aucun compte en ligne avec ce mot de passe : création du compte (e-mail de confirmation)
+      const { data: created, error: signUpError } = await this.client.auth.signUp({
+        email,
+        password: pwd,
+        options: {
+          data: { full_name: (entry && entry.name) || (this.userProfile && this.userProfile.name) || '' },
+          emailRedirectTo: this._appUrl('index.html')
+        }
+      });
+      if (signUpError) {
+        const m = signUpError.message || '';
+        if (/already|registered|exists/i.test(m)) {
+          return { state: 'error', message: "Un compte en ligne existe déjà avec cette adresse, avec un autre mot de passe. Utilisez « Mot de passe oublié » sur la page de connexion." };
+        }
+        if (/rate|too many|security purposes/i.test(m)) {
+          return { state: 'error', message: "Trop de demandes en peu de temps. Réessayez dans quelques minutes." };
+        }
+        return { state: 'error', message: "Création du compte en ligne impossible pour le moment. Réessayez plus tard." };
+      }
+      if (entry) {
+        entry.cloudSignupRequestedAt = new Date().toISOString();
+        entry.cloudSignupProject = CONFIG.SUPABASE_URL;
+        this.saveSchoolsRegistry(registry);
+      }
+      if (created && created.session && created.user) return await markLinked(created.user, created.session);
+      return { state: 'confirm-email', message: `Un e-mail de confirmation vient d'être envoyé à ${email}. Ouvrez-le (pensez aux spams), puis revenez ici et appuyez de nouveau sur « Activer ».` };
+    } catch (err) {
+      console.warn('[Auth] Activation du compte en ligne:', err);
+      return { state: 'error', message: "Connexion au serveur impossible. Vérifiez votre connexion Internet et réessayez." };
+    }
   },
 
   /**

@@ -50,7 +50,7 @@ const App = {
         this.renderHeader();
         this.navigate(this.currentTab, { preserveFilters: true, keepScroll: true });
         this.showToast("Données mises à jour depuis votre sauvegarde en ligne.", "info");
-      }).catch(() => {});
+      }).then(() => this.remindCloudActivation()).catch(() => {});
     }
 
     // Support de l'installation PWA
@@ -2206,6 +2206,10 @@ const App = {
       detail = `Dernière sauvegarde : ${status.lastBackupAt ? Utils.formatDateTime(status.lastBackupAt) : 'à jour'}. ${status.publishedCount || 0} reçu(s) vérifiable(s) par QR code depuis n'importe quel téléphone.`;
     }
     const canSync = window.CloudSync && CloudSync.canSync();
+    const needsActivation = canSync && status.state === 'no-session' && navigator.onLine && window.Auth && Auth.client;
+    if (needsActivation) {
+      detail = "Inactive sur cet appareil : appuyez sur « Activer » et saisissez votre mot de passe habituel. Vos données restent sur ce téléphone et seront ensuite sauvegardées en ligne.";
+    }
     return `
       <div style="flex:1; min-width:240px;">
         <div style="font-weight:700; font-size:var(--text-base); color:var(--text-main); display:flex; align-items:center; gap:0.5rem;">
@@ -2217,11 +2221,120 @@ const App = {
         <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:0.25rem; line-height:1.45;">${Utils.escapeHtml(detail || "Vos données sont sauvegardées automatiquement dans votre espace en ligne privé, et vos reçus deviennent vérifiables par les parents.")}</p>
       </div>
       <div>
+        ${needsActivation ? `
+        <button type="button" class="btn btn-primary btn-navy" onclick="App.openCloudActivationModal()" style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700;">
+          <span>🔐 Activer la sauvegarde en ligne</span>
+        </button>` : `
         <button type="button" class="btn btn-secondary" onclick="App.forceCloudSync()" ${canSync ? '' : 'disabled'} style="display:inline-flex; align-items:center; gap:0.5rem; font-weight:700;">
           <span>☁️ Sauvegarder maintenant</span>
-        </button>
+        </button>`}
       </div>
     `;
+  },
+
+  // Rappel (au plus une fois par jour) quand la sauvegarde en ligne n'est pas active sur cet appareil
+  remindCloudActivation() {
+    if (!window.CloudSync || !CloudSync.canSync() || CloudSync.status.state !== 'no-session') return;
+    if (!navigator.onLine || !window.Auth || !Auth.client) return;
+    const KEY = 'gp_cloud_activation_reminder_v1';
+    try {
+      const last = Date.parse(localStorage.getItem(KEY) || '') || 0;
+      if (Date.now() - last < 24 * 60 * 60 * 1000) return;
+      localStorage.setItem(KEY, new Date().toISOString());
+    } catch (e) {}
+    this.showToast("Sauvegarde en ligne inactive : activez-la pour protéger les données de votre école.", "warning", {
+      label: 'Activer',
+      callback: () => this.openCloudActivationModal()
+    });
+  },
+
+  // Fenêtre « Activer la sauvegarde en ligne » : mot de passe habituel, sans déconnexion
+  openCloudActivationModal() {
+    if (!window.Auth || typeof Auth.activateCloudAccount !== 'function') return;
+    let modal = document.getElementById('cloudActivationModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'cloudActivationModal';
+      modal.className = 'modal-backdrop';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'cloudActivationTitle');
+      modal.innerHTML = `
+        <div class="modal-container" style="max-width:460px;">
+          <div class="modal-header">
+            <h2 class="modal-title" id="cloudActivationTitle">Activer la sauvegarde en ligne</h2>
+            <button type="button" class="modal-close-btn" aria-label="Fermer">✕</button>
+          </div>
+          <form id="cloudActivationForm" class="modal-body" style="display:grid; gap:0.9rem;">
+            <p style="font-size:var(--text-sm); color:var(--text-muted); line-height:1.5; margin:0;">
+              Saisissez le mot de passe que vous utilisez pour vous connecter. Les données de votre école restent sur ce téléphone et seront ensuite sauvegardées dans votre espace en ligne privé.
+            </p>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Adresse e-mail</label>
+              <input type="email" class="form-input" id="cloudActivationEmail" readonly>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="cloudActivationPassword">Mot de passe</label>
+              <input type="password" class="form-input" id="cloudActivationPassword" autocomplete="current-password" required>
+            </div>
+            <div id="cloudActivationMessage" role="status" style="display:none; font-size:var(--text-sm); font-weight:600; padding:0.7rem 0.85rem; border-radius:var(--radius-md); line-height:1.45;"></div>
+            <div style="display:flex; justify-content:flex-end; gap:0.6rem; flex-wrap:wrap;">
+              <button type="button" class="btn btn-secondary modal-close-btn">Fermer</button>
+              <button type="submit" class="btn btn-primary btn-navy" id="cloudActivationSubmit">Activer</button>
+            </div>
+          </form>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.querySelector('#cloudActivationForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.submitCloudActivation();
+      });
+    }
+    const user = Auth.getUser() || {};
+    modal.querySelector('#cloudActivationEmail').value = user.email || '';
+    modal.querySelector('#cloudActivationPassword').value = '';
+    const msg = modal.querySelector('#cloudActivationMessage');
+    msg.style.display = 'none';
+    msg.textContent = '';
+    modal.classList.add('is-open');
+    setTimeout(() => modal.querySelector('#cloudActivationPassword').focus(), 100);
+  },
+
+  async submitCloudActivation() {
+    const modal = document.getElementById('cloudActivationModal');
+    if (!modal) return;
+    const pwdInput = modal.querySelector('#cloudActivationPassword');
+    const msg = modal.querySelector('#cloudActivationMessage');
+    const btn = modal.querySelector('#cloudActivationSubmit');
+    const show = (text, tone) => {
+      const colors = {
+        success: ['var(--success-subtle)', 'var(--tone-green-deep)'],
+        warning: ['var(--warning-subtle)', 'var(--warning-dark)'],
+        danger: ['var(--danger-subtle)', 'var(--tone-red-deep)']
+      }[tone];
+      msg.style.background = colors[0];
+      msg.style.color = colors[1];
+      msg.textContent = text;
+      msg.style.display = 'block';
+    };
+    btn.disabled = true;
+    btn.textContent = 'Activation...';
+    try {
+      const result = await Auth.activateCloudAccount(pwdInput.value);
+      pwdInput.value = '';
+      if (result.state === 'active') {
+        show(result.message, 'success');
+        if (window.CloudSync) await CloudSync.syncNow({ force: true });
+        this.updateCloudSyncCard();
+        this.showToast("✓ Sauvegarde en ligne activée.", "success");
+        setTimeout(() => this.closeAllModals(), 1200);
+      } else {
+        show(result.message, result.state === 'confirm-email' ? 'warning' : 'danger');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Activer';
+    }
   },
 
   updateCloudSyncCard() {
