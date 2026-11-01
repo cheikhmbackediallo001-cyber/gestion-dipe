@@ -90,10 +90,10 @@
   </script>
 
   <!-- Design System & Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=20261101_v2">
-  <link rel="stylesheet" href="css/app.css?v=20261101_v2">
-  <link rel="stylesheet" href="css/receipt.css?v=20261101_v2">
-  <link rel="stylesheet" href="css/datepicker.css?v=20261101_v2">
+  <link rel="stylesheet" href="css/design-system.css?v=20261102_v1">
+  <link rel="stylesheet" href="css/app.css?v=20261102_v1">
+  <link rel="stylesheet" href="css/receipt.css?v=20261102_v1">
+  <link rel="stylesheet" href="css/datepicker.css?v=20261102_v1">
 
   <!-- PWA Configuration & Official App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -904,17 +904,40 @@
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=20261101_v2"></script>
-  <script src="js/utils.js?v=20261101_v2"></script>
-  <script src="js/datepicker.js?v=20261101_v2"></script>
-  <script src="js/stamp.js?v=20261101_v2"></script>
-  <script src="js/supabase.js?v=20261101_v2"></script>
-  <script src="js/auth.js?v=20261101_v2"></script>
-  <script src="js/demo-data.js?v=20261101_v2"></script>
-  <script src="js/store.js?v=20261101_v2"></script>
-  <script src="js/cloud-sync.js?v=20261101_v2"></script>
+  <script src="js/config.js?v=20261102_v1"></script>
+  <script src="js/utils.js?v=20261102_v1"></script>
+  <script src="js/datepicker.js?v=20261102_v1"></script>
+  <script src="js/stamp.js?v=20261102_v1"></script>
+  <script src="js/supabase.js?v=20261102_v1"></script>
+  <script src="js/auth.js?v=20261102_v1"></script>
+  <script src="js/demo-data.js?v=20261102_v1"></script>
+  <script src="js/store.js?v=20261102_v1"></script>
+  <script src="js/cloud-sync.js?v=20261102_v1"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20261101_v2"></script>
+  <script src="js/app.js?v=20261102_v1"></script>
+
+  <!-- Filet de sécurité : si l'application ne s'est pas affichée (fichier non téléchargé), message + réparation -->
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        var area = document.getElementById('appViewContent');
+        if (!area || area.children.length || area.textContent.trim()) return;
+        area.innerHTML = '<div style="padding:2.5rem 1.5rem;text-align:center;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-lg);margin-top:1rem;">'
+          + '<div style="font-size:2.5rem;margin-bottom:.5rem;">📶</div>'
+          + '<h2 style="font-size:1.25rem;font-weight:800;color:var(--text-main);margin-bottom:.5rem;">Chargement incomplet</h2>'
+          + '<p style="color:var(--text-muted);font-size:.9rem;max-width:440px;margin:0 auto 1.25rem;line-height:1.5;">Une partie de l\'application n\'a pas pu être téléchargée. Vos données sont intactes sur ce téléphone.</p>'
+          + '<button type="button" class="btn btn-primary" id="btnLoadRetry">Réessayer</button> '
+          + '<button type="button" class="btn btn-secondary" id="btnLoadRepair">Réparer l\'application</button></div>';
+        document.getElementById('btnLoadRetry').onclick = function () { window.location.reload(); };
+        document.getElementById('btnLoadRepair').onclick = function () {
+          var jobs = [];
+          if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) { return Promise.all(regs.map(function (r) { return r.unregister(); })); }));
+          if (window.caches) jobs.push(caches.keys().then(function (keys) { return Promise.all(keys.map(function (k) { return caches.delete(k); })); }));
+          Promise.all(jobs).catch(function () {}).then(function () { window.location.replace(window.location.pathname + '?upd=' + Date.now()); });
+        };
+      }, 5000);
+    });
+  </script>
 
   <!-- Bannière flottante de mise à jour PWA -->
   <div id="pwaUpdateBanner" class="pwa-update-banner" role="status" aria-live="polite">

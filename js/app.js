@@ -123,7 +123,30 @@ const App = {
   // ----------------------------------------------------------------------------
   // NAVIGATION & ROUTING SPA
   // ----------------------------------------------------------------------------
+  // Chargement incomplet (fichier manquant, connexion coupée) : message clair au lieu d'une page vide.
+  // Les données de l'école restent enregistrées sur l'appareil.
+  renderLoadFailure() {
+    const area = document.getElementById('appViewContent');
+    if (!area) return;
+    area.innerHTML = `
+      <div style="padding:2.5rem 1.5rem; text-align:center; background:var(--bg-card); border:1px solid var(--border-medium); border-radius:var(--radius-lg); margin-top:1rem; box-shadow:var(--shadow-sm);">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;" aria-hidden="true">📶</div>
+        <h2 style="font-size:1.25rem; font-weight:800; color:var(--text-main); margin-bottom:0.5rem;">Chargement incomplet</h2>
+        <p style="color:var(--text-muted); font-size:var(--text-sm); max-width:440px; margin:0 auto 1.25rem auto; line-height:1.5;">
+          Une partie de l'application n'a pas pu être téléchargée (connexion lente ou coupée). Vos données sont intactes sur ce téléphone.
+        </p>
+        <div style="display:flex; gap:0.6rem; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-navy" onclick="window.location.reload()">Réessayer</button>
+          <button type="button" class="btn btn-secondary" onclick="App.forceAppUpdate()">Réparer l'application</button>
+        </div>
+      </div>`;
+  },
+
   navigate(tabName, options = {}) {
+    if (!window.Store || !Store.data || !Store.data.school || typeof Utils === 'undefined') {
+      this.renderLoadFailure();
+      return;
+    }
     let resolvedTab = tabName;
     if (tabName === 'total-registrations') {
       resolvedTab = 'bilan';
@@ -3614,26 +3637,29 @@ const App = {
     this.showToast("Synchronisation avec le serveur et vérification des mises à jour...", "info");
 
     try {
-      // 1. Purge intégrale de tous les caches de CacheStorage
+      // Vérifie d'abord que le serveur répond : sans réseau, on garde la version installée intacte
+      const online = await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' }).then(r => r.ok).catch(() => false);
+      if (!online) {
+        this.showToast("Pas de connexion Internet : la version actuelle est conservée. Réessayez une fois connecté.", "warning");
+        if (refreshIcon) refreshIcon.classList.remove('is-spinning');
+        if (settingsBtn) {
+          settingsBtn.disabled = false;
+          settingsBtn.innerHTML = '<span>🔄 Actualiser & Forcer la mise à jour</span>';
+        }
+        return;
+      }
+
+      // 1. Retrait du gestionnaire hors ligne : le rechargement se fait directement depuis le serveur
+      //    (il se réinstalle ensuite tout seul avec la dernière version). Les données de l'école ne sont pas touchées.
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(reg => reg.unregister().catch(() => false)));
+      }
+
+      // 2. Purge des copies de fichiers en cache (jamais les données)
       if ('caches' in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
-        console.log('[PWA] Caches locaux vidés avec succès :', keys);
-      }
-
-      // 2. Demander à tous les Service Workers de se mettre à jour
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          try {
-            await reg.update();
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-          } catch (e) {
-            console.warn('[PWA] Erreur update SW :', e);
-          }
-        }
       }
 
       this.showToast("Mise à jour prête ! Chargement de la dernière version...", "success");

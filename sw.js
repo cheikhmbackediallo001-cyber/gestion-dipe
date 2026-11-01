@@ -7,7 +7,7 @@
  */
 
 // Même numéro que les « ?v= » des pages HTML : à changer à chaque publication
-const ASSET_VERSION = '20261101_v2';
+const ASSET_VERSION = '20261102_v1';
 const CACHE_NAME = 'gestion-prescolaire-v' + ASSET_VERSION;
 
 const STATIC_ASSETS = [
@@ -120,38 +120,40 @@ self.addEventListener('fetch', (e) => {
   ) {
     e.respondWith(
       (async () => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 800); // 800ms max
-
-          const networkResponse = await fetch(e.request, {
-            signal: controller.signal,
-            headers: { 'Cache-Control': 'no-cache' }
-          });
-          clearTimeout(timeoutId);
-
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            const clone = networkResponse.clone();
-            const cacheKey = url.origin + url.pathname; // sans « ?token=... »
-            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, clone));
-            return networkResponse;
+        const findCached = async () => {
+          const cached = await caches.match(e.request, { ignoreSearch: true });
+          if (cached) return cached;
+          if (url.pathname.includes('app')) {
+            const appCached = await caches.match('./app.html');
+            if (appCached) return appCached;
           }
-        } catch (netErr) {
-          // Timeout ou hors-ligne : bascule immédiate sur le cache local
-        }
+          if (url.pathname.includes('verify')) {
+            const verifyCached = await caches.match('./verify.html');
+            if (verifyCached) return verifyCached;
+          }
+          return (await caches.match('./index.html')) || (await caches.match('./')) || null;
+        };
 
-        const cached = await caches.match(e.request, { ignoreSearch: true });
+        // Le téléchargement n'est jamais interrompu : si le cache est vide (ex. après « Actualiser »),
+        // on attend le réseau au lieu d'afficher une page vide.
+        const network = fetch(e.request, { cache: 'no-cache' })
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              const clone = networkResponse.clone();
+              const cacheKey = url.origin + url.pathname; // sans « ?token=... »
+              caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, clone));
+            }
+            return networkResponse;
+          })
+          .catch(() => null);
+
+        // Réseau lent (> 800 ms) et copie disponible : ouverture immédiate depuis le cache
+        const quick = await Promise.race([network, new Promise((resolve) => setTimeout(() => resolve('slow'), 800))]);
+        if (quick && quick !== 'slow' && quick.ok) return quick;
+        const cached = await findCached();
         if (cached) return cached;
-
-        if (url.pathname.includes('app')) {
-          const appCached = await caches.match('./app.html');
-          if (appCached) return appCached;
-        }
-        if (url.pathname.includes('verify')) {
-          const verifyCached = await caches.match('./verify.html');
-          if (verifyCached) return verifyCached;
-        }
-        return (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
+        const late = quick === 'slow' ? await network : quick;
+        return late || Response.error();
       })()
     );
     return;
