@@ -90,6 +90,13 @@ const CONFIG = {
 Comme le front-end est conçu en HTML5/CSS3/JavaScript natif ultra-léger (< 200 Ko) :
 - **Sur Netlify** : Glissez-déposez le dossier `GESTION DIPE` directement sur [app.netlify.com/drop](https://app.netlify.com/drop).
 - **Sur Vercel** : Déployez avec la commande `vercel` ou via l'interface Vercel (sélectionnez "Other" / static).
+
+#### Mise à jour automatique (Vercel relié à GitHub)
+Le projet Vercel `gestion-dipe` est relié au dépôt GitHub `cheikhmbackediallo001-cyber/gestion-dipe` :
+- chaque envoi (`git push`) sur la branche `main` met le site en ligne automatiquement (https://gestion-dipe.vercel.app) en 1 à 2 minutes ;
+- les autres branches donnent une version d'essai (lien affiché dans Vercel), sans toucher au site en ligne.
+
+Avant chaque envoi sur `main` qui modifie des scripts ou des styles, changez le numéro de version **partout en même temps** : `ASSET_VERSION` dans `sw.js` et tous les `?v=...` de `index.html`, `app.html` et `verify.html`. Sinon, les téléphones peuvent garder d'anciens fichiers en cache.
 - **Sur GitHub Pages** : Activez GitHub Pages dans les réglages du dépôt sur la branche principale.
 
 ---
