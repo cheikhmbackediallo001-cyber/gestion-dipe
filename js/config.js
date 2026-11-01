@@ -21,8 +21,8 @@ const CONFIG = {
 
   // Configuration Supabase (laisser vide pour activer le mode démo local automatique)
   // Renseigner avec les clés de votre projet Supabase pour le mode production
-  SUPABASE_URL: "https://rkkgwhxtpozwwkyvzcqz.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJra2d3aHh0cG96d3dreXZ6Y3F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzMTg1NTMsImV4cCI6MjEwNzg5NDU1M30.lLIeEVQaN3Zl4yd95GF8d1zXt3cdtkvB4e_MLjS5ClQ",
+  SUPABASE_URL: "https://sllypfalhrkxikizlcgc.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsbHlwZmFsaHJreGlraXpsY2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1NjM1NjksImV4cCI6MjEwOTEzOTU2OX0.4SixdGdFQEYDN1dQcCGE5dqfZfk0ysJBAmkB8hXmPAU",
 
   // Structure administrative intégrale du Sénégal (14 Régions, 46 Départements et Communes)
   SENEGAL_REGIONS: {

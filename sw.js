@@ -7,7 +7,7 @@
  */
 
 // Même numéro que les « ?v= » des pages HTML : à changer à chaque publication
-const ASSET_VERSION = '20261026_v5';
+const ASSET_VERSION = '20261101_v1';
 const CACHE_NAME = 'gestion-prescolaire-v' + ASSET_VERSION;
 
 const STATIC_ASSETS = [
