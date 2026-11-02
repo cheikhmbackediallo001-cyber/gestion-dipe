@@ -98,7 +98,71 @@ const CloudSync = {
   onLocalChange() {
     if (this._suspended || !this.canSync()) return;
     clearTimeout(this._timer);
-    this._timer = setTimeout(() => { this.syncNow().catch(() => {}); }, this.DEBOUNCE_MS);
+    this._timer = setTimeout(() => {
+      this.syncNow().catch(() => {});
+      this.reportActivity().catch(() => {});
+    }, this.DEBOUNCE_MS);
+  },
+
+  // ----------------------------------------------------------------------------
+  // Rapport d'activité pour l'administrateur de la plateforme (avec ou sans compte en ligne)
+  // Fiche de l'école + totaux uniquement (aucun nom d'enfant), au plus une fois toutes les 10 minutes.
+  // ----------------------------------------------------------------------------
+  DEVICE_KEY: 'gp_device_id_v1',
+  REPORT_KEY: 'gp_device_report_at_v1',
+  REPORT_EVERY_MS: 10 * 60 * 1000,
+
+  _deviceId() {
+    let id = '';
+    try { id = localStorage.getItem(this.DEVICE_KEY) || ''; } catch (e) {}
+    if (!/^dev_[0-9a-f]{32}$/.test(id)) {
+      id = 'dev_' + Utils.randomHex(16);
+      try { localStorage.setItem(this.DEVICE_KEY, id); } catch (e) {}
+    }
+    return id;
+  },
+
+  buildActivityReport() {
+    const d = Store.data || {};
+    const school = d.school || {};
+    const user = (window.Auth && Auth.getUser()) || {};
+    const students = (d.students || []).filter(s => s.active !== false);
+    const payments = (d.payments || []).filter(p => (p.status || 'valid') === 'valid');
+    const expenses = (d.expenses || []).filter(x => !['cancelled', 'deleted'].includes(x.status));
+    const total = (list) => list.reduce((acc, x) => acc + Math.max(0, Math.round(Number(x.amount) || 0)), 0);
+    return {
+      device_id: this._deviceId(),
+      email: String(user.email || '').trim().toLowerCase(),
+      director_name: school.director_name || user.name || '',
+      school_name: school.name || '',
+      school_phone: school.director_phone || '',
+      region: school.region || '',
+      commune: school.commune || '',
+      school_year: school.school_year || '',
+      students: students.length,
+      girls: students.filter(s => s.gender === 'F').length,
+      boys: students.filter(s => s.gender !== 'F').length,
+      classes: (d.classes || []).length,
+      payments: payments.length,
+      collected: total(payments),
+      expenses: total(expenses),
+      app_version: (window.CONFIG && CONFIG.APP_VERSION) || '1.0.4'
+    };
+  },
+
+  async reportActivity({ force = false } = {}) {
+    if (!this.canSync() || !navigator.onLine || !window.Auth || !Auth.client) return false;
+    let last = 0;
+    try { last = Date.parse(localStorage.getItem(this.REPORT_KEY) || '') || 0; } catch (e) {}
+    if (!force && Date.now() - last < this.REPORT_EVERY_MS) return false;
+    try {
+      const { error } = await Auth.client.rpc('report_device_activity', { p_report: this.buildActivityReport() });
+      if (error) return false;
+      try { localStorage.setItem(this.REPORT_KEY, new Date().toISOString()); } catch (e) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
   /**
@@ -290,6 +354,7 @@ const CloudSync = {
       this._setStatus('demo', "La sauvegarde en ligne s'active dès que votre école est créée.");
       return;
     }
+    this.reportActivity().catch(() => {});
     const session = await this._session();
     if (!session) {
       await this.syncNow();

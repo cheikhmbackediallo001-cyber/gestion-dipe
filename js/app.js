@@ -2273,9 +2273,50 @@ const App = {
     }
   },
 
-  _adminLevel(d) {
-    if (!d.has_backup) return { label: 'Sauvegarde non activée', tone: 'muted' };
-    const n = (d.stats && d.stats.students) || 0;
+  // Fusionne comptes en ligne et téléphones en une seule liste homogène
+  _adminAccounts() {
+    const data = this.adminState.data || {};
+    const out = [];
+    (data.directors || []).forEach(d => {
+      const dev = d.device || null;
+      const useDevice = !d.has_backup && dev;
+      if (d.is_admin && !d.has_backup && !dev) return; // compte administrateur sans école
+      const sc = d.has_backup ? (d.school || {}) : (dev ? {
+        name: dev.school_name, director_name: dev.director_name, director_phone: dev.school_phone,
+        region: dev.region, commune: dev.commune, school_year: dev.school_year
+      } : {});
+      const st = d.has_backup ? (d.stats || {}) : (dev ? dev : null);
+      const activity = [d.backup_saved_at, dev && dev.last_seen_at].filter(Boolean).sort().pop() || null;
+      out.push({
+        key: d.user_id, name: d.full_name || sc.director_name || '', email: d.email, emailConfirmed: !!d.email_confirmed,
+        isAdmin: !!d.is_admin, kind: d.has_backup ? 'backup' : 'online', school: sc, stats: st,
+        fromDevice: !!useDevice, createdAt: d.created_at, lastSignIn: d.last_sign_in_at, lastActivity: activity
+      });
+    });
+    // Téléphones sans compte en ligne : un seul par adresse e-mail (le plus récent)
+    const seen = new Set();
+    (data.devices || []).forEach(v => {
+      const k = v.email ? 'm:' + String(v.email).toLowerCase() : 'd:' + v.device_id;
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push({
+        key: v.device_id, name: v.director_name || '', email: v.email || '', emailConfirmed: false, isAdmin: false, kind: 'phone',
+        school: { name: v.school_name, director_name: v.director_name, director_phone: v.school_phone, region: v.region, commune: v.commune, school_year: v.school_year },
+        stats: v, fromDevice: true, createdAt: v.first_seen_at, lastSignIn: null, lastActivity: v.last_seen_at
+      });
+    });
+    return out;
+  },
+
+  _adminKind(a) {
+    if (a.kind === 'backup') return { label: 'En ligne · sauvegarde active', tone: 'success' };
+    if (a.kind === 'online') return { label: a.emailConfirmed ? 'En ligne · sauvegarde non activée' : 'En ligne · e-mail non confirmé', tone: 'warning' };
+    return { label: 'Sur téléphone uniquement', tone: 'muted' };
+  },
+
+  _adminLevel(a) {
+    if (!a.stats) return { label: 'Aucune donnée reçue', tone: 'muted' };
+    const n = Number(a.stats.students) || 0;
     if (n === 0) return { label: 'Pas encore commencé', tone: 'muted' };
     if (n < 10) return { label: 'Débutant', tone: 'warning' };
     if (n < 30) return { label: 'Actif', tone: 'info' };
@@ -2283,14 +2324,16 @@ const App = {
   },
 
   _adminRows() {
-    const list = ((this.adminState.data && this.adminState.data.directors) || []).filter(d => !d.is_admin || d.has_backup);
+    const list = this._adminAccounts();
     const q = (this.adminState.search || '').trim().toLowerCase();
-    const filtered = !q ? list : list.filter(d => [d.full_name, d.email, d.school && d.school.name, d.school && d.school.commune, d.school && d.school.region, d.school && d.school.director_phone]
+    const filtered = !q ? list : list.filter(a => [a.name, a.email, a.school.name, a.school.commune, a.school.region, a.school.director_phone]
       .some(v => String(v || '').toLowerCase().includes(q)));
+    const num = (a, f) => Number((a.stats && a.stats[f]) || 0);
     const sorters = {
-      students: (a, b) => ((b.stats && b.stats.students) || 0) - ((a.stats && a.stats.students) || 0),
-      recent: (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')),
-      collected: (a, b) => Number((b.stats && b.stats.collected) || 0) - Number((a.stats && a.stats.collected) || 0)
+      students: (a, b) => num(b, 'students') - num(a, 'students'),
+      collected: (a, b) => num(b, 'collected') - num(a, 'collected'),
+      activity: (a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || '')),
+      recent: (a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
     };
     return filtered.slice().sort(sorters[this.adminState.sort] || sorters.students);
   },
@@ -2304,9 +2347,9 @@ const App = {
       this.loadAdminOverview().then(() => { if (this.currentTab === 'admin') this.renderAdmin(document.getElementById('appViewContent')); });
     }
     const st = this.adminState;
-    const all = ((st.data && st.data.directors) || []).filter(d => !d.is_admin || d.has_backup);
+    const all = this._adminAccounts();
     const rows = this._adminRows();
-    const sum = (f) => all.reduce((acc, d) => acc + Number((d.stats && d.stats[f]) || 0), 0);
+    const sum = (f) => all.reduce((acc, a) => acc + Number((a.stats && a.stats[f]) || 0), 0);
     const esc = (v) => Utils.escapeHtml(v == null ? '' : String(v));
     const date = (v) => v ? Utils.formatDate(v) : '—';
     const toneStyle = {
@@ -2315,6 +2358,8 @@ const App = {
       warning: 'background:var(--warning-subtle); color:var(--warning-dark);',
       muted: 'background:var(--bg-subtle); color:var(--text-muted);'
     };
+    const badge = (b) => `<span class="badge" style="${toneStyle[b.tone]} font-weight:700; white-space:normal; text-align:center;">${esc(b.label)}</span>`;
+    const count = (k) => all.filter(a => a.kind === k).length;
 
     container.innerHTML = `
       <div class="view-header">
@@ -2336,32 +2381,33 @@ const App = {
       ${st.data ? `
         <div class="kpi-grid">
           <div class="kpi-card" style="border-top:4px solid var(--primary);">
-            <span class="kpi-title">Directrices inscrites</span>
+            <span class="kpi-title">Comptes utilisant la plateforme</span>
             <div class="kpi-figure" style="color:var(--primary);">${all.length}</div>
-            <div class="kpi-meta">${all.filter(d => d.email_confirmed).length} e-mail(s) confirmé(s)</div>
-          </div>
-          <div class="kpi-card" style="border-top:4px solid var(--success);">
-            <span class="kpi-title">Sauvegardes actives</span>
-            <div class="kpi-figure" style="color:var(--success);">${all.filter(d => d.has_backup).length}</div>
-            <div class="kpi-meta">Écoles dont les données sont visibles ici</div>
+            <div class="kpi-meta">${count('backup')} sauvegarde active · ${count('online')} en ligne sans sauvegarde · ${count('phone')} sur téléphone uniquement</div>
           </div>
           <div class="kpi-card" style="border-top:4px solid #F59E0B;">
             <span class="kpi-title">Élèves enregistrés</span>
             <div class="kpi-figure" style="color:var(--tone-amber);">${sum('students')}</div>
             <div class="kpi-meta">${sum('girls')} fille(s) · ${sum('boys')} garçon(s)</div>
           </div>
+          <div class="kpi-card" style="border-top:4px solid var(--success);">
+            <span class="kpi-title">Paiements enregistrés</span>
+            <div class="kpi-figure" style="color:var(--success);">${sum('payments')}</div>
+            <div class="kpi-meta">Inscriptions et cotisations validées</div>
+          </div>
           <div class="kpi-card" style="border-top:4px solid var(--tone-indigo);">
             <span class="kpi-title">Total encaissé (toutes écoles)</span>
             <div class="kpi-figure" style="color:var(--tone-indigo);">${Utils.formatFCFA(sum('collected'))}</div>
-            <div class="kpi-meta">${sum('payments')} paiement(s) · ${sum('receipts_published')} reçu(s) vérifiable(s)</div>
+            <div class="kpi-meta">Selon les dernières données reçues</div>
           </div>
         </div>
 
         <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin:1.25rem 0 1rem;">
-          <input type="search" class="form-input search-input" style="flex:1 1 220px; min-width:0;" placeholder="Rechercher : nom, e-mail, école, commune…" value="${esc(st.search)}" oninput="App.onAdminSearch(this.value)" aria-label="Rechercher une directrice">
-          <select class="form-select" style="flex:0 1 220px; min-width:0;" onchange="App.onAdminSort(this.value)" aria-label="Trier">
+          <input type="search" class="form-input search-input" style="flex:1 1 220px; min-width:0;" placeholder="Rechercher : nom, e-mail, école, commune…" value="${esc(st.search)}" oninput="App.onAdminSearch(this.value)" aria-label="Rechercher un compte">
+          <select class="form-select" style="flex:0 1 230px; min-width:0;" onchange="App.onAdminSort(this.value)" aria-label="Trier">
             <option value="students" ${st.sort === 'students' ? 'selected' : ''}>Trier : plus d'élèves d'abord</option>
             <option value="collected" ${st.sort === 'collected' ? 'selected' : ''}>Trier : plus encaissé d'abord</option>
+            <option value="activity" ${st.sort === 'activity' ? 'selected' : ''}>Trier : activité la plus récente</option>
             <option value="recent" ${st.sort === 'recent' ? 'selected' : ''}>Trier : inscription la plus récente</option>
           </select>
         </div>
@@ -2369,35 +2415,35 @@ const App = {
         <div class="data-table-container">
           <table class="data-table">
             <thead>
-              <tr><th>Directrice</th><th>École</th><th>Téléphone</th><th>Inscrite le</th><th>Dernière connexion</th><th>Élèves</th><th>Paiements</th><th>Encaissé</th><th>Activité</th><th>Dernière sauvegarde</th></tr>
+              <tr><th>Directrice</th><th>École</th><th>Téléphone</th><th>Compte</th><th>Inscrite le</th><th>Dernière activité</th><th>Élèves</th><th>Paiements</th><th>Encaissé</th><th>Niveau</th></tr>
             </thead>
             <tbody>
-              ${rows.length ? rows.map(d => {
-                const s = d.stats || {};
-                const sc = d.school || {};
-                const lvl = this._adminLevel(d);
+              ${rows.length ? rows.map(a => {
+                const s = a.stats || {};
+                const sc = a.school || {};
                 const place = [sc.commune, sc.region].filter(Boolean).join(', ');
                 const phone = sc.director_phone || '';
+                const has = !!a.stats;
                 return `
                 <tr>
-                  <td data-label="Directrice"><div style="text-align:right;"><strong>${esc(d.full_name || sc.director_name || '—')}</strong>${d.is_admin ? ' <span class="badge" style="background:var(--primary-subtle); color:var(--tone-navy); font-weight:700;">Vous</span>' : ''}<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(d.email)}${d.email_confirmed ? '' : ' · <span style="color:var(--tone-red);">non confirmé</span>'}</div></div></td>
+                  <td data-label="Directrice"><div style="text-align:right;"><strong>${esc(a.name || '—')}</strong>${a.isAdmin ? ' <span class="badge" style="background:var(--primary-subtle); color:var(--tone-navy); font-weight:700;">Vous</span>' : ''}<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(a.email || 'e-mail inconnu')}</div></div></td>
                   <td data-label="École"><div style="text-align:right;">${esc(sc.name || '—')}${place ? `<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(place)}</div>` : ''}</div></td>
                   <td data-label="Téléphone">${phone ? `<a href="tel:${esc(phone.replace(/[^0-9+]/g, ''))}">${esc(phone)}</a>` : '—'}</td>
-                  <td data-label="Inscrite le">${date(d.created_at)}</td>
-                  <td data-label="Dernière connexion">${date(d.last_sign_in_at)}</td>
-                  <td data-label="Élèves"><span><strong>${d.has_backup ? (s.students || 0) : '—'}</strong>${d.has_backup ? ` <span style="font-size:var(--text-xs); color:var(--text-muted);">(${s.girls || 0} F · ${s.boys || 0} G)</span>` : ''}</span></td>
-                  <td data-label="Paiements">${d.has_backup ? (s.payments || 0) : '—'}</td>
-                  <td data-label="Encaissé" style="font-weight:700; color:var(--tone-green);">${d.has_backup ? Utils.formatFCFA(Number(s.collected || 0)) : '—'}</td>
-                  <td data-label="Activité"><span class="badge" style="${toneStyle[lvl.tone]} font-weight:700;">${esc(lvl.label)}</span></td>
-                  <td data-label="Dernière sauvegarde">${date(d.backup_saved_at)}</td>
+                  <td data-label="Compte">${badge(this._adminKind(a))}</td>
+                  <td data-label="Inscrite le">${date(a.createdAt)}</td>
+                  <td data-label="Dernière activité">${date(a.lastActivity || a.lastSignIn)}</td>
+                  <td data-label="Élèves"><span><strong>${has ? (Number(s.students) || 0) : '—'}</strong>${has ? ` <span style="font-size:var(--text-xs); color:var(--text-muted);">(${Number(s.girls) || 0} F · ${Number(s.boys) || 0} G)</span>` : ''}</span></td>
+                  <td data-label="Paiements">${has ? (Number(s.payments) || 0) : '—'}</td>
+                  <td data-label="Encaissé" style="font-weight:700; color:var(--tone-green);">${has ? Utils.formatFCFA(Number(s.collected) || 0) : '—'}</td>
+                  <td data-label="Niveau">${badge(this._adminLevel(a))}</td>
                 </tr>`;
-              }).join('') : `<tr><td colspan="10" class="empty-state-cell">${all.length ? 'Aucune directrice ne correspond à la recherche.' : 'Aucune directrice inscrite pour le moment.'}</td></tr>`}
+              }).join('') : `<tr><td colspan="10" class="empty-state-cell">${all.length ? 'Aucun compte ne correspond à la recherche.' : 'Aucun compte pour le moment.'}</td></tr>`}
             </tbody>
           </table>
         </div>
 
         <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:1rem; line-height:1.5;">
-          Les nombres d'élèves et de paiements proviennent de la sauvegarde en ligne de chaque école. Une directrice qui n'a pas encore activé sa sauvegarde apparaît avec « Sauvegarde non activée ». Aucun nom d'enfant n'est affiché ici.
+          Chaque téléphone où une école est ouverte envoie ses totaux (au plus toutes les 10 minutes, dès qu'il a Internet) : les comptes utilisés sur téléphone uniquement apparaissent donc après leur prochaine ouverture de l'application avec la nouvelle version. Aucun nom d'enfant n'est affiché.
         </p>
       ` : ''}
     `;
@@ -2427,16 +2473,16 @@ const App = {
 
   exportAdminCSV() {
     const rows = this._adminRows();
-    let csv = Utils.csvRow(['Directrice', 'E-mail', 'E-mail confirmé', 'École', 'Directeur (fiche école)', 'Téléphone', 'Commune', 'Région', 'Adresse', 'Année scolaire', 'Inscrite le', 'Dernière connexion', 'Élèves', 'Filles', 'Garçons', 'Classes', 'Paiements', 'Encaissé (FCFA)', 'Autres entrées (FCFA)', 'Dépenses (FCFA)', 'Reçus vérifiables', 'Activité', 'Dernière sauvegarde']);
-    rows.forEach(d => {
-      const s = d.stats || {};
-      const sc = d.school || {};
-      csv += Utils.csvRow([d.full_name, d.email, d.email_confirmed ? 'oui' : 'non', sc.name, sc.director_name, sc.director_phone, sc.commune, sc.region, sc.address, sc.school_year,
-        d.created_at ? Utils.formatDate(d.created_at) : '', d.last_sign_in_at ? Utils.formatDate(d.last_sign_in_at) : '',
-        s.students || 0, s.girls || 0, s.boys || 0, s.classes || 0, s.payments || 0, Number(s.collected || 0), Number(s.other_revenues || 0), Number(s.expenses || 0), s.receipts_published || 0,
-        this._adminLevel(d).label, d.backup_saved_at ? Utils.formatDate(d.backup_saved_at) : '']);
+    let csv = Utils.csvRow(['Directrice', 'E-mail', 'Compte', 'École', 'Téléphone', 'Commune', 'Région', 'Année scolaire', 'Inscrite le', 'Dernière activité', 'Élèves', 'Filles', 'Garçons', 'Classes', 'Paiements', 'Encaissé (FCFA)', 'Dépenses (FCFA)', 'Niveau']);
+    rows.forEach(a => {
+      const s = a.stats || {};
+      const sc = a.school || {};
+      csv += Utils.csvRow([a.name, a.email, this._adminKind(a).label, sc.name, sc.director_phone, sc.commune, sc.region, sc.school_year,
+        a.createdAt ? Utils.formatDate(a.createdAt) : '', (a.lastActivity || a.lastSignIn) ? Utils.formatDate(a.lastActivity || a.lastSignIn) : '',
+        Number(s.students) || 0, Number(s.girls) || 0, Number(s.boys) || 0, Number(s.classes) || 0, Number(s.payments) || 0,
+        Number(s.collected) || 0, Number(s.expenses) || 0, this._adminLevel(a).label]);
     });
-    Utils.downloadCSV(csv, 'directrices_gestion_prescolaire.csv');
+    Utils.downloadCSV(csv, 'comptes_gestion_prescolaire.csv');
   },
 
   // ----------------------------------------------------------------------------
@@ -2579,6 +2625,7 @@ const App = {
         show(result.message, 'success');
         if (window.CloudSync) await CloudSync.syncNow({ force: true });
         this.updateCloudSyncCard();
+        if (window.CloudSync) CloudSync.reportActivity({ force: true }).catch(() => {});
         this.checkAdminAccess();
         this.showToast("✓ Sauvegarde en ligne activée.", "success");
         setTimeout(() => this.closeAllModals(), 1200);
