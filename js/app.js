@@ -52,6 +52,8 @@ const App = {
         this.showToast("Données mises à jour depuis votre sauvegarde en ligne.", "info");
       }).then(() => this.remindCloudActivation()).catch(() => {});
     }
+    // Tableau administrateur : accès vérifié par le serveur (compte administrateur, e-mail confirmé)
+    this.checkAdminAccess();
 
     // Support de l'installation PWA
     const showAppInstallBtn = () => {
@@ -211,6 +213,9 @@ const App = {
           break;
         case 'settings':
           this.renderSettings(contentArea);
+          break;
+        case 'admin':
+          this.renderAdmin(contentArea);
           break;
         default:
           this.renderDashboard(contentArea);
@@ -2061,6 +2066,15 @@ const App = {
       </div>
 
       <div class="settings-stack" style="display:grid; grid-template-columns:minmax(0, 1fr); gap:1.5rem;">
+        ${this.adminState.isAdmin ? `
+          <div class="tint-info-banner" style="border:1.5px solid #3B82F6; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
+            <div style="min-width:0;">
+              <div style="font-weight:800; font-size:var(--text-base); color:var(--tone-navy);">🛡️ Tableau de bord administrateur</div>
+              <p style="font-size:var(--text-xs); color:var(--tone-navy-soft); margin-top:0.25rem;">Visible uniquement par vous : toutes les directrices inscrites et leur niveau d'activité.</p>
+            </div>
+            <button type="button" class="btn btn-primary btn-navy" onclick="App.navigate('admin')">Ouvrir l'administration</button>
+          </div>
+        ` : ''}
         ${isDemo ? `
           <div class="tint-info-banner" style="border:1.5px solid #3B82F6; border-radius:var(--radius-lg); padding:1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
             <div>
@@ -2210,6 +2224,222 @@ const App = {
   },
 
   // ----------------------------------------------------------------------------
+  // TABLEAU DE BORD ADMINISTRATEUR (propriétaire de la plateforme uniquement)
+  // L'accès est décidé par le serveur (fonctions is_platform_admin / admin_overview) :
+  // masquer ou afficher le menu ici n'est qu'un confort, jamais une protection.
+  // ----------------------------------------------------------------------------
+  adminState: { isAdmin: false, data: null, loading: false, error: null, search: '', sort: 'students' },
+
+  async checkAdminAccess() {
+    let isAdmin = false;
+    try {
+      if (window.Auth && Auth.client && navigator.onLine) {
+        const { data: sess } = await Auth.client.auth.getSession();
+        if (sess && sess.session) {
+          const { data, error } = await Auth.client.rpc('is_platform_admin');
+          isAdmin = !error && data === true;
+        }
+      }
+    } catch (e) {
+      isAdmin = false;
+    }
+    const changed = isAdmin !== this.adminState.isAdmin;
+    this.adminState.isAdmin = isAdmin;
+    if (!isAdmin) this.adminState.data = null;
+    const item = document.getElementById('sidebarAdminItem');
+    if (item) item.style.display = isAdmin ? '' : 'none';
+    if (changed && (this.currentTab === 'settings' || this.currentTab === 'admin')) {
+      this.navigate(isAdmin ? this.currentTab : 'dashboard', { keepScroll: true, preserveFilters: true });
+    }
+    return isAdmin;
+  },
+
+  async loadAdminOverview() {
+    this.adminState.loading = true;
+    this.adminState.error = null;
+    try {
+      const { data, error } = await Auth.client.rpc('admin_overview');
+      if (error) throw error;
+      this.adminState.data = data;
+    } catch (err) {
+      const msg = String((err && err.message) || err || '');
+      this.adminState.error = /42501|réservé|refus/i.test(msg + (err && err.code))
+        ? "Accès refusé : ce tableau est réservé à l'administrateur de la plateforme."
+        : /Could not find|PGRST202|does not exist/i.test(msg)
+          ? "Le script SQL du tableau administrateur (sql/09_tableau_administrateur.sql) n'est pas encore installé dans Supabase."
+          : "Chargement impossible pour le moment. Vérifiez votre connexion Internet puis appuyez sur « Actualiser ».";
+    } finally {
+      this.adminState.loading = false;
+    }
+  },
+
+  _adminLevel(d) {
+    if (!d.has_backup) return { label: 'Sauvegarde non activée', tone: 'muted' };
+    const n = (d.stats && d.stats.students) || 0;
+    if (n === 0) return { label: 'Pas encore commencé', tone: 'muted' };
+    if (n < 10) return { label: 'Débutant', tone: 'warning' };
+    if (n < 30) return { label: 'Actif', tone: 'info' };
+    return { label: 'Très actif', tone: 'success' };
+  },
+
+  _adminRows() {
+    const list = ((this.adminState.data && this.adminState.data.directors) || []).filter(d => !d.is_admin);
+    const q = (this.adminState.search || '').trim().toLowerCase();
+    const filtered = !q ? list : list.filter(d => [d.full_name, d.email, d.school && d.school.name, d.school && d.school.commune, d.school && d.school.region, d.school && d.school.director_phone]
+      .some(v => String(v || '').toLowerCase().includes(q)));
+    const sorters = {
+      students: (a, b) => ((b.stats && b.stats.students) || 0) - ((a.stats && a.stats.students) || 0),
+      recent: (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')),
+      collected: (a, b) => Number((b.stats && b.stats.collected) || 0) - Number((a.stats && a.stats.collected) || 0)
+    };
+    return filtered.slice().sort(sorters[this.adminState.sort] || sorters.students);
+  },
+
+  renderAdmin(container) {
+    if (!this.adminState.isAdmin) {
+      this.navigate('dashboard');
+      return;
+    }
+    if (!this.adminState.data && !this.adminState.loading && !this.adminState.error) {
+      this.loadAdminOverview().then(() => { if (this.currentTab === 'admin') this.renderAdmin(document.getElementById('appViewContent')); });
+    }
+    const st = this.adminState;
+    const all = ((st.data && st.data.directors) || []).filter(d => !d.is_admin);
+    const rows = this._adminRows();
+    const sum = (f) => all.reduce((acc, d) => acc + Number((d.stats && d.stats[f]) || 0), 0);
+    const esc = (v) => Utils.escapeHtml(v == null ? '' : String(v));
+    const date = (v) => v ? Utils.formatDate(v) : '—';
+    const toneStyle = {
+      success: 'background:var(--success-subtle); color:var(--tone-green-deep);',
+      info: 'background:var(--primary-subtle); color:var(--tone-navy);',
+      warning: 'background:var(--warning-subtle); color:var(--warning-dark);',
+      muted: 'background:var(--bg-subtle); color:var(--text-muted);'
+    };
+
+    container.innerHTML = `
+      <div class="view-header">
+        <div class="view-title-group">
+          <div>
+            <h1 class="view-title">🛡️ Administration</h1>
+            <p class="view-subtitle">Visible uniquement par vous. ${st.data ? `Mis à jour le ${esc(Utils.formatDateTime(st.data.generated_at))}.` : ''}</p>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.refreshAdmin()" ${st.loading ? 'disabled' : ''}>🔄 Actualiser</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="App.exportAdminCSV()" ${all.length ? '' : 'disabled'}>📄 Exporter CSV</button>
+          </div>
+        </div>
+      </div>
+
+      ${st.error ? `<div style="background:var(--danger-subtle); color:var(--tone-red-deep); padding:0.9rem 1rem; border-radius:var(--radius-md); font-weight:600; margin-bottom:1rem;">${esc(st.error)}</div>` : ''}
+      ${st.loading && !st.data ? `<div style="padding:2rem; text-align:center; color:var(--text-muted);">Chargement des comptes…</div>` : ''}
+
+      ${st.data ? `
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-top:4px solid var(--primary);">
+            <span class="kpi-title">Directrices inscrites</span>
+            <div class="kpi-figure" style="color:var(--primary);">${all.length}</div>
+            <div class="kpi-meta">${all.filter(d => d.email_confirmed).length} e-mail(s) confirmé(s)</div>
+          </div>
+          <div class="kpi-card" style="border-top:4px solid var(--success);">
+            <span class="kpi-title">Sauvegardes actives</span>
+            <div class="kpi-figure" style="color:var(--success);">${all.filter(d => d.has_backup).length}</div>
+            <div class="kpi-meta">Écoles dont les données sont visibles ici</div>
+          </div>
+          <div class="kpi-card" style="border-top:4px solid #F59E0B;">
+            <span class="kpi-title">Élèves enregistrés</span>
+            <div class="kpi-figure" style="color:var(--tone-amber);">${sum('students')}</div>
+            <div class="kpi-meta">${sum('girls')} fille(s) · ${sum('boys')} garçon(s)</div>
+          </div>
+          <div class="kpi-card" style="border-top:4px solid var(--tone-indigo);">
+            <span class="kpi-title">Total encaissé (toutes écoles)</span>
+            <div class="kpi-figure" style="color:var(--tone-indigo);">${Utils.formatFCFA(sum('collected'))}</div>
+            <div class="kpi-meta">${sum('payments')} paiement(s) · ${sum('receipts_published')} reçu(s) vérifiable(s)</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin:1.25rem 0 1rem;">
+          <input type="search" class="form-input search-input" style="flex:1 1 220px; min-width:0;" placeholder="Rechercher : nom, e-mail, école, commune…" value="${esc(st.search)}" oninput="App.onAdminSearch(this.value)" aria-label="Rechercher une directrice">
+          <select class="form-select" style="flex:0 1 220px; min-width:0;" onchange="App.onAdminSort(this.value)" aria-label="Trier">
+            <option value="students" ${st.sort === 'students' ? 'selected' : ''}>Trier : plus d'élèves d'abord</option>
+            <option value="collected" ${st.sort === 'collected' ? 'selected' : ''}>Trier : plus encaissé d'abord</option>
+            <option value="recent" ${st.sort === 'recent' ? 'selected' : ''}>Trier : inscription la plus récente</option>
+          </select>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr><th>Directrice</th><th>École</th><th>Téléphone</th><th>Inscrite le</th><th>Dernière connexion</th><th>Élèves</th><th>Paiements</th><th>Encaissé</th><th>Activité</th><th>Dernière sauvegarde</th></tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows.map(d => {
+                const s = d.stats || {};
+                const sc = d.school || {};
+                const lvl = this._adminLevel(d);
+                const place = [sc.commune, sc.region].filter(Boolean).join(', ');
+                const phone = sc.director_phone || '';
+                return `
+                <tr>
+                  <td data-label="Directrice"><div style="text-align:right;"><strong>${esc(d.full_name || sc.director_name || '—')}</strong><div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(d.email)}${d.email_confirmed ? '' : ' · <span style="color:var(--tone-red);">non confirmé</span>'}</div></div></td>
+                  <td data-label="École"><div style="text-align:right;">${esc(sc.name || '—')}${place ? `<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(place)}</div>` : ''}</div></td>
+                  <td data-label="Téléphone">${phone ? `<a href="tel:${esc(phone.replace(/[^0-9+]/g, ''))}">${esc(phone)}</a>` : '—'}</td>
+                  <td data-label="Inscrite le">${date(d.created_at)}</td>
+                  <td data-label="Dernière connexion">${date(d.last_sign_in_at)}</td>
+                  <td data-label="Élèves"><span><strong>${d.has_backup ? (s.students || 0) : '—'}</strong>${d.has_backup ? ` <span style="font-size:var(--text-xs); color:var(--text-muted);">(${s.girls || 0} F · ${s.boys || 0} G)</span>` : ''}</span></td>
+                  <td data-label="Paiements">${d.has_backup ? (s.payments || 0) : '—'}</td>
+                  <td data-label="Encaissé" style="font-weight:700; color:var(--tone-green);">${d.has_backup ? Utils.formatFCFA(Number(s.collected || 0)) : '—'}</td>
+                  <td data-label="Activité"><span class="badge" style="${toneStyle[lvl.tone]} font-weight:700;">${esc(lvl.label)}</span></td>
+                  <td data-label="Dernière sauvegarde">${date(d.backup_saved_at)}</td>
+                </tr>`;
+              }).join('') : `<tr><td colspan="10" class="empty-state-cell">${all.length ? 'Aucune directrice ne correspond à la recherche.' : 'Aucune directrice inscrite pour le moment.'}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+
+        <p style="font-size:var(--text-xs); color:var(--text-muted); margin-top:1rem; line-height:1.5;">
+          Les nombres d'élèves et de paiements proviennent de la sauvegarde en ligne de chaque école. Une directrice qui n'a pas encore activé sa sauvegarde apparaît avec « Sauvegarde non activée ». Aucun nom d'enfant n'est affiché ici.
+        </p>
+      ` : ''}
+    `;
+  },
+
+  async refreshAdmin() {
+    this.adminState.data = null;
+    this.adminState.error = null;
+    await this.checkAdminAccess();
+    if (this.adminState.isAdmin) this.navigate('admin', { keepScroll: true });
+  },
+
+  onAdminSearch(value) {
+    this.adminState.search = String(value || '').slice(0, 100);
+    clearTimeout(this._adminSearchTimer);
+    this._adminSearchTimer = setTimeout(() => {
+      this.renderAdmin(document.getElementById('appViewContent'));
+      const input = document.querySelector('#appViewContent input[type="search"]');
+      if (input) { input.focus(); const n = input.value.length; try { input.setSelectionRange(n, n); } catch (e) {} }
+    }, 200);
+  },
+
+  onAdminSort(value) {
+    this.adminState.sort = value;
+    this.renderAdmin(document.getElementById('appViewContent'));
+  },
+
+  exportAdminCSV() {
+    const rows = this._adminRows();
+    let csv = Utils.csvRow(['Directrice', 'E-mail', 'E-mail confirmé', 'École', 'Directeur (fiche école)', 'Téléphone', 'Commune', 'Région', 'Adresse', 'Année scolaire', 'Inscrite le', 'Dernière connexion', 'Élèves', 'Filles', 'Garçons', 'Classes', 'Paiements', 'Encaissé (FCFA)', 'Autres entrées (FCFA)', 'Dépenses (FCFA)', 'Reçus vérifiables', 'Activité', 'Dernière sauvegarde']);
+    rows.forEach(d => {
+      const s = d.stats || {};
+      const sc = d.school || {};
+      csv += Utils.csvRow([d.full_name, d.email, d.email_confirmed ? 'oui' : 'non', sc.name, sc.director_name, sc.director_phone, sc.commune, sc.region, sc.address, sc.school_year,
+        d.created_at ? Utils.formatDate(d.created_at) : '', d.last_sign_in_at ? Utils.formatDate(d.last_sign_in_at) : '',
+        s.students || 0, s.girls || 0, s.boys || 0, s.classes || 0, s.payments || 0, Number(s.collected || 0), Number(s.other_revenues || 0), Number(s.expenses || 0), s.receipts_published || 0,
+        this._adminLevel(d).label, d.backup_saved_at ? Utils.formatDate(d.backup_saved_at) : '']);
+    });
+    Utils.downloadCSV(csv, 'directrices_gestion_prescolaire.csv');
+  },
+
+  // ----------------------------------------------------------------------------
   // CARTE « SAUVEGARDE EN LIGNE » (PARAMÈTRES)
   // ----------------------------------------------------------------------------
   renderCloudSyncCardContent() {
@@ -2349,6 +2579,7 @@ const App = {
         show(result.message, 'success');
         if (window.CloudSync) await CloudSync.syncNow({ force: true });
         this.updateCloudSyncCard();
+        this.checkAdminAccess();
         this.showToast("✓ Sauvegarde en ligne activée.", "success");
         setTimeout(() => this.closeAllModals(), 1200);
       } else {

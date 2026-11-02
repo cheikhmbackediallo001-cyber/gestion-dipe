@@ -70,6 +70,7 @@ Dans le **SQL Editor** de Supabase, exécutez les scripts dans l'ordre strict su
 3. `sql/03_rls_policies.sql` : activation du RLS et des politiques d'isolation par établissement.
 4. `sql/04_seed_data.sql` *(optionnel)* : insertion de l'école de test « Les Papillons », 3 classes et 30 élèves sénégalais.
 5. **`sql/A_EXECUTER_DANS_SUPABASE.sql` : OBLIGATOIRE.** Ce fichier unique regroupe les scripts 05 (dépenses), 06 (autres rentrées), 07 (sécurité) et 08 (synchronisation). Il s'exécute en une seule transaction (rien n'est modifié en cas d'erreur) et peut être relancé sans risque. Il a été testé sur un vrai PostgreSQL imitant Supabase (49 tests de sécurité).
+6. `sql/09_tableau_administrateur.sql` : tableau de bord administrateur (liste des directrices inscrites et de leur activité). Réservé aux adresses de la table `platform_admins` dont l'e-mail est confirmé ; aucun nom d'enfant n'est renvoyé. L'écran « Administration » apparaît dans les Paramètres pour ce compte uniquement.
 
 Dans *Authentication > URL Configuration*, renseignez **Site URL** = `https://gestion-dipe.vercel.app` et ajoutez `https://gestion-dipe.vercel.app/**` aux *Redirect URLs* (liens de confirmation d'e-mail et de mot de passe oublié).
 
