@@ -23,7 +23,8 @@ ALTER TABLE public.platform_admins ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.platform_admins FROM PUBLIC, anon, authenticated;
 
 INSERT INTO public.platform_admins (email)
-VALUES ('cheikhmbackediallo001@gmail.com')
+VALUES ('cheikhmbackediallo001@gmail.com'),
+       ('cheikhmbackediallo0@gmail.com')
 ON CONFLICT (email) DO NOTHING;
 
 -- ------------------------------------------------------------------------------
