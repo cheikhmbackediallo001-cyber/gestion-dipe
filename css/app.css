@@ -1110,3 +1110,72 @@
 /* Boutons « Payé » / « Impayé » actifs : texte blanc sur un fond assez foncé */
 [data-theme="dark"] .toggle-btn.btn-status-paid.is-active { background-color: #15803D !important; }
 [data-theme="dark"] .toggle-btn.btn-status-unpaid.is-active { background-color: #DC2626 !important; }
+
+/* ==============================================================================
+   AUCUN DÉBORDEMENT SUR TÉLÉPHONE
+   ============================================================================== */
+/* Paramètres : les cartes et les champs se rétrécissent à la largeur de l'écran */
+.settings-stack > * { min-width: 0; }
+.settings-stack .form-input,
+.settings-stack .form-select { min-width: 0; max-width: 100%; }
+.settings-stack .btn { max-width: 100%; white-space: normal; text-align: center; }
+.settings-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+#cloudSyncCard > div { min-width: 0; }
+
+@media (max-width: 520px) {
+  /* Champs côte à côte → l'un sous l'autre (libellés longs : « Nom du Directeur / de la Directrice ») */
+  .settings-pair { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .settings-stack > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+
+/* Sélecteur de mois : flèches seules sur petit écran */
+.month-navigator-current { min-width: 0; flex: 1 1 auto; }
+@media (max-width: 480px) {
+  .month-nav-btn { padding: 0.45rem 0.6rem; flex-shrink: 0; }
+  .month-nav-btn-label { display: none; }
+  .month-navigator-box { padding: 0.5rem 0.6rem; gap: 0.4rem; }
+}
+
+/* Bilan : onglets sur deux lignes au lieu d'une bande qui sort de l'écran */
+@media (max-width: 640px) {
+  .bilan-subtabs-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+  .bilan-subtab-btn {
+    min-width: 0 !important;
+    white-space: normal !important;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+/* Tableaux en cartes sur téléphone : le pied de tableau (totaux) suit la même mise en page */
+@media (max-width: 767px) {
+  .data-table tfoot { display: block; }
+  .data-table td { gap: 0.75rem; }
+  .data-table td > * { min-width: 0; overflow-wrap: anywhere; }
+  .data-table td:not(.cell-actions):not([colspan]) > :last-child { text-align: right; }
+}
+
+/* Boutons du bas des fenêtres : retour à la ligne au lieu de sortir de l'écran */
+.modal-footer { flex-wrap: wrap; }
+.modal-container .btn { max-width: 100%; white-space: normal; text-align: center; }
+@media (max-width: 420px) {
+  .modal-footer { padding-left: 1rem; padding-right: 1rem; }
+  .modal-footer .btn { flex: 1 1 auto; }
+}
+
+/* Retouches téléphone : onglets du bilan (montant sous le titre) et titre du mois sur une ligne */
+@media (max-width: 640px) {
+  .bilan-subtab-btn { flex-direction: column; gap: 0.3rem; padding: 0.65rem 0.5rem; line-height: 1.25; }
+}
+@media (max-width: 480px) {
+  .month-current-title { font-size: 1.05rem; gap: 0.3rem; white-space: nowrap; }
+}
+.month-current-title svg { flex-shrink: 0; }

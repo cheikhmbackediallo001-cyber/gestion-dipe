@@ -2060,7 +2060,7 @@ const App = {
         <p class="view-subtitle">Configuration générale de l'école, cachet officiel et tarifs</p>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr; gap:1.5rem;">
+      <div class="settings-stack" style="display:grid; grid-template-columns:minmax(0, 1fr); gap:1.5rem;">
         ${isDemo ? `
           <div class="tint-info-banner" style="border:1.5px solid #3B82F6; border-radius:var(--radius-lg); padding:1.5rem; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;">
             <div>
@@ -2128,7 +2128,7 @@ const App = {
             <div id="settingsStampDisplay">
               ${stampSvg}
             </div>
-            <div style="flex:1; min-width:280px;">
+            <div style="flex:1 1 260px; min-width:0;">
               <p style="font-size:var(--text-sm); color:var(--text-muted); margin-bottom:1rem;">
                 Le cachet officiel bleu encre (#1E3A8A) à double contour circulaire est généré en temps réel d'après les informations ci-dessous. Il s'applique automatiquement sur tous les reçus imprimables et partagés.
               </p>
@@ -2136,7 +2136,7 @@ const App = {
                 <label class="form-label" for="settingSchoolName">Nom officiel de l'école <span style="color:var(--danger)">*</span></label>
                 <input type="text" id="settingSchoolName" class="form-input" value="${Utils.escapeHtml(school.name)}">
               </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+              <div class="settings-pair">
                 <div class="form-group">
                   <label class="form-label" for="settingDirectorName">Nom du Directeur / de la Directrice <span style="color:var(--danger)">*</span></label>
                   <input type="text" id="settingDirectorName" class="form-input" value="${Utils.escapeHtml(school.director_name)}">
@@ -2146,7 +2146,7 @@ const App = {
                   <input type="text" id="settingDirectorPhone" class="form-input" value="${Utils.escapeHtml(school.director_phone)}">
                 </div>
               </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+              <div class="settings-pair">
                 <div class="form-group">
                   <label class="form-label" for="settingSchoolYear">Année scolaire</label>
                   <input type="text" id="settingSchoolYear" class="form-input" value="${Utils.escapeHtml(school.school_year || '2026-2027')}">
@@ -2167,11 +2167,11 @@ const App = {
             <p style="font-size:var(--text-xs); color:var(--text-muted); margin-bottom:1rem;">
               Ces montants servent de valeurs par défaut lors de l'enregistrement des paiements d'inscription et des cotisations mensuelles.
             </p>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:1rem;">
               ${classes.map(c => `
                 <div style="background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-md); border:1px solid var(--border-light);">
                   <strong style="color:var(--primary); font-size:var(--text-sm);">${Utils.escapeHtml(c.name)}</strong>
-                  <div style="margin-top:0.5rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                  <div style="margin-top:0.5rem; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.5rem;">
                     <div>
                       <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:2px;">Inscription</label>
                       <input type="number" id="settingFeeReg_${c.id}" class="form-input" value="${c.registration_fee || 0}" min="0" step="500">
