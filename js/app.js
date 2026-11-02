@@ -2283,7 +2283,7 @@ const App = {
   },
 
   _adminRows() {
-    const list = ((this.adminState.data && this.adminState.data.directors) || []).filter(d => !d.is_admin);
+    const list = ((this.adminState.data && this.adminState.data.directors) || []).filter(d => !d.is_admin || d.has_backup);
     const q = (this.adminState.search || '').trim().toLowerCase();
     const filtered = !q ? list : list.filter(d => [d.full_name, d.email, d.school && d.school.name, d.school && d.school.commune, d.school && d.school.region, d.school && d.school.director_phone]
       .some(v => String(v || '').toLowerCase().includes(q)));
@@ -2304,7 +2304,7 @@ const App = {
       this.loadAdminOverview().then(() => { if (this.currentTab === 'admin') this.renderAdmin(document.getElementById('appViewContent')); });
     }
     const st = this.adminState;
-    const all = ((st.data && st.data.directors) || []).filter(d => !d.is_admin);
+    const all = ((st.data && st.data.directors) || []).filter(d => !d.is_admin || d.has_backup);
     const rows = this._adminRows();
     const sum = (f) => all.reduce((acc, d) => acc + Number((d.stats && d.stats[f]) || 0), 0);
     const esc = (v) => Utils.escapeHtml(v == null ? '' : String(v));
@@ -2380,7 +2380,7 @@ const App = {
                 const phone = sc.director_phone || '';
                 return `
                 <tr>
-                  <td data-label="Directrice"><div style="text-align:right;"><strong>${esc(d.full_name || sc.director_name || '—')}</strong><div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(d.email)}${d.email_confirmed ? '' : ' · <span style="color:var(--tone-red);">non confirmé</span>'}</div></div></td>
+                  <td data-label="Directrice"><div style="text-align:right;"><strong>${esc(d.full_name || sc.director_name || '—')}</strong>${d.is_admin ? ' <span class="badge" style="background:var(--primary-subtle); color:var(--tone-navy); font-weight:700;">Vous</span>' : ''}<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(d.email)}${d.email_confirmed ? '' : ' · <span style="color:var(--tone-red);">non confirmé</span>'}</div></div></td>
                   <td data-label="École"><div style="text-align:right;">${esc(sc.name || '—')}${place ? `<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(place)}</div>` : ''}</div></td>
                   <td data-label="Téléphone">${phone ? `<a href="tel:${esc(phone.replace(/[^0-9+]/g, ''))}">${esc(phone)}</a>` : '—'}</td>
                   <td data-label="Inscrite le">${date(d.created_at)}</td>
