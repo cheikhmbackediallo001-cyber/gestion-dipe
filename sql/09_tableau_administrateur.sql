@@ -22,9 +22,10 @@ CREATE TABLE IF NOT EXISTS public.platform_admins (
 ALTER TABLE public.platform_admins ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.platform_admins FROM PUBLIC, anon, authenticated;
 
+-- Seule adresse administratrice : cheikhmbackediallo0@gmail.com (toute autre est retirée)
+DELETE FROM public.platform_admins WHERE email <> 'cheikhmbackediallo0@gmail.com';
 INSERT INTO public.platform_admins (email)
-VALUES ('cheikhmbackediallo001@gmail.com'),
-       ('cheikhmbackediallo0@gmail.com')
+VALUES ('cheikhmbackediallo0@gmail.com')
 ON CONFLICT (email) DO NOTHING;
 
 -- ------------------------------------------------------------------------------
