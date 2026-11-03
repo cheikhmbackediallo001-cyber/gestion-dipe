@@ -617,13 +617,18 @@ const Auth = {
           }
 
           // Nouvel appareil ou version plus récente en ligne : restauration de la sauvegarde
+          // (une école VIDE sur cet appareil est remplacée par l'école sauvegardée du même compte)
+          let adoptedFromCloud = false;
           if (window.CloudSync) {
             try {
               const restored = await Promise.race([
                 CloudSync.restoreAfterLogin(localSchool ? localSchool.id : null),
                 new Promise(resolve => setTimeout(() => resolve(null), 10000))
               ]);
-              if (restored) this.school = restored;
+              if (restored) {
+                adoptedFromCloud = !!(localSchool && restored.id !== localSchool.id);
+                this.school = restored;
+              }
             } catch (e) {
               console.warn('[Auth] Restauration en ligne impossible:', e);
             }
@@ -645,7 +650,7 @@ const Auth = {
           if (!entry) {
             entry = { email: cleanEmail, name: this.userProfile.name, directorId: data.user.id, school: this.school };
             registry.push(entry);
-          } else if (this.school && (!entry.school || entry.school.id === this.school.id)) {
+          } else if (this.school && (adoptedFromCloud || !entry.school || entry.school.id === this.school.id)) {
             entry.school = this.school;
           }
           entry.supabaseUserId = data.user.id;

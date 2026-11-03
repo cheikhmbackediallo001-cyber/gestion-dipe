@@ -204,6 +204,13 @@ const CloudSync = {
     const { state, key, entry } = this._entry(session.user.id);
     if (!force && entry.lastBackupSavedAt === savedAt) return false; // rien de nouveau
 
+    // Une école VIDE ne remplace jamais la sauvegarde d'une autre école (ex. un ordinateur
+    // où l'école a été recréée vide ne doit pas écraser les élèves saisis sur le téléphone)
+    if (!this._hasRecords(data)) {
+      const meta = await this._fetchBackupMeta(session).catch(() => null);
+      if (meta && String(meta.local_school_id) !== String(data.school.id)) return false;
+    }
+
     const payload = {
       owner_id: session.user.id,
       local_school_id: String(data.school.id).slice(0, 100),
@@ -320,7 +327,11 @@ const CloudSync = {
 
     const remote = backup.data;
     if (currentSchoolId && String(currentSchoolId) !== String(remote.school.id)) {
-      return null; // une autre école existe déjà sur cet appareil pour ce compte : on n'y touche pas
+      // Une autre école existe déjà sur cet appareil pour ce compte : on n'y touche pas,
+      // SAUF si elle est vide et que la sauvegarde en ligne contient des données (même compte, autre appareil)
+      let current = null;
+      try { current = JSON.parse(localStorage.getItem(`gp_store_${currentSchoolId}`) || 'null'); } catch (e) { current = null; }
+      if (this._hasRecords(current) || !this._hasRecords(remote)) return null;
     }
 
     const storageKey = `gp_store_${remote.school.id}`;
@@ -360,9 +371,19 @@ const CloudSync = {
       await this.syncNow();
       return;
     }
+    let forceBackup = false;
     try {
       const meta = await this._fetchBackupMeta(session);
-      if (meta && String(meta.local_school_id) === String(Store.data.school.id)) {
+      if (meta && String(meta.local_school_id) !== String(Store.data.school.id)) {
+        if (this._hasRecords(Store.data)) {
+          // La sauvegarde en ligne a été remplacée par un autre appareil : on renvoie nos données
+          forceBackup = true;
+        } else if (await this._adoptRemoteSchool(session)) {
+          // École vide ici, données en ligne : on reprend l'école sauvegardée (même compte)
+          window.location.reload();
+          return;
+        }
+      } else if (meta && String(meta.local_school_id) === String(Store.data.school.id)) {
         const remoteTime = Date.parse(meta.client_saved_at || '') || 0;
         const localTime = Date.parse(Store.data._savedAt || '') || 0;
         if (remoteTime > localTime + 1000) {
@@ -383,7 +404,40 @@ const CloudSync = {
     } catch (err) {
       console.warn('[CloudSync] Récupération en ligne impossible:', err && err.message);
     }
-    await this.syncNow();
+    await this.syncNow({ force: forceBackup });
+  },
+
+  /**
+   * Remplace l'école VIDE de cet appareil par l'école sauvegardée en ligne du même compte.
+   * @returns {Promise<boolean>} vrai si l'école a été reprise
+   */
+  async _adoptRemoteSchool(session) {
+    const full = await this._fetchBackup(session);
+    if (!full || !this._isValidSchoolData(full.data) || !this._hasRecords(full.data) || this._hasRecords(Store.data)) return false;
+    const remote = full.data;
+    localStorage.setItem(`gp_store_${remote.school.id}`, JSON.stringify(remote));
+    const { state, key, entry } = (() => {
+      const st = this._readState();
+      const k = `${remote.school.id}:${session.user.id}`;
+      st[k] = st[k] || { published: {}, lastBackupAt: null, lastBackupSavedAt: null };
+      return { state: st, key: k, entry: st[k] };
+    })();
+    entry.lastBackupSavedAt = remote._savedAt || full.client_saved_at;
+    state[key] = entry;
+    this._writeState(state);
+    if (window.Auth) {
+      const email = String((Auth.getUser() || {}).email || '').toLowerCase();
+      const registry = Auth.getSchoolsRegistry();
+      const reg = registry.find(r => (r.email || '').toLowerCase() === email);
+      if (reg) {
+        reg.school = remote.school;
+        Auth.saveSchoolsRegistry(registry);
+      }
+      Auth.school = remote.school;
+      if (Auth.userProfile) Auth.userProfile.school_id = remote.school.id;
+      Auth.saveActiveSession();
+    }
+    return true;
   }
 };
 

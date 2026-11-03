@@ -190,17 +190,16 @@ BEGIN
                              WHERE COALESCE(x->>'status', 'active') NOT IN ('cancelled', 'deleted')),
                 'receipts_published', (SELECT count(*) FROM public.published_receipts r WHERE r.owner_id = u.id)
             ) END,
-            -- Dernier rapport du téléphone de ce compte (chiffres disponibles même sans sauvegarde en ligne)
-            'device', (SELECT jsonb_build_object(
+            -- Rapports de TOUS les appareils de ce compte (téléphone, ordinateur...)
+            'devices', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
                            'last_seen_at', d.last_seen_at,
                            'school_name', d.school_name, 'director_name', d.director_name, 'school_phone', d.school_phone,
                            'region', d.region, 'commune', d.commune, 'school_year', d.school_year,
                            'students', d.students, 'girls', d.girls, 'boys', d.boys, 'classes', d.classes,
                            'payments', d.payments, 'collected', d.collected, 'expenses', d.expenses)
-                       FROM public.device_reports d
-                       WHERE d.linked_user_id = u.id OR lower(d.email) = lower(u.email)
-                       ORDER BY d.last_seen_at DESC
-                       LIMIT 1)
+                           ORDER BY d.students DESC, d.payments DESC, d.last_seen_at DESC), '[]'::jsonb)
+                        FROM public.device_reports d
+                        WHERE d.linked_user_id = u.id OR lower(d.email) = lower(u.email))
         ) AS row_data
         FROM auth.users u
         LEFT JOIN public.school_backups b ON b.owner_id = u.id

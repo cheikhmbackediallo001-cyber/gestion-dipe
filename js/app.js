@@ -2278,19 +2278,28 @@ const App = {
     const data = this.adminState.data || {};
     const out = [];
     (data.directors || []).forEach(d => {
-      const dev = d.device || null;
-      const useDevice = !d.has_backup && dev;
-      if (d.is_admin && !d.has_backup && !dev) return; // compte administrateur sans école
-      const sc = d.has_backup ? (d.school || {}) : (dev ? {
-        name: dev.school_name, director_name: dev.director_name, director_phone: dev.school_phone,
-        region: dev.region, commune: dev.commune, school_year: dev.school_year
-      } : {});
-      const st = d.has_backup ? (d.stats || {}) : (dev ? dev : null);
-      const activity = [d.backup_saved_at, dev && dev.last_seen_at].filter(Boolean).sort().pop() || null;
+      // Sources disponibles : la sauvegarde en ligne + les rapports de chaque appareil du compte.
+      // On affiche la plus complète (plus d'élèves, puis plus de paiements, puis la plus récente) :
+      // un appareil où l'école est vide ne masque jamais celui où les élèves ont été saisis.
+      const devices = Array.isArray(d.devices) ? d.devices : (d.device ? [d.device] : []);
+      if (d.is_admin && !d.has_backup && !devices.length) return; // compte administrateur sans école
+      const sources = [];
+      if (d.has_backup) {
+        sources.push({ from: 'backup', at: d.backup_saved_at, stats: d.stats || {}, school: d.school || {} });
+      }
+      devices.forEach(dev => sources.push({
+        from: 'device', at: dev.last_seen_at, stats: dev,
+        school: { name: dev.school_name, director_name: dev.director_name, director_phone: dev.school_phone, region: dev.region, commune: dev.commune, school_year: dev.school_year }
+      }));
+      const n = (s, f) => Number((s.stats && s.stats[f]) || 0);
+      sources.sort((x, y) => (n(y, 'students') - n(x, 'students')) || (n(y, 'payments') - n(x, 'payments')) || String(y.at || '').localeCompare(String(x.at || '')));
+      const best = sources[0] || null;
+      const activity = sources.map(s => s.at).filter(Boolean).sort().pop() || null;
       out.push({
-        key: d.user_id, name: d.full_name || sc.director_name || '', email: d.email, emailConfirmed: !!d.email_confirmed,
-        isAdmin: !!d.is_admin, kind: d.has_backup ? 'backup' : 'online', school: sc, stats: st,
-        fromDevice: !!useDevice, createdAt: d.created_at, lastSignIn: d.last_sign_in_at, lastActivity: activity
+        key: d.user_id, name: d.full_name || (best && best.school.director_name) || '', email: d.email, emailConfirmed: !!d.email_confirmed,
+        isAdmin: !!d.is_admin, kind: d.has_backup ? 'backup' : 'online', school: best ? best.school : {}, stats: best ? best.stats : null,
+        fromDevice: !!(best && best.from === 'device'), devicesCount: devices.length,
+        createdAt: d.created_at, lastSignIn: d.last_sign_in_at, lastActivity: activity
       });
     });
     // Téléphones sans compte en ligne : un seul par adresse e-mail (le plus récent)
@@ -2429,7 +2438,7 @@ const App = {
                   <td data-label="Directrice"><div style="text-align:right;"><strong>${esc(a.name || '—')}</strong>${a.isAdmin ? ' <span class="badge" style="background:var(--primary-subtle); color:var(--tone-navy); font-weight:700;">Vous</span>' : ''}<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(a.email || 'e-mail inconnu')}</div></div></td>
                   <td data-label="École"><div style="text-align:right;">${esc(sc.name || '—')}${place ? `<div style="font-size:var(--text-xs); color:var(--text-muted);">${esc(place)}</div>` : ''}</div></td>
                   <td data-label="Téléphone">${phone ? `<a href="tel:${esc(phone.replace(/[^0-9+]/g, ''))}">${esc(phone)}</a>` : '—'}</td>
-                  <td data-label="Compte">${badge(this._adminKind(a))}</td>
+                  <td data-label="Compte"><span style="display:inline-flex; flex-direction:column; align-items:flex-end; gap:0.2rem;">${badge(this._adminKind(a))}${a.devicesCount > 1 ? `<span style="font-size:var(--text-xs); color:var(--text-muted);">${a.devicesCount} appareils</span>` : ''}</span></td>
                   <td data-label="Inscrite le">${date(a.createdAt)}</td>
                   <td data-label="Dernière activité">${date(a.lastActivity || a.lastSignIn)}</td>
                   <td data-label="Élèves"><span><strong>${has ? (Number(s.students) || 0) : '—'}</strong>${has ? ` <span style="font-size:var(--text-xs); color:var(--text-muted);">(${Number(s.girls) || 0} F · ${Number(s.boys) || 0} G)</span>` : ''}</span></td>
