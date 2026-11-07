@@ -3225,6 +3225,33 @@ const App = {
       }
 
       const captionText = `Reçu officiel N° ${receipt.receipt_number} — ${school.name} pour ${studentName} (${objectText}) : ${Utils.formatFCFA(amount)}`;
+      const waMsg = `Bonjour,\n\nVeuillez trouver ci-joint l'image du reçu officiel de paiement n° ${receipt.receipt_number} de ${school.name} pour ${studentName} (${objectText}) d'un montant de ${Utils.formatFCFA(amount)}.\n\nCordialement,\nLa Direction`;
+
+      // 0. Numéro du parent connu : conversation WhatsApp du parent ouverte directement
+      //    (l'image est enregistrée sur l'appareil pour être jointe en un geste)
+      const parentWa = student && student.parent_phone ? Utils.toWhatsAppPhone(student.parent_phone) : '';
+      if (/^\d{9,15}$/.test(parentWa)) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+        let copied = false;
+        if (navigator.clipboard && window.ClipboardItem) {
+          try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); copied = true; } catch (e) {}
+        }
+        this.openWhatsAppParentModal({
+          phone: parentWa,
+          displayPhone: student.parent_phone,
+          parentName: student.parent_name || '',
+          studentName,
+          message: waMsg,
+          copied
+        });
+        return;
+      }
 
       // 1. Partage natif direct du fichier image PNG (Android, iPhone / iPad)
       if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
@@ -3262,8 +3289,7 @@ const App = {
       if (student && student.parent_phone) {
         waPhone = Utils.toWhatsAppPhone(student.parent_phone);
       }
-      const waMsg = `Bonjour,\n\nVeuillez trouver ci-joint l'image du reçu officiel de paiement n° ${receipt.receipt_number} de ${school.name} pour ${studentName} (${objectText}) d'un montant de ${Utils.formatFCFA(amount)}.\n\nCordialement,\nLa Direction`;
-      const waUrl = waPhone 
+      const waUrl = waPhone
         ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`
         : `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
 
@@ -3279,6 +3305,51 @@ const App = {
   shareWhatsApp(paymentId) {
     // Redirection automatique vers l'envoi de l'image PNG officielle (aucun lien)
     return this.shareReceiptPNG(paymentId);
+  },
+
+  // Fenêtre « Envoyer au parent » : un appui ouvre WhatsApp directement sur la conversation du parent.
+  // (Les téléphones n'autorisent l'ouverture de WhatsApp qu'à la suite d'un appui : d'où ce bouton.)
+  openWhatsAppParentModal({ phone, displayPhone, parentName, studentName, message, copied }) {
+    let modal = document.getElementById('waParentModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'waParentModal';
+      modal.className = 'modal-backdrop';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'waParentTitle');
+      document.body.appendChild(modal);
+    }
+    const esc = (v) => Utils.escapeHtml(String(v || ''));
+    const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const waUrl = `https://wa.me/${encodeURIComponent(phone)}?text=${encodeURIComponent(message)}`;
+    const who = parentName ? `${parentName} (${displayPhone})` : displayPhone;
+    modal.innerHTML = `
+      <div class="modal-container" style="max-width:440px;">
+        <div class="modal-header">
+          <h2 class="modal-title" id="waParentTitle">Envoyer le reçu au parent</h2>
+          <button type="button" class="modal-close-btn" aria-label="Fermer">✕</button>
+        </div>
+        <div class="modal-body" style="display:grid; gap:0.9rem;">
+          <div style="background:var(--tint-green-flat); border:1.5px solid var(--tint-green-border); border-radius:var(--radius-md); padding:0.8rem 1rem; font-size:var(--text-sm); color:var(--tone-green-deep); font-weight:600; line-height:1.45;">
+            ✓ Image du reçu de ${esc(studentName)} enregistrée sur cet appareil${copied ? ' et copiée' : ''}.
+          </div>
+          <a id="waParentOpenBtn" href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="display:flex; justify-content:center; padding:0.9rem 1rem; font-size:1rem; font-weight:800; text-decoration:none; white-space:normal; text-align:center;">
+            📲 Ouvrir la conversation de ${esc(who)}
+          </a>
+          <ol style="margin:0; padding-left:1.2rem; font-size:var(--text-sm); color:var(--text-muted); line-height:1.6;">
+            <li>La conversation du parent s'ouvre avec le message déjà écrit.</li>
+            ${isTouch
+              ? '<li>Touchez <strong>📎</strong> puis <strong>Galerie</strong> et choisissez la dernière image (le reçu).</li>'
+              : `<li>Dans la conversation, faites <strong>Ctrl+V</strong> pour coller l'image${copied ? '' : ' (ou joignez le fichier téléchargé)'}.</li>`}
+            <li>Appuyez sur <strong>Envoyer</strong>.</li>
+          </ol>
+        </div>
+      </div>`;
+    modal.querySelector('#waParentOpenBtn').addEventListener('click', () => {
+      setTimeout(() => this.closeAllModals(), 400);
+    });
+    modal.classList.add('is-open');
   },
 
   // ----------------------------------------------------------------------------
