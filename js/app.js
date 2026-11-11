@@ -2735,6 +2735,8 @@ const App = {
     document.getElementById('payValTitle').textContent = title;
     document.getElementById('payValStudentName').textContent = `${student.first_names} ${student.last_name} (${cls ? cls.name : ''})`;
     document.getElementById('payValAmount').value = defaultFee;
+    const parentPhoneInput = document.getElementById('payValParentPhone');
+    if (parentPhoneInput) parentPhoneInput.value = (student && student.parent_phone) || '';
     document.getElementById('payValMethod').value = 'wave';
     document.getElementById('payValReference').value = '';
     
@@ -2767,6 +2769,22 @@ const App = {
       if (!Number.isFinite(amount) || amount < 0) {
         throw new Error("Veuillez saisir un montant valide en FCFA.");
       }
+      // Numéro WhatsApp du parent : enregistré dans la fiche de l'élève pour l'envoi direct du reçu
+      const phoneInput = document.getElementById('payValParentPhone');
+      const rawParentPhone = phoneInput ? phoneInput.value.trim() : '';
+      // (un numéro invalide n'empêche jamais d'encaisser : il n'est simplement pas enregistré)
+      let phoneWarning = false;
+      if (rawParentPhone) {
+        if (this._waPhone(rawParentPhone)) {
+          const student = Store.getStudentById(studentId);
+          const normalized = Utils.normalizeSenegalPhone(rawParentPhone);
+          if (student && student.parent_phone !== normalized) {
+            Store.updateStudent(studentId, { parent_phone: normalized });
+          }
+        } else {
+          phoneWarning = true;
+        }
+      }
       const res = Store.recordPayment({
         studentId,
         kind,
@@ -2779,6 +2797,9 @@ const App = {
 
       modal.classList.remove('is-open');
       this.showToast("Paiement validé ! Reçu officiel généré.", "success");
+      if (phoneWarning) {
+        this.showToast("Numéro WhatsApp du parent non reconnu : il n'a pas été enregistré (il sera demandé à l'envoi du reçu).", "warning");
+      }
 
       // Rafraîchir la vue courante
       this.navigate(this.currentTab);
@@ -3203,113 +3224,112 @@ const App = {
     }
   },
 
-  async shareReceiptPNG(paymentId) {
-    try {
-      this.showToast("Préparation de l'image PNG du reçu...", "info");
-      const { blob, receipt, payment, otherRev } = await this.renderReceiptToBlob(paymentId);
-      const school = Store.getSchool();
-      const cleanNum = (receipt.receipt_number || 'recu').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const filename = `recu_officiel_${cleanNum}.png`;
-      const pngFile = new File([blob], filename, { type: 'image/png' });
+  // ----------------------------------------------------------------------------
+  // ENVOI DU REÇU SUR WHATSAPP
+  // Un appui sur « WhatsApp » ouvre DIRECTEMENT la conversation du parent (numéro de la fiche
+  // de l'élève), avec le reçu complet écrit dans le message : il ne reste qu'à appuyer sur Envoyer.
+  // L'ouverture se fait pendant l'appui lui-même (les téléphones bloquent WhatsApp ouvert plus tard).
+  // ----------------------------------------------------------------------------
+  _receiptShareContext(paymentId) {
+    const receipt = (Store.data.receipts || []).find(r => r.payment_id === paymentId || r.id === paymentId) || null;
+    const payment = (Store.data.payments || []).find(p => p.id === paymentId) || null;
+    const otherRev = !payment ? (Store.data.other_revenues || []).find(o => o.id === paymentId || (receipt && o.receipt_number === receipt.receipt_number)) || null : null;
+    if (!receipt) return null;
+    const school = Store.getSchool() || {};
+    const student = payment ? Store.getStudentById(payment.student_id) : null;
+    const cls = student ? Store.getClassById(student.class_id) : null;
+    const studentName = student ? `${student.first_names} ${(student.last_name || '').toUpperCase()}` : '';
+    let objectText = "Frais d'inscription";
+    if (payment && payment.kind === 'monthly') {
+      const m = Store.getMonthById(payment.month_id);
+      objectText = `Cotisation de ${m ? m.label : 'mensualité'}`;
+    } else if (otherRev) {
+      objectText = otherRev.motif || 'Paiement';
+    }
+    const amount = payment ? payment.amount : (otherRev ? otherRev.amount : 0);
+    const method = payment ? payment.method : (otherRev ? otherRev.method : '');
+    const date = payment ? (payment.paid_at || payment.created_at) : (otherRev ? otherRev.date : receipt.issued_at);
+    const lines = [
+      'Bonjour,',
+      '',
+      `*Reçu officiel de paiement — ${school.name || ''}*`,
+      `N° ${receipt.receipt_number}`,
+      student ? `Élève : ${studentName}${cls ? ` (${cls.name})` : ''}` : (otherRev && otherRev.payer_name ? `Payeur : ${otherRev.payer_name}` : null),
+      `Objet : ${objectText}`,
+      `Montant : *${Utils.formatFCFA(amount)}*`,
+      method ? `Mode de paiement : ${Utils.paymentMethodLabel(method)}` : null,
+      date ? `Date : ${Utils.formatDate(date)}` : null,
+      receipt.status === 'cancelled' ? '⚠️ Ce reçu a été annulé.' : null,
+      '',
+      'Merci pour votre confiance.',
+      'La Direction'
+    ].filter(l => l !== null);
+    const rawPhone = student ? (student.parent_phone || '') : '';
+    const waPhone = this._waPhone(rawPhone);
+    return { receipt, payment, otherRev, student, school, studentName, waPhone, rawPhone, message: lines.join('\n') };
+  },
 
-      let student = payment ? Store.getStudentById(payment.student_id) : null;
-      let studentName = student ? `${student.first_names} ${student.last_name}` : 'votre enfant';
-      let objectText = "l'inscription";
-      let amount = payment ? payment.amount : (otherRev ? otherRev.amount : 0);
+  // Numéro au format WhatsApp (chiffres, indicatif 221 ajouté pour un numéro sénégalais à 9 chiffres)
+  _waPhone(phone) {
+    const digits = Utils.toWhatsAppPhone(String(phone || '')).replace(/\D/g, '');
+    return /^\d{9,15}$/.test(digits) ? (digits.length === 9 ? '221' + digits : digits) : '';
+  },
 
-      if (payment && payment.kind === 'monthly') {
-        const m = Store.getMonthById(payment.month_id);
-        objectText = `la cotisation de ${m ? m.label : 'mensualité'}`;
-      } else if (otherRev) {
-        objectText = otherRev.motif || "paiement";
-      }
-
-      const captionText = `Reçu officiel N° ${receipt.receipt_number} — ${school.name} pour ${studentName} (${objectText}) : ${Utils.formatFCFA(amount)}`;
-      const waMsg = `Bonjour,\n\nVeuillez trouver ci-joint l'image du reçu officiel de paiement n° ${receipt.receipt_number} de ${school.name} pour ${studentName} (${objectText}) d'un montant de ${Utils.formatFCFA(amount)}.\n\nCordialement,\nLa Direction`;
-
-      // 0. Numéro du parent connu : conversation WhatsApp du parent ouverte directement
-      //    (l'image est enregistrée sur l'appareil pour être jointe en un geste)
-      const parentWa = student && student.parent_phone ? Utils.toWhatsAppPhone(student.parent_phone) : '';
-      if (/^\d{9,15}$/.test(parentWa)) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-        let copied = false;
-        if (navigator.clipboard && window.ClipboardItem) {
-          try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); copied = true; } catch (e) {}
-        }
-        this.openWhatsAppParentModal({
-          phone: parentWa,
-          displayPhone: student.parent_phone,
-          parentName: student.parent_name || '',
-          studentName,
-          message: waMsg,
-          copied
-        });
-        return;
-      }
-
-      // 1. Partage natif direct du fichier image PNG (Android, iPhone / iPad)
-      if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
-        await navigator.share({
-          files: [pngFile],
-          title: `Reçu officiel N° ${receipt.receipt_number}`,
-          text: captionText
-        });
-        this.showToast("✓ Image PNG du reçu partagée avec succès !", "success");
-        return;
-      }
-
-      // 2. Si le partage natif de fichier n'est pas supporté (ex: PC / Navigateurs sans partage de fichier) :
-      // Télécharger immédiatement l'image PNG
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 500);
-
-      // Copie dans le presse-papier si possible
-      if (navigator.clipboard && window.ClipboardItem) {
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        } catch(e) {}
-      }
-
-      // Ouvrir WhatsApp avec message d'accompagnement (ZÉRO LIEN WEB)
-      let waPhone = '';
-      if (student && student.parent_phone) {
-        waPhone = Utils.toWhatsAppPhone(student.parent_phone);
-      }
-      const waUrl = waPhone
-        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`
-        : `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
-
-      window.open(waUrl, '_blank');
-      this.showToast("✓ Image PNG téléchargée ! Joignez-la dans WhatsApp pour l'envoyer au parent.", "success");
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      console.error("Erreur partage PNG:", err);
-      alert("Erreur lors de la génération de l'image PNG : " + err.message);
+  _openWhatsAppChat(phone, message) {
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    const w = window.open(url, '_blank');
+    if (w) {
+      try { w.opener = null; } catch (e) {}
+    } else {
+      window.location.href = url;
     }
   },
 
+  // L'image du reçu est aussi enregistrée sur l'appareil (et copiée sur ordinateur) pour qui veut la joindre
+  async _saveReceiptImage(paymentId) {
+    try {
+      const { blob, receipt } = await this.renderReceiptToBlob(paymentId);
+      const cleanNum = (receipt.receipt_number || 'recu').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `recu_officiel_${cleanNum}.png`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+      if (navigator.clipboard && window.ClipboardItem) {
+        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); } catch (e) {}
+      }
+      this.showToast("✓ Image du reçu aussi enregistrée sur l'appareil (à joindre si besoin : 📎 → Galerie).", "success");
+    } catch (err) {
+      console.warn('[WhatsApp] Image du reçu:', err);
+    }
+  },
+
+  // Bouton « WhatsApp » des reçus et des listes
+  shareReceiptPNG(paymentId) {
+    const ctx = this._receiptShareContext(paymentId);
+    if (!ctx) {
+      this.showToast("Reçu introuvable.", "warning");
+      return;
+    }
+    if (ctx.waPhone) {
+      this._openWhatsAppChat(ctx.waPhone, ctx.message);     // pendant l'appui : conversation du parent
+      this._saveReceiptImage(paymentId);                    // puis l'image, en arrière-plan
+      return;
+    }
+    this.openWhatsAppNumberModal(paymentId);                // numéro inconnu : demandé une seule fois
+  },
+
   shareWhatsApp(paymentId) {
-    // Redirection automatique vers l'envoi de l'image PNG officielle (aucun lien)
     return this.shareReceiptPNG(paymentId);
   },
 
-  // Fenêtre « Envoyer au parent » : un appui ouvre WhatsApp directement sur la conversation du parent.
-  // (Les téléphones n'autorisent l'ouverture de WhatsApp qu'à la suite d'un appui : d'où ce bouton.)
-  openWhatsAppParentModal({ phone, displayPhone, parentName, studentName, message, copied }) {
+  // Numéro du parent manquant : saisi ici (et enregistré dans la fiche de l'élève), puis WhatsApp
+  // s'ouvre directement sur ce numéro. Le partage classique reste possible en second choix.
+  openWhatsAppNumberModal(paymentId) {
+    const ctx = this._receiptShareContext(paymentId);
+    if (!ctx) return;
     let modal = document.getElementById('waParentModal');
     if (!modal) {
       modal = document.createElement('div');
@@ -3321,35 +3341,85 @@ const App = {
       document.body.appendChild(modal);
     }
     const esc = (v) => Utils.escapeHtml(String(v || ''));
-    const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    const waUrl = `https://wa.me/${encodeURIComponent(phone)}?text=${encodeURIComponent(message)}`;
-    const who = parentName ? `${parentName} (${displayPhone})` : displayPhone;
+    const who = ctx.student ? `du parent de ${ctx.studentName}` : 'du payeur';
     modal.innerHTML = `
       <div class="modal-container" style="max-width:440px;">
         <div class="modal-header">
-          <h2 class="modal-title" id="waParentTitle">Envoyer le reçu au parent</h2>
+          <h2 class="modal-title" id="waParentTitle">Numéro WhatsApp ${esc(who)}</h2>
           <button type="button" class="modal-close-btn" aria-label="Fermer">✕</button>
         </div>
-        <div class="modal-body" style="display:grid; gap:0.9rem;">
-          <div style="background:var(--tint-green-flat); border:1.5px solid var(--tint-green-border); border-radius:var(--radius-md); padding:0.8rem 1rem; font-size:var(--text-sm); color:var(--tone-green-deep); font-weight:600; line-height:1.45;">
-            ✓ Image du reçu de ${esc(studentName)} enregistrée sur cet appareil${copied ? ' et copiée' : ''}.
+        <form class="modal-body" id="waParentForm" style="display:grid; gap:0.9rem;" novalidate>
+          <p style="margin:0; font-size:var(--text-sm); color:var(--text-muted); line-height:1.5;">
+            Le reçu sera envoyé directement sur ce numéro.${ctx.student ? " Il est enregistré dans la fiche de l'élève : la prochaine fois, WhatsApp s'ouvrira tout de suite sur ce parent." : ''}
+          </p>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" for="waParentPhone">Téléphone WhatsApp</label>
+            <input type="tel" id="waParentPhone" class="form-input" inputmode="tel" autocomplete="tel" placeholder="Ex. 77 123 45 67" value="${esc(ctx.rawPhone)}" required>
+            <div id="waParentPhoneError" class="form-helper" style="color:var(--tone-red); display:none;">Numéro invalide : 9 chiffres (ex. 77 123 45 67) ou format international.</div>
           </div>
-          <a id="waParentOpenBtn" href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp" style="display:flex; justify-content:center; padding:0.9rem 1rem; font-size:1rem; font-weight:800; text-decoration:none; white-space:normal; text-align:center;">
-            📲 Ouvrir la conversation de ${esc(who)}
-          </a>
-          <ol style="margin:0; padding-left:1.2rem; font-size:var(--text-sm); color:var(--text-muted); line-height:1.6;">
-            <li>La conversation du parent s'ouvre avec le message déjà écrit.</li>
-            ${isTouch
-              ? '<li>Touchez <strong>📎</strong> puis <strong>Galerie</strong> et choisissez la dernière image (le reçu).</li>'
-              : `<li>Dans la conversation, faites <strong>Ctrl+V</strong> pour coller l'image${copied ? '' : ' (ou joignez le fichier téléchargé)'}.</li>`}
-            <li>Appuyez sur <strong>Envoyer</strong>.</li>
-          </ol>
-        </div>
+          <button type="submit" class="btn btn-whatsapp" style="display:flex; justify-content:center; padding:0.85rem 1rem; font-size:1rem; font-weight:800; white-space:normal;">📲 Ouvrir WhatsApp sur ce numéro</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="waParentOtherBtn">Choisir un autre contact (menu de partage)</button>
+        </form>
       </div>`;
-    modal.querySelector('#waParentOpenBtn').addEventListener('click', () => {
-      setTimeout(() => this.closeAllModals(), 400);
+    modal.querySelector('#waParentForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = modal.querySelector('#waParentPhone');
+      const phone = this._waPhone(input.value);
+      if (!phone) {
+        modal.querySelector('#waParentPhoneError').style.display = 'block';
+        input.focus();
+        return;
+      }
+      if (ctx.student) {
+        try {
+          Store.updateStudent(ctx.student.id, { parent_phone: Utils.normalizeSenegalPhone(input.value.trim()) });
+        } catch (err) {
+          console.warn('[WhatsApp] Enregistrement du numéro:', err);
+        }
+      }
+      this._openWhatsAppChat(phone, ctx.message);   // pendant l'appui sur le bouton
+      this.closeAllModals();
+      this._saveReceiptImage(paymentId);
+    });
+    modal.querySelector('#waParentOtherBtn').addEventListener('click', () => {
+      this.closeAllModals();
+      this._shareReceiptSystem(paymentId);
     });
     modal.classList.add('is-open');
+    setTimeout(() => { const i = modal.querySelector('#waParentPhone'); if (i) i.focus(); }, 120);
+  },
+
+  // Partage classique par le menu du téléphone (choix libre du contact)
+  async _shareReceiptSystem(paymentId) {
+    try {
+      this.showToast("Préparation de l'image PNG du reçu...", "info");
+      const ctx = this._receiptShareContext(paymentId);
+      const { blob, receipt } = await this.renderReceiptToBlob(paymentId);
+      const cleanNum = (receipt.receipt_number || 'recu').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `recu_officiel_${cleanNum}.png`;
+      const pngFile = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
+        await navigator.share({ files: [pngFile], title: `Reçu officiel N° ${receipt.receipt_number}`, text: ctx ? ctx.message : '' });
+        this.showToast("✓ Image PNG du reçu partagée avec succès !", "success");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+      if (navigator.clipboard && window.ClipboardItem) {
+        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); } catch (e) {}
+      }
+      window.open(`https://wa.me/?text=${encodeURIComponent(ctx ? ctx.message : '')}`, '_blank');
+      this.showToast("✓ Image PNG téléchargée ! Joignez-la dans WhatsApp pour l'envoyer.", "success");
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.error("Erreur partage PNG:", err);
+      this.showToast("Partage impossible pour le moment : " + (err && err.message ? err.message : 'erreur inconnue'), "danger");
+    }
   },
 
   // ----------------------------------------------------------------------------
