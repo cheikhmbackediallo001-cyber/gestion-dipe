@@ -3354,13 +3354,14 @@ const App = {
           </p>
           <div class="form-group" style="margin:0;">
             <label class="form-label" for="waParentPhone">Téléphone WhatsApp</label>
-            <input type="tel" id="waParentPhone" class="form-input" inputmode="tel" autocomplete="tel" placeholder="Ex. 77 123 45 67" value="${esc(ctx.rawPhone)}" required>
+            <input type="tel" id="waParentPhone" data-dictate="phone" class="form-input" inputmode="tel" autocomplete="tel" placeholder="Ex. 77 123 45 67" value="${esc(ctx.rawPhone)}" required>
             <div id="waParentPhoneError" class="form-helper" style="color:var(--tone-red); display:none;">Numéro invalide : 9 chiffres (ex. 77 123 45 67) ou format international.</div>
           </div>
           <button type="submit" class="btn btn-whatsapp" style="display:flex; justify-content:center; padding:0.85rem 1rem; font-size:1rem; font-weight:800; white-space:normal;">📲 Ouvrir WhatsApp sur ce numéro</button>
           <button type="button" class="btn btn-secondary btn-sm" id="waParentOtherBtn">Choisir un autre contact (menu de partage)</button>
         </form>
       </div>`;
+    if (window.Dictation) Dictation.enhanceAll(modal);
     modal.querySelector('#waParentForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const input = modal.querySelector('#waParentPhone');

@@ -7,7 +7,7 @@
  */
 
 // Même numéro que les « ?v= » des pages HTML : à changer à chaque publication
-const ASSET_VERSION = '20261111_v1';
+const ASSET_VERSION = '20261116_v1';
 const CACHE_NAME = 'gestion-prescolaire-v' + ASSET_VERSION;
 
 const STATIC_ASSETS = [
@@ -21,9 +21,11 @@ const STATIC_ASSETS = [
   './css/app.css',
   './css/receipt.css',
   './css/datepicker.css',
+  './css/dictation.css',
   './js/config.js',
   './js/utils.js',
   './js/datepicker.js',
+  './js/dictation.js',
   './js/stamp.js',
   './js/supabase.js',
   './js/auth.js',

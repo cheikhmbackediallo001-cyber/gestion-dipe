@@ -90,10 +90,11 @@
   </script>
 
   <!-- Design System & Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=20261111_v1">
-  <link rel="stylesheet" href="css/app.css?v=20261111_v1">
-  <link rel="stylesheet" href="css/receipt.css?v=20261111_v1">
-  <link rel="stylesheet" href="css/datepicker.css?v=20261111_v1">
+  <link rel="stylesheet" href="css/design-system.css?v=20261116_v1">
+  <link rel="stylesheet" href="css/app.css?v=20261116_v1">
+  <link rel="stylesheet" href="css/receipt.css?v=20261116_v1">
+  <link rel="stylesheet" href="css/datepicker.css?v=20261116_v1">
+  <link rel="stylesheet" href="css/dictation.css?v=20261116_v1">
 
   <!-- PWA Configuration & Official App Icons -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -327,7 +328,7 @@
 
         <div class="form-group">
           <label class="form-label" for="payValParentPhone">📲 Téléphone WhatsApp du parent</label>
-          <input type="tel" id="payValParentPhone" class="form-input" inputmode="tel" autocomplete="tel" placeholder="Ex. 77 123 45 67">
+          <input type="tel" id="payValParentPhone" data-dictate="phone" class="form-input" inputmode="tel" autocomplete="tel" placeholder="Ex. 77 123 45 67">
           <div class="form-helper">Le reçu sera envoyé directement sur ce numéro WhatsApp. Il est enregistré dans la fiche de l'élève.</div>
         </div>
       </div>
@@ -409,14 +410,18 @@
       <div class="modal-body">
         <input type="hidden" id="studentIdInput">
 
+        <button type="button" class="dictate-sequence-btn" hidden data-dictate-sequence="#studentFirstNames,#studentLastName,#studentParentName,#studentParentPhone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg><span>Dicter la fiche : prénom, nom, parent, téléphone</span>
+        </button>
+
         <div class="form-group">
           <label class="form-label" for="studentFirstNames">Prénom(s) <span class="required">*</span></label>
-          <input type="text" id="studentFirstNames" class="form-input" placeholder="Ex. Mamadou" required>
+          <input type="text" id="studentFirstNames" data-dictate="first-name" class="form-input" placeholder="Ex. Mamadou" required>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="studentLastName">Nom de famille <span class="required">*</span></label>
-          <input type="text" id="studentLastName" class="form-input" placeholder="Ex. DIOP" required>
+          <input type="text" id="studentLastName" data-dictate="last-name" class="form-input" placeholder="Ex. DIOP" required>
         </div>
 
         <div class="form-group">
@@ -440,12 +445,12 @@
 
         <div class="form-group">
           <label class="form-label" for="studentParentName">Nom du parent / tuteur</label>
-          <input type="text" id="studentParentName" class="form-input" placeholder="Ex. Ousmane Diop">
+          <input type="text" id="studentParentName" data-dictate="name" class="form-input" placeholder="Ex. Ousmane Diop">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="studentParentPhone">Téléphone du parent (pour envoi WhatsApp)</label>
-          <input type="tel" id="studentParentPhone" class="form-input" placeholder="+221 77 123 45 67">
+          <input type="tel" id="studentParentPhone" data-dictate="phone" class="form-input" placeholder="+221 77 123 45 67">
           <div class="form-helper">Recommandé pour permettre le partage direct du reçu officiel en image PNG.</div>
         </div>
 
@@ -536,7 +541,7 @@
 
           <div class="form-group">
             <label class="form-label" for="expenseMotif">Motif de la dépense <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="expenseMotif" class="form-input" placeholder="Ex: Achat fournitures scolaires, Facture Senelec, Goûter..." required>
+            <input type="text" id="expenseMotif" data-dictate="text" class="form-input" placeholder="Ex: Achat fournitures scolaires, Facture Senelec, Goûter..." required>
             <div class="form-helper">Description précise de la dépense effectuée.</div>
           </div>
 
@@ -604,7 +609,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label" for="otherRevMotif">Motif de l'entrée <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="otherRevMotif" class="form-input" placeholder="Ex: Subvention Mairie, Vente uniformes, Dons..." required>
+            <input type="text" id="otherRevMotif" data-dictate="text" class="form-input" placeholder="Ex: Subvention Mairie, Vente uniformes, Dons..." required>
             <div class="form-helper">Description précise de l'entrée d'argent (hors inscriptions et cotisations).</div>
           </div>
 
@@ -655,7 +660,7 @@
 
             <div class="form-group">
               <label class="form-label" for="otherRevPayer">Payeur / Donateur / Organisme</label>
-              <input type="text" id="otherRevPayer" class="form-input" placeholder="Ex: Mairie, Association, M. Sow...">
+              <input type="text" id="otherRevPayer" data-dictate="name" class="form-input" placeholder="Ex: Mairie, Association, M. Sow...">
             </div>
           </div>
 
@@ -916,17 +921,18 @@
   </div>
 
   <!-- Scripts JavaScript nécessaires -->
-  <script src="js/config.js?v=20261111_v1"></script>
-  <script src="js/utils.js?v=20261111_v1"></script>
-  <script src="js/datepicker.js?v=20261111_v1"></script>
-  <script src="js/stamp.js?v=20261111_v1"></script>
-  <script src="js/supabase.js?v=20261111_v1"></script>
-  <script src="js/auth.js?v=20261111_v1"></script>
-  <script src="js/demo-data.js?v=20261111_v1"></script>
-  <script src="js/store.js?v=20261111_v1"></script>
-  <script src="js/cloud-sync.js?v=20261111_v1"></script>
+  <script src="js/config.js?v=20261116_v1"></script>
+  <script src="js/utils.js?v=20261116_v1"></script>
+  <script src="js/datepicker.js?v=20261116_v1"></script>
+  <script src="js/dictation.js?v=20261116_v1"></script>
+  <script src="js/stamp.js?v=20261116_v1"></script>
+  <script src="js/supabase.js?v=20261116_v1"></script>
+  <script src="js/auth.js?v=20261116_v1"></script>
+  <script src="js/demo-data.js?v=20261116_v1"></script>
+  <script src="js/store.js?v=20261116_v1"></script>
+  <script src="js/cloud-sync.js?v=20261116_v1"></script>
   <script src="js/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20261111_v1"></script>
+  <script src="js/app.js?v=20261116_v1"></script>
 
   <!-- Filet de sécurité : si l'application ne s'est pas affichée (fichier non téléchargé), message + réparation -->
   <script>

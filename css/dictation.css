@@ -1,0 +1,107 @@
+/* ==============================================================================
+   DICTÉE VOCALE (js/dictation.js) : bouton micro dans les champs
+   ============================================================================== */
+.dictate-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.dictate-wrap > .form-input {
+  padding-right: 3.1rem;
+}
+
+.dictate-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.dictate-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dictate-btn:hover {
+  background: var(--primary);
+  color: #FFFFFF;
+}
+
+.dictate-btn:focus-visible {
+  outline: 2px solid var(--primary-light, #2563EB);
+  outline-offset: 2px;
+}
+
+/* En écoute : rouge et pulsation */
+.dictate-btn.is-listening,
+.dictate-sequence-btn.is-listening {
+  background: #DC2626;
+  color: #FFFFFF;
+  animation: dictate-pulse 1.1s ease-in-out infinite;
+}
+
+.form-input.is-dictating {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18) !important;
+}
+
+@keyframes dictate-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+
+/* Bouton « Dicter la fiche » */
+.dictate-sequence-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 46px;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem 1rem;
+  border: 1.5px dashed var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  text-align: center;
+  cursor: pointer;
+  white-space: normal;
+}
+
+.dictate-sequence-btn[hidden] {
+  display: none;
+}
+
+.dictate-sequence-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.dictate-sequence-btn.is-listening {
+  border-style: solid;
+  border-color: #DC2626;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dictate-btn.is-listening,
+  .dictate-sequence-btn.is-listening {
+    animation: none;
+  }
+}
